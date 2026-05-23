@@ -87,14 +87,14 @@ export default function SideBar({
           <span style={{ color: activePanel === 'perso' ? accent : '#6B7280' }}>Perso</span>
         </div>
         <div
-          className={`sb-bot-btn${curView === 'reglages' ? ' active' : ''}`}
+          className={`sb-bot-btn${activePanel === 'settings' ? ' active' : ''}`}
           role="button"
           tabIndex={0}
-          onClick={() => onNavigate('reglages')}
-          onKeyDown={e => e.key === 'Enter' && onNavigate('reglages')}
+          onClick={() => togglePanel('settings')}
+          onKeyDown={e => e.key === 'Enter' && togglePanel('settings')}
         >
-          <i className="ti ti-settings" style={{ color: curView === 'reglages' ? accent : '#6B7280' }} aria-hidden="true" />
-          <span style={{ color: curView === 'reglages' ? accent : '#6B7280' }}>Réglages</span>
+          <i className="ti ti-settings" style={{ color: activePanel === 'settings' ? accent : '#6B7280' }} aria-hidden="true" />
+          <span style={{ color: activePanel === 'settings' ? accent : '#6B7280' }}>Réglages</span>
         </div>
       </div>
     </aside>

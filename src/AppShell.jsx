@@ -4,7 +4,6 @@ import SideBar from './components/SideBar'
 import Dashboard from './components/Dashboard'
 import ProfilPage from './components/ProfilPage'
 import SimplePage from './components/SimplePage'
-import Reglages from './components/Reglages'
 
 const DEFAULT_SB_ITEMS = [
   { id: 'dashboard', label: 'Board', icon: 'ti-layout-dashboard' },
@@ -58,19 +57,12 @@ export default function AppShell({ user, onSignOut }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [decoOpen, setDecoOpen] = useState(false)
   const [username, setUsername] = useState('Nathalie')
-  const [fs, setFs] = useState(() => {
-    const saved = parseInt(localStorage.getItem('napo_font_size'), 10)
-    return (saved >= 80 && saved <= 150) ? saved : 100
-  })
+  const [fs, setFs] = useState(100)
   const [newItemName, setNewItemName] = useState('')
   const [newItemIcon, setNewItemIcon] = useState('ti-star')
   const searchInputRef = useRef(null)
   const sbDragSrc = useRef(null)
   const tbDragSrc = useRef(null)
-
-  useEffect(() => {
-    document.documentElement.style.fontSize = `${fs}%`
-  }, [fs])
 
   useEffect(() => {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus()
@@ -150,7 +142,7 @@ export default function AppShell({ user, onSignOut }) {
     setTbItems(next)
   }
 
-  const mainStyle = {}
+  const mainStyle = { fontSize: `${fs}%` }
 
   return (
     <div className="app" id="app">
@@ -378,9 +370,6 @@ export default function AppShell({ user, onSignOut }) {
           )}
           {['faq', 'aide', 'news'].includes(curView) && (
             <SimplePage view={curView} />
-          )}
-          {curView === 'reglages' && (
-            <Reglages fs={fs} setFs={setFs} accent={accent} />
           )}
         </main>
       </div>
