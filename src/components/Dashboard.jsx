@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -13,6 +14,16 @@ const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet'
 export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidgets }) {
   const [time, setTime] = useState(new Date())
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
+  const [prenom, setPrenom] = useState('')
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      const p = user?.user_metadata?.prenom || user?.email
+      setPrenom(p)
+    }
+    getUser()
+  }, [])
 
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000)
@@ -32,7 +43,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         <i className={`ti ${activeSbItem?.icon || 'ti-layout-dashboard'}`} style={{ color: accent }} aria-hidden="true" />
         <div>
           <div className="dash-title">{activeSbItem?.label || 'Dashboard'}</div>
-          <div className="dash-sub">Bonjour Nathalie — 23 mai 2026</div>
+          <div className="dash-sub">Bonjour {prenom} — {dateStr}</div>
         </div>
       </div>
 

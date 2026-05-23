@@ -4,6 +4,7 @@ import SideBar from './components/SideBar'
 import Dashboard from './components/Dashboard'
 import ProfilPage from './components/ProfilPage'
 import SimplePage from './components/SimplePage'
+import { supabase } from './lib/supabase'
 
 const DEFAULT_SB_ITEMS = [
   { id: 'dashboard', label: 'Board', icon: 'ti-layout-dashboard' },
@@ -56,13 +57,25 @@ export default function AppShell({ user, onSignOut }) {
   ])
   const [searchOpen, setSearchOpen] = useState(false)
   const [decoOpen, setDecoOpen] = useState(false)
-  const [username, setUsername] = useState('Nathalie')
+  const [username, setUsername] = useState(() => {
+    // sera remplacé par les données Supabase au montage
+    return user?.user_metadata?.prenom || user?.email?.split('@')[0] || 'Utilisateur'
+  })
   const [fs, setFs] = useState(100)
   const [newItemName, setNewItemName] = useState('')
   const [newItemIcon, setNewItemIcon] = useState('ti-star')
   const searchInputRef = useRef(null)
   const sbDragSrc = useRef(null)
   const tbDragSrc = useRef(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (u) {
+        const prenom = u.user_metadata?.prenom || u.email?.split('@')[0] || 'Utilisateur'
+        setUsername(prenom)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus()
@@ -150,7 +163,7 @@ export default function AppShell({ user, onSignOut }) {
         tbItems={tbItems} setTbItems={setTbItems}
         tbActif={tbActif} setTbActif={setTbActif}
         accent={accent}
-        username={username} initials="NA"
+        username={username} initials={username.charAt(0).toUpperCase()}
         notifOpen={notifOpen} setNotifOpen={setNotifOpen}
         notifDot={notifDot} setNotifDot={setNotifDot}
         searchOpen={searchOpen} setSearchOpen={setSearchOpen}
