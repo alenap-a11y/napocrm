@@ -1,26 +1,49 @@
 import { useState, useRef, useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import Dashboard from './components/Dashboard'
 import ProfilPage from './components/ProfilPage'
 import SimplePage from './components/SimplePage'
+import Seances from './pages/Seances'
+import NouvelleSeance from './pages/NouvelleSeance'
+import Clients from './pages/Clients'
+import Agenda from './pages/Agenda'
+import Notes from './pages/Notes'
+import FicheClientBach from './components/FicheClientBach'
 import { supabase } from './lib/supabase'
 
-const DEFAULT_SB_ITEMS = [
-  { id: 'dashboard', label: 'Board', icon: 'ti-layout-dashboard' },
-  { id: 'clients', label: 'Clients', icon: 'ti-users' },
-  { id: 'agenda', label: 'Agenda', icon: 'ti-calendar' },
-  { id: 'taches', label: 'Tâches', icon: 'ti-check' },
-  { id: 'messages', label: 'Msgs', icon: 'ti-mail' },
-  { id: 'factures', label: 'Factures', icon: 'ti-file' },
+const ALL_SB_ITEMS = [
+  { id: 'board',    label: 'Board',    icon: 'ti-layout-dashboard', to: '/board'    },
+  { id: 'seances',  label: 'Séances',  icon: 'ti-calendar-plus',    to: '/seances'  },
+  { id: 'clients',     label: 'Clients',        icon: 'ti-users',          to: '/clients'                        },
+  { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
+  { id: 'bach-seance', label: 'Nouvelle séance',icon: 'ti-calendar-heart', to: '/fleurs-de-bach/nouvelle-seance' },
+  { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
+  { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
+  { id: 'factures', label: 'Factures', icon: 'ti-file',             to: '/factures' },
 ]
 
+const SB_STORAGE_KEY = 'napo_sb_items'
+
+function loadSbItems() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SB_STORAGE_KEY))
+    if (!Array.isArray(saved) || saved.length === 0) return ALL_SB_ITEMS
+    const map = Object.fromEntries(ALL_SB_ITEMS.map(i => [i.id, i]))
+    const result = saved.map(id => map[id]).filter(Boolean)
+    if (result.length === 0) return ALL_SB_ITEMS
+    // Append any new items not yet in saved order
+    const resultIds = new Set(result.map(i => i.id))
+    ALL_SB_ITEMS.filter(i => !resultIds.has(i.id)).forEach(i => result.push(i))
+    return result
+  } catch { return ALL_SB_ITEMS }
+}
+
 const DEFAULT_TB_ITEMS = [
-  { id: 'faq', label: 'FAQ', icon: 'ti-help-circle', vis: true },
-  { id: 'aide', label: 'Aide', icon: 'ti-lifebuoy', vis: true },
+  { id: 'faq',  label: 'FAQ',  icon: 'ti-help-circle',  vis: true },
+  { id: 'aide', label: 'Aide', icon: 'ti-lifebuoy',     vis: true },
   { id: 'news', label: 'News', icon: 'ti-speakerphone', vis: true },
-  { id: 'agenda2', label: 'Agenda', icon: 'ti-calendar', vis: true },
-  { id: 'taches2', label: 'Tâches', icon: 'ti-check', vis: true },
 ]
 
 const DEFAULT_WIDGETS = { clock: true, meteo: true, lune: true, fete: true, ferie: true, mantra: true }
@@ -38,13 +61,13 @@ const ACCENT_SWATCHES = ['#B8961E', '#534AB7', '#0F6E56', '#993C1D', '#185FA5', 
 const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C2C2A']
 
 export default function AppShell({ user, onSignOut }) {
-  const [sbItems, setSbItems] = useState(DEFAULT_SB_ITEMS)
+  const [sbItems, setSbItems] = useState(loadSbItems)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
   const [curView, setCurView] = useState('dash')
   const [accent, setAccent] = useState('#B8961E')
-  const [bgCol, setBgCol] = useState('#111827')
+  const [bgCol, setBgCol] = useState('#1E1A4E')
   const [widgets, setWidgets] = useState(DEFAULT_WIDGETS)
   const [activePanel, setActivePanel] = useState(null)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -61,9 +84,7 @@ export default function AppShell({ user, onSignOut }) {
     // sera remplacé par les données Supabase au montage
     return user?.user_metadata?.prenom || user?.email?.split('@')[0] || 'Utilisateur'
   })
-  const [fs, setFs] = useState(100)
-  const [newItemName, setNewItemName] = useState('')
-  const [newItemIcon, setNewItemIcon] = useState('ti-star')
+  const [fs, setFs] = useState(() => parseInt(localStorage.getItem('napo_font_size') || '100', 10))
   const searchInputRef = useRef(null)
   const sbDragSrc = useRef(null)
   const tbDragSrc = useRef(null)
@@ -100,20 +121,14 @@ export default function AppShell({ user, onSignOut }) {
     setNotifDot(false)
   }
 
-  function addSbItem() {
-    if (!newItemName.trim()) return
-    setSbItems(prev => [...prev, { id: 'c' + Date.now(), label: newItemName.trim(), icon: newItemIcon }])
-    setNewItemName('')
+  function addSbItem(id) {
+    const item = ALL_SB_ITEMS.find(i => i.id === id)
+    if (!item || sbItems.find(i => i.id === id)) return
+    setSbItems(prev => [...prev, item])
   }
 
-  function removeSbItem(idx) {
-    setSbItems(prev => {
-      if (prev.length <= 1) return prev
-      const next = [...prev]
-      if (next[idx].id === sbActif) setSbActif(next[idx === 0 ? 1 : 0].id)
-      next.splice(idx, 1)
-      return next
-    })
+  function removeSbItem(id) {
+    setSbItems(prev => prev.length <= 1 ? prev : prev.filter(i => i.id !== id))
   }
 
   function toggleTbVis(idx) {
@@ -155,7 +170,14 @@ export default function AppShell({ user, onSignOut }) {
     setTbItems(next)
   }
 
-  const mainStyle = { fontSize: `${fs}%` }
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fs}%`
+    localStorage.setItem('napo_font_size', fs)
+  }, [fs])
+
+  useEffect(() => {
+    localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
+  }, [sbItems])
 
   return (
     <div className="app" id="app">
@@ -220,12 +242,10 @@ export default function AppShell({ user, onSignOut }) {
 
       <div className="body">
         <SideBar
-          sbItems={sbItems} setSbItems={setSbItems}
-          sbActif={sbActif} setSbActif={setSbActif}
           accent={accent} bgCol={bgCol}
-          curView={curView}
           activePanel={activePanel} setActivePanel={setActivePanel}
-          onNavigate={navigate}
+          username={username}
+          items={sbItems} setItems={setSbItems}
         />
 
         {/* Panel Perso */}
@@ -247,20 +267,23 @@ export default function AppShell({ user, onSignOut }) {
                 icon={item.icon} label={item.label} accent={accent}
                 onDragStart={() => { sbDragSrc.current = idx }}
                 onDrop={() => { if (sbDragSrc.current !== null && sbDragSrc.current !== idx) { sbPanelDrop(sbDragSrc.current, idx); sbDragSrc.current = null } }}
-                action={<button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(idx)}><i className="ti ti-trash" /></button>}
+                action={<button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(item.id)}><i className="ti ti-trash" /></button>}
               />
             ))}
-            <div className="pl">Ajouter section sidebar</div>
-            <div className="add-form">
-              <input type="text" placeholder="Nom ex: Notes" maxLength={12} value={newItemName} onChange={e => setNewItemName(e.target.value)} />
-              <select value={newItemIcon} onChange={e => setNewItemIcon(e.target.value)}>
-                {[['ti-star','Étoile'],['ti-heart','Coeur'],['ti-bookmark','Signet'],['ti-notes','Notes'],['ti-chart-bar','Graphique'],['ti-map-pin','Lieu'],['ti-phone','Téléphone'],['ti-video','Vidéo'],['ti-gift','Cadeau'],['ti-bulb','Idée'],['ti-trophy','Trophée']]
-                  .map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
-              <button className="add-btn" onClick={addSbItem}>
-                <i className="ti ti-plus" aria-hidden="true" /> Ajouter
-              </button>
-            </div>
+            {ALL_SB_ITEMS.filter(i => !sbItems.find(s => s.id === i.id)).length > 0 && (
+              <>
+                <div className="pl">Éléments disponibles</div>
+                {ALL_SB_ITEMS.filter(i => !sbItems.find(s => s.id === i.id)).map(item => (
+                  <div key={item.id} className="drag-row" style={{ cursor: 'default', opacity: .7 }}>
+                    <i className={`ti ${item.icon} ico`} style={{ color: accent }} aria-hidden="true" />
+                    <span className="dname">{item.label}</span>
+                    <button aria-label={`Ajouter ${item.label}`} onClick={() => addSbItem(item.id)}>
+                      <i className="ti ti-plus" />
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
             <div className="pl" style={{ marginTop: 12 }}>Topbar — glisse + œil pour masquer</div>
             {tbItems.map((item, idx) => (
               <DragRow
@@ -369,21 +392,28 @@ export default function AppShell({ user, onSignOut }) {
                 <i className="ti ti-refresh" style={{ color: '#5F5E5A' }} aria-hidden="true" />
               </div>
               <div className="ptxt"><div className="plbl">Réinitialiser</div></div>
-              <button className="rst-btn" onClick={() => { setFs(100); setAccent('#B8961E'); setBgCol('#111827') }}>Reset</button>
+              <button className="rst-btn" onClick={() => { setFs(100); setAccent('#B8961E'); setBgCol('#1E1A4E') }}>Reset</button>
             </div>
           </div>
         </div>
 
-        <main className="main" style={mainStyle}>
-          {curView === 'dash' && (
-            <Dashboard accent={accent} sbActif={sbActif} sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} />
-          )}
-          {curView === 'profil' && (
-            <ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />
-          )}
-          {['faq', 'aide', 'news'].includes(curView) && (
-            <SimplePage view={curView} />
-          )}
+        <main className="main">
+          <Routes>
+            <Route path="/"         element={<Navigate to="/board" replace />} />
+            <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} />} />
+            <Route path="/seances/nouvelle" element={<NouvelleSeance />} />
+            <Route path="/seances"          element={<Seances />} />
+            <Route path="/clients"  element={<Clients />} />
+            <Route path="/agenda"   element={<Agenda />} />
+            <Route path="/notes"    element={<Notes />} />
+            <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
+            <Route path="/fleurs-de-bach/nouvelle-seance" element={<FicheClientBach />} />
+            <Route path="/factures" element={<SimplePage view="factures" />} />
+            <Route path="/profil"   element={<ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />} />
+            <Route path="/faq"      element={<SimplePage view="faq" />} />
+            <Route path="/aide"     element={<SimplePage view="aide" />} />
+            <Route path="/news"     element={<SimplePage view="news" />} />
+          </Routes>
         </main>
       </div>
     </div>

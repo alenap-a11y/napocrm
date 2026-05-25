@@ -1,46 +1,51 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 
 export default function SideBar({
-  sbItems, setSbItems,
-  sbActif, setSbActif,
   accent, bgCol,
-  curView,
   activePanel, setActivePanel,
-  onNavigate,
+  username,
+  items,
+  setItems,
 }) {
+  const [hoveredTo, setHoveredTo] = useState(null)
+  const [dragOverTo, setDragOverTo] = useState(null)
   const dragSrc = useRef(null)
-
-  function handleItemClick(item) {
-    setSbActif(item.id)
-    onNavigate('dash')
-  }
-
-  function onDragStart(e, idx) {
-    dragSrc.current = idx
-    e.currentTarget.classList.add('dragging')
-    e.dataTransfer.effectAllowed = 'move'
-  }
-  function onDragEnd(e) {
-    e.currentTarget.classList.remove('dragging')
-    document.querySelectorAll('.sb-item').forEach(el => el.classList.remove('drag-over'))
-  }
-  function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over') }
-  function onDragLeave(e) { e.currentTarget.classList.remove('drag-over') }
-  function onDrop(e, toIdx) {
-    e.preventDefault()
-    e.currentTarget.classList.remove('drag-over')
-    if (dragSrc.current !== null && dragSrc.current !== toIdx) {
-      const next = [...sbItems]
-      const [moved] = next.splice(dragSrc.current, 1)
-      next.splice(toIdx, 0, moved)
-      dragSrc.current = null
-      setSbItems(next)
-    }
-  }
 
   function togglePanel(name) {
     setActivePanel(p => p === name ? null : name)
   }
+
+  function onDragStart(e, idx) {
+    dragSrc.current = idx
+    e.dataTransfer.effectAllowed = 'move'
+    e.currentTarget.style.opacity = '.4'
+  }
+
+  function onDragEnd(e) {
+    e.currentTarget.style.opacity = '1'
+    setDragOverTo(null)
+  }
+
+  function onDragOver(e, to) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverTo(to)
+  }
+
+  function onDrop(e, toIdx) {
+    e.preventDefault()
+    setDragOverTo(null)
+    const from = dragSrc.current
+    if (from === null || from === toIdx) return
+    const next = [...items]
+    const [moved] = next.splice(from, 1)
+    next.splice(toIdx, 0, moved)
+    dragSrc.current = null
+    setItems(next)
+  }
+
+  const initials = username ? username.charAt(0).toUpperCase() : 'U'
 
   return (
     <aside className="sidebar" style={{ background: bgCol }}>
@@ -49,52 +54,62 @@ export default function SideBar({
       </div>
 
       <div className="sb-items">
-        {sbItems.map((item, idx) => {
-          const isActive = item.id === sbActif && curView === 'dash'
-          return (
-            <div
-              key={item.id}
-              className={`sb-item${isActive ? ' active' : ''}`}
-              style={isActive ? { borderRight: `3px solid ${accent}` } : {}}
-              draggable
-              title={item.label}
-              role="button"
-              tabIndex={0}
-              onClick={() => handleItemClick(item)}
-              onKeyDown={e => e.key === 'Enter' && handleItemClick(item)}
-              onDragStart={e => onDragStart(e, idx)}
-              onDragEnd={onDragEnd}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={e => onDrop(e, idx)}
-            >
-              <i className={`ti ${item.icon}`} style={{ color: isActive ? accent : '#6B7280' }} aria-hidden="true" />
-              <span className="sb-item-lbl" style={{ color: isActive ? accent : '#6B7280' }}>{item.label}</span>
-            </div>
-          )
-        })}
+        {items.map(({ to, icon, label }, idx) => (
+          <NavLink
+            key={to}
+            to={to}
+            draggable
+            className={({ isActive }) =>
+              `sb-item${isActive ? ' active' : ''}${dragOverTo === to ? ' drag-over' : ''}`
+            }
+            title={label}
+            style={{ textDecoration: 'none' }}
+            onMouseEnter={() => setHoveredTo(to)}
+            onMouseLeave={() => setHoveredTo(null)}
+            onDragStart={e => onDragStart(e, idx)}
+            onDragEnd={onDragEnd}
+            onDragOver={e => onDragOver(e, to)}
+            onDragLeave={() => setDragOverTo(null)}
+            onDrop={e => onDrop(e, idx)}
+          >
+            {({ isActive }) => (
+              <>
+                <div
+                  className="sb-icon-sq"
+                  style={{ background: isActive || hoveredTo === to ? '#534AB7' : 'transparent' }}
+                >
+                  <i className={`ti ${icon}`} aria-hidden="true" />
+                </div>
+                <span className="sb-item-lbl">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
       </div>
 
       <div className="sb-bottom">
         <div
           className={`sb-bot-btn${activePanel === 'perso' ? ' active' : ''}`}
-          role="button"
-          tabIndex={0}
+          role="button" tabIndex={0}
           onClick={() => togglePanel('perso')}
           onKeyDown={e => e.key === 'Enter' && togglePanel('perso')}
         >
-          <i className="ti ti-adjustments-horizontal" style={{ color: activePanel === 'perso' ? accent : '#6B7280' }} aria-hidden="true" />
-          <span style={{ color: activePanel === 'perso' ? accent : '#6B7280' }}>Perso</span>
+          <i className="ti ti-adjustments-horizontal" style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+          <span style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.4)' }}>Perso</span>
         </div>
         <div
           className={`sb-bot-btn${activePanel === 'settings' ? ' active' : ''}`}
-          role="button"
-          tabIndex={0}
+          role="button" tabIndex={0}
           onClick={() => togglePanel('settings')}
           onKeyDown={e => e.key === 'Enter' && togglePanel('settings')}
         >
-          <i className="ti ti-settings" style={{ color: activePanel === 'settings' ? accent : '#6B7280' }} aria-hidden="true" />
-          <span style={{ color: activePanel === 'settings' ? accent : '#6B7280' }}>Réglages</span>
+          <i className="ti ti-settings" style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
+          <span style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.4)' }}>Réglages</span>
+        </div>
+        <div className="sb-avatar">
+          <div className="sb-av-circle">
+            <span>{initials}</span>
+          </div>
         </div>
       </div>
     </aside>
