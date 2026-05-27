@@ -18,7 +18,6 @@ const ALL_SB_ITEMS = [
   { id: 'seances',  label: 'Séances',  icon: 'ti-calendar-plus',    to: '/seances'  },
   { id: 'clients',     label: 'Clients',        icon: 'ti-users',          to: '/clients'                        },
   { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
-  { id: 'bach-seance', label: 'Nouvelle séance',icon: 'ti-calendar-heart', to: '/fleurs-de-bach/nouvelle-seance' },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
   { id: 'factures', label: 'Factures', icon: 'ti-file',             to: '/factures' },
