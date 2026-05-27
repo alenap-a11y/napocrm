@@ -11,6 +11,7 @@ import Clients from './pages/Clients'
 import Agenda from './pages/Agenda'
 import Notes from './pages/Notes'
 import FicheClientBach from './components/FicheClientBach'
+import SimulateurFiscal from './components/SimulateurFiscal'
 import { supabase } from './lib/supabase'
 
 const ALL_SB_ITEMS = [
@@ -21,6 +22,7 @@ const ALL_SB_ITEMS = [
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
   { id: 'factures', label: 'Factures', icon: 'ti-file',             to: '/factures' },
+  { id: 'fiscal',   label: 'Fiscal',   icon: 'ti-calculator',       to: '/fiscal'   },
 ]
 
 const SB_STORAGE_KEY = 'napo_sb_items'
@@ -408,6 +410,7 @@ export default function AppShell({ user, onSignOut }) {
             <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
             <Route path="/fleurs-de-bach/nouvelle-seance" element={<FicheClientBach />} />
             <Route path="/factures" element={<SimplePage view="factures" />} />
+            <Route path="/fiscal"   element={<SimulateurFiscal />} />
             <Route path="/profil"   element={<ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />} />
             <Route path="/faq"      element={<SimplePage view="faq" />} />
             <Route path="/aide"     element={<SimplePage view="aide" />} />
