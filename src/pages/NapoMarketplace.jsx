@@ -299,7 +299,18 @@ const chipStyle = (label) => ({
 export default function NapoMarketplace() {
   const [activeTab, setActiveTab] = useState('Tous')
   const [activeExpert, setActiveExpert] = useState('juridique')
+  const [suggModal, setSuggModal] = useState(false)
+  const [suggText, setSuggText] = useState('')
   const navigate = useNavigate()
+
+  function sendSuggestion() {
+    if (!suggText.trim()) return
+    const subject = encodeURIComponent('Suggestion Napo Marketplace')
+    const body = encodeURIComponent(suggText.trim())
+    window.location.href = `mailto:alessandrelli.fr@gmail.com?subject=${subject}&body=${body}`
+    setSuggModal(false)
+    setSuggText('')
+  }
 
   const expert = EXPERTS.find(e => e.id === activeExpert)
 
@@ -498,10 +509,44 @@ export default function NapoMarketplace() {
           <div style={{ fontSize: 14, fontWeight: 600, color: '#0F1A2E', marginBottom: 3 }}>Une idée pour la Marketplace ?</div>
           <div style={{ fontSize: 12, color: '#185FA5' }}>Dites-nous ce qui vous ferait gagner du temps — nous construisons avec vos retours.</div>
         </div>
-        <button style={{ flexShrink: 0, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#185FA5', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <button onClick={() => setSuggModal(true)} style={{ flexShrink: 0, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#185FA5', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
           Faire une suggestion
         </button>
       </div>
+
+      {/* Modal suggestion */}
+      {suggModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
+          onClick={e => e.target === e.currentTarget && setSuggModal(false)}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 460, maxWidth: '95vw', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Faire une suggestion</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>Votre idée sera envoyée directement à l'équipe Napo.</div>
+              </div>
+              <button onClick={() => setSuggModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--color-text-secondary)', lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <textarea
+              autoFocus
+              value={suggText}
+              onChange={e => setSuggText(e.target.value)}
+              placeholder="Décrivez votre idée ou ce qui vous ferait gagner du temps…"
+              rows={5}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6 }}
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button onClick={() => setSuggModal(false)}
+                style={{ padding: '8px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 13, cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={sendSuggestion} disabled={!suggText.trim()}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: suggText.trim() ? '#185FA5' : 'var(--color-border-secondary)', color: suggText.trim() ? '#fff' : 'var(--color-text-secondary)', fontSize: 13, fontWeight: 600, cursor: suggText.trim() ? 'pointer' : 'default' }}>
+                <i className="ti ti-send" style={{ marginRight: 6 }} />Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
