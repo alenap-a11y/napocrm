@@ -26,7 +26,7 @@ const IA_ITEMS = [
     iconColor: '#A05A00',
     title: 'Générateur de documents',
     description: 'CGV, contrats de séance, formulaires de consentement, modèles de factures — générés et personnalisés par IA en 30 secondes.',
-    badge: 'Disponible',
+    badge: 'Bientôt',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '3,99 €/mois',
@@ -40,7 +40,7 @@ const IA_ITEMS = [
     iconColor: '#1565A8',
     title: 'Analyse client IA',
     description: 'L\'IA identifie les tendances dans vos séances, prédit les risques de désengagement et suggère des actions de suivi personnalisées.',
-    badge: 'Disponible',
+    badge: 'Bientôt',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '4,99 €/mois',
@@ -82,7 +82,7 @@ const IA_ITEMS = [
     iconColor: '#7A4500',
     title: 'Optimisation tarifaire',
     description: 'L\'IA analyse votre marché local, votre taux de remplissage et vos charges pour vous recommander une grille tarifaire optimale.',
-    badge: 'Disponible',
+    badge: 'Bientôt',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '2,99 €/mois',
@@ -629,7 +629,7 @@ function OutilCard({ outil }) {
           <i className={`ti ${outil.icon}`} style={{ fontSize: 20, color: outil.iconColor }} aria-hidden="true" />
         </div>
         <span style={{ fontSize: 10, fontWeight: 600, background: '#EEEDFE', color: '#534AB7', padding: '3px 8px', borderRadius: 20 }}>
-          Disponible
+          Bientôt
         </span>
       </div>
       <div>

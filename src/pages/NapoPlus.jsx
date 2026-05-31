@@ -46,7 +46,7 @@ const MODULES = [
       "Construisez des parcours multi-séances structurés, assignez-les à vos clients et suivez leur progression étape par étape.",
     price: "6,99 €/mois",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
   {
     id: "facturation",
@@ -61,7 +61,7 @@ const MODULES = [
       "Générez des factures PDF à votre image, gérez les paiements, les relances automatiques et exportez votre comptabilité.",
     price: "4,99 €/mois",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
   {
     id: "stats",
@@ -76,7 +76,7 @@ const MODULES = [
       "Visualisez votre activité avec des graphiques détaillés : revenus, fréquence des séances, fidélisation clients et tendances.",
     price: "3,99 €/mois",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
   {
     id: "fiscal",
@@ -107,7 +107,7 @@ const MODULES = [
       "Envoyez des rappels de séance par SMS ou email, réduisez les no-shows et automatisez vos messages post-séance.",
     price: "2,99 €/mois + SMS",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
   {
     id: "gcal",
@@ -122,7 +122,7 @@ const MODULES = [
       "Synchronisez vos séances avec Google Calendar en temps réel. Vos rendez-vous NapoCRM apparaissent automatiquement dans votre agenda.",
     price: "3,99 €/mois",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
   {
     id: "formulaires",
@@ -137,7 +137,7 @@ const MODULES = [
       "Envoyez des questionnaires pré-séance à vos clients, récupérez leurs réponses directement dans leur fiche et gagnez du temps.",
     price: "3,99 €/mois",
     status: "available",
-    cta: "Activer",
+    cta: "Bientôt disponible",
   },
 ];
 
@@ -145,7 +145,7 @@ const TABS = ["Tous", "Bien-être", "Gestion", "Automatisation"];
 
 const STATUS_STYLES = {
   active: { label: "Inclus", bg: "#E6F4EE", color: "#1A7A4A" },
-  available: { label: "Disponible", bg: "#EEEDFE", color: "#534AB7" },
+  available: { label: "Bientôt", bg: "#EEEDFE", color: "#534AB7" },
   soon: { label: "Bientôt", bg: "#F5F5F5", color: "#6B7280" },
 };
 
