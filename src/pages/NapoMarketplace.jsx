@@ -30,7 +30,7 @@ const IA_ITEMS = [
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '3,99 €/mois',
-    cta: 'Activer',
+    cta: 'Bientôt disponible',
     status: 'available',
   },
   {
@@ -44,7 +44,7 @@ const IA_ITEMS = [
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '4,99 €/mois',
-    cta: 'Activer',
+    cta: 'Bientôt disponible',
     status: 'available',
   },
   {
@@ -86,7 +86,7 @@ const IA_ITEMS = [
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '2,99 €/mois',
-    cta: 'Activer',
+    cta: 'Bientôt disponible',
     status: 'available',
   },
 ]
@@ -480,7 +480,7 @@ export default function NapoMarketplace() {
                       ))}
                     </div>
                     <button style={{ marginTop: 4, padding: '7px 0', fontSize: 12, cursor: 'pointer', borderRadius: 8, width: '100%', border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)' }}>
-                      {plan.key === 'mensuel' ? 'Contacter' : 'Activer'}
+                      {plan.key === 'mensuel' ? 'Contacter' : 'Bientôt disponible'}
                     </button>
                   </div>
                 ))}
@@ -639,7 +639,7 @@ function OutilCard({ outil }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{outil.price}</div>
         <button style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#534AB7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          Activer
+          Bientôt disponible
         </button>
       </div>
     </div>
