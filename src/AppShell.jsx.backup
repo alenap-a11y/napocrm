@@ -1,24 +1,24 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
+import Dashboard from './components/Dashboard'
+import ProfilPage from './components/ProfilPage'
+import SimplePage from './components/SimplePage'
+import Seances from './pages/Seances'
+import NouvelleSeance from './pages/NouvelleSeance'
+import Clients from './pages/Clients'
+import Agenda from './pages/Agenda'
+import Notes from './pages/Notes'
+import FicheClientBach from './components/FicheClientBach'
+import SimulateurFiscal from './components/SimulateurFiscal'
+import NapoPlus from './pages/NapoPlus'
+import Factures from './pages/Factures'
+import FAQ from './pages/FAQ'
+import Aide from './pages/Aide'
+import NewsNapo from './pages/NewsNapo'
+import NapoMarketplace from './pages/NapoMarketplace'
 import { supabase } from './lib/supabase'
-
-const Dashboard = lazy(() => import('./components/Dashboard'))
-const ProfilPage = lazy(() => import('./components/ProfilPage'))
-const Seances = lazy(() => import('./pages/Seances'))
-const NouvelleSeance = lazy(() => import('./pages/NouvelleSeance'))
-const Clients = lazy(() => import('./pages/Clients'))
-const Agenda = lazy(() => import('./pages/Agenda'))
-const Notes = lazy(() => import('./pages/Notes'))
-const FicheClientBach = lazy(() => import('./components/FicheClientBach'))
-const SimulateurFiscal = lazy(() => import('./components/SimulateurFiscal'))
-const NapoPlus = lazy(() => import('./pages/NapoPlus'))
-const Factures = lazy(() => import('./pages/Factures'))
-const FAQ = lazy(() => import('./pages/FAQ'))
-const Aide = lazy(() => import('./pages/Aide'))
-const NewsNapo = lazy(() => import('./pages/NewsNapo'))
-const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
 
 const ALL_SB_ITEMS = [
   { id: 'board',    label: 'Board',    icon: 'ti-layout-dashboard', to: '/board'    },
@@ -408,27 +408,25 @@ export default function AppShell({ user, onSignOut }) {
         </div>
 
         <main className="main">
-          <Suspense fallback={null}>
-            <Routes>
-              <Route path="/"         element={<Navigate to="/board" replace />} />
-              <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} onNavigate={routerNavigate} />} />
-              <Route path="/seances/nouvelle" element={<NouvelleSeance />} />
-              <Route path="/seances"          element={<Seances />} />
-              <Route path="/clients"  element={<Clients />} />
-              <Route path="/agenda"   element={<Agenda />} />
-              <Route path="/notes"    element={<Notes />} />
-              <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
-              <Route path="/fleurs-de-bach/nouvelle-seance" element={<FicheClientBach />} />
-              <Route path="/factures" element={<Factures />} />
-              <Route path="/fiscal"    element={<SimulateurFiscal />} />
-              <Route path="/napoplus"    element={<NapoPlus />} />
-              <Route path="/marketplace" element={<NapoMarketplace />} />
-              <Route path="/profil"   element={<ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />} />
-              <Route path="/faq"      element={<FAQ />} />
-              <Route path="/aide"     element={<Aide />} />
-              <Route path="/newsnapo" element={<NewsNapo />} />
-            </Routes>
-          </Suspense>
+          <Routes>
+            <Route path="/"         element={<Navigate to="/board" replace />} />
+            <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} onNavigate={routerNavigate} />} />
+            <Route path="/seances/nouvelle" element={<NouvelleSeance />} />
+            <Route path="/seances"          element={<Seances />} />
+            <Route path="/clients"  element={<Clients />} />
+            <Route path="/agenda"   element={<Agenda />} />
+            <Route path="/notes"    element={<Notes />} />
+            <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
+            <Route path="/fleurs-de-bach/nouvelle-seance" element={<FicheClientBach />} />
+            <Route path="/factures" element={<Factures />} />
+            <Route path="/fiscal"    element={<SimulateurFiscal />} />
+            <Route path="/napoplus"    element={<NapoPlus />} />
+            <Route path="/marketplace" element={<NapoMarketplace />} />
+            <Route path="/profil"   element={<ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />} />
+            <Route path="/faq"      element={<FAQ />} />
+            <Route path="/aide"     element={<Aide />} />
+            <Route path="/newsnapo" element={<NewsNapo />} />
+          </Routes>
         </main>
       </div>
     </div>

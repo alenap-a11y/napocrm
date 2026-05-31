@@ -24,9 +24,9 @@ function statutStyle(st) {
 }
 
 function exportCSV(clients) {
-  const header = 'nom,prenom,genre,tel,email'
+  const header = 'nom,prenom,genre,telephone,email'
   const rows = clients.map(c =>
-    ['nom', 'prenom', 'genre', 'tel', 'email']
+    ['nom', 'prenom', 'genre', 'telephone', 'email']
       .map(k => `"${(c[k] || '').replace(/"/g, '""')}"`)
       .join(',')
   )
@@ -104,7 +104,7 @@ export default function FicheClients({ userId }) {
     setFNom(client.nom || '')
     setFPrenom(client.prenom || '')
     setFGenre(client.genre || 'Femme')
-    setFTel(client.tel || '')
+    setFTel(client.telephone || '')
     setFEmail(client.email || '')
     setFNotes(client.notes || '')
     setConfirmDel(false)
@@ -124,7 +124,7 @@ export default function FicheClients({ userId }) {
   /* ── Sauvegarde ── */
   async function saveDetail() {
     setSaving(true)
-    const payload = { user_id: userId, nom: fNom.trim(), prenom: fPrenom.trim(), genre: fGenre, tel: fTel.trim(), email: fEmail.trim(), notes: fNotes.trim() }
+    const payload = { user_id: userId, nom: fNom.trim(), prenom: fPrenom.trim(), genre: fGenre, telephone: fTel.trim(), email: fEmail.trim(), notes: fNotes.trim() }
 
     if (detail.isNew) {
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
@@ -163,7 +163,7 @@ export default function FicheClients({ userId }) {
       nom:       r.nom       || r['Nom']       || '',
       prenom:    r.prenom    || r['Prénom']     || r['Prenom']    || '',
       genre:     r.genre     || r['Genre']      || 'Autre',
-      tel: r.tel || r.telephone || r['Téléphone'] || r['Telephone'] || '',
+      telephone: r.telephone || r['Téléphone']  || r['Telephone'] || '',
       email:     r.email     || r['Email']      || '',
     }))
     if (payload.length) {
@@ -259,7 +259,7 @@ export default function FicheClients({ userId }) {
                   <Cell bold>{c.nom}</Cell>
                   <Cell>{c.prenom}</Cell>
                   <Cell small>{c.genre}</Cell>
-                  <Cell small>{c.tel}</Cell>
+                  <Cell small>{c.telephone}</Cell>
                   <Cell small>{c.email}</Cell>
                   <div style={{ fontSize: 12, color: '#1a1208', textAlign: 'center', fontWeight: 600 }}>{nb}</div>
                   <span style={{ ...ss, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>

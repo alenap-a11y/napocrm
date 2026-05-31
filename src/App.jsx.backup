@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import AppShell from './AppShell'
-import LoginPage from './pages/LoginPage'
+import LoginPage from './components/LoginPage'
 import ResetPassword from './pages/ResetPassword'
 import { supabase } from './lib/supabase'
 

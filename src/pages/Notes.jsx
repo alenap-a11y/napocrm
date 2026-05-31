@@ -1,383 +1,533 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-function formatDate(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('fr-FR', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
+/* ─── Mock data ────────────────────────────────────────────────────────── */
+
+const MOCK = [
+  { id: 1,  client: 'Sophie Legrand',  categorie: 'Séance',    date: '2026-05-27', titre: 'Séance sophrologie – retour positif', contenu: 'Sophie a bien progressé sur la gestion du stress. Les exercices de respiration sont désormais automatiques. Elle signale une amélioration notable du sommeil depuis 2 semaines. Prochaine séance dans 3 semaines.' },
+  { id: 2,  client: 'Pierre Dumont',   categorie: 'Suivi',     date: '2026-05-26', titre: 'Appel téléphonique de suivi', contenu: 'Pierre a appelé pour signaler une rechute de stress liée à une restructuration dans son entreprise. Nous avons convenu d\'un rendez-vous en urgence la semaine prochaine. Penser à retravailler les outils anti-anxiété.' },
+  { id: 3,  client: 'Marie Caron',     categorie: 'Bilan',     date: '2026-05-24', titre: 'Bilan naturopathie mois 2', contenu: 'Les résultats sanguins confirment une amélioration du taux de magnésium. Fatigue toujours présente mais moins intense. Continuer le protocole 1 mois. Ajouter Vitamine D3 5000 UI.' },
+  { id: 4,  client: 'Lucie Bernard',   categorie: 'Fleurs de Bach', date: '2026-05-22', titre: 'Formule Bach renouvellement', contenu: 'Formule renouvelée : Star of Bethlehem, Walnut, Olive. Score bien-être passé de 3/10 à 6/10 en 21 jours. Excellent résultat. Continuer avec formule allégée.' },
+  { id: 5,  client: '',               categorie: 'Perso',     date: '2026-05-20', titre: 'Idées formations 2026', contenu: 'Formations à prévoir :\n- Hypnose Eriksonienne (octobre)\n- Cohérence cardiaque avancée (septembre)\n- Supervision groupale mensuelle\nBudget estimé : 2 400 €' },
+  { id: 6,  client: 'Paul Renard',     categorie: 'Séance',    date: '2026-05-18', titre: 'Séance énergie lombaires', contenu: 'Libération du blocage L4-L5. Paul signale 70% de diminution de la douleur après la séance. Exercices posturaux donnés à faire quotidiennement. Revoir dans 2 semaines.' },
+  { id: 7,  client: 'Anna Leblanc',    categorie: 'Suivi',     date: '2026-05-15', titre: 'Protocole anxiété – J+14', contenu: 'Anna pratique les exercices matin et soir comme convenu. Les crises de panique sont passées de 4/semaine à 1/semaine. Progression encourageante. Maintenir le rythme actuel.' },
+  { id: 8,  client: '',               categorie: 'Perso',     date: '2026-05-10', titre: 'Organisation cabinet – mai', contenu: 'Tâches en cours :\n✓ Renouveler assurance RC Pro\n✓ Commander flacons Bach\n→ Mettre à jour CGV\n→ Créer modèle de consentement RGPD' },
+]
+
+const CATEGORIES = ['Toutes', 'Séance', 'Suivi', 'Bilan', 'Fleurs de Bach', 'Perso', 'Autre']
+
+const CAT_COLOR = {
+  'Séance':        { bg: '#E6F1FB', color: '#185FA5' },
+  'Suivi':         { bg: '#EEEDFE', color: '#534AB7' },
+  'Bilan':         { bg: '#E1F5EE', color: '#0F6E56' },
+  'Fleurs de Bach':{ bg: '#F0EBF8', color: '#7F3FBF' },
+  'Perso':         { bg: '#FAEEDA', color: '#854F0B' },
+  'Autre':         { bg: '#F5F5F5', color: '#6B7280' },
 }
 
-function formatDateShort(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+/* ─── CSV helpers ─────────────────────────────────────────────────────── */
+
+function toCSV(rows) {
+  const header = 'Titre,Client,Catégorie,Date,Contenu'
+  const lines  = rows.map(r =>
+    `"${(r.titre||'').replace(/"/g,"'")}","${r.client||''}","${r.categorie}","${r.date}","${(r.contenu||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
+  )
+  return [header, ...lines].join('\n')
 }
 
-function clientFullName(c) {
-  if (!c) return '—'
-  return [c.prenom, c.nom].filter(Boolean).join(' ') || '—'
+function downloadCSV(content, filename) {
+  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a'); a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
 }
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').slice(1)
+  return lines.map((line, i) => {
+    const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g) || []
+    const c    = cols.map(x => x.replace(/^"|"$/g, '').trim())
+    return { id: Date.now() + i, titre: c[0]||'', client: c[1]||'', categorie: c[2]||'Autre', date: c[3]||new Date().toISOString().slice(0,10), contenu: c[4]||'' }
+  }).filter(r => r.titre || r.contenu)
+}
+
+/* ─── Utilitaires ─────────────────────────────────────────────────────── */
+
+const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+function fmtDate(d) {
+  if (!d) return '—'
+  const [y, m, j] = d.split('-')
+  return `${j} ${MOIS[parseInt(m)-1]} ${y}`
+}
+
+const isoToday = new Date().toISOString().slice(0, 10)
+
+/* ─── Composant principal ─────────────────────────────────────────────── */
 
 export default function Notes() {
-  const navigate = useNavigate()
+  const importRef = useRef()
 
-  /* ── Data ── */
-  const [notes,    setNotes]    = useState([])
-  const [clients,  setClients]  = useState([])
-  const [seances,  setSeances]  = useState([]) // filtered by selected client in compose form
+  const [notes,      setNotes]      = useState(MOCK)
+  const [activeTab,  setActiveTab]  = useState('liste')
+  const [search,     setSearch]     = useState('')
+  const [filterCat,  setFilterCat]  = useState('Toutes')
+  const [selected,   setSelected]   = useState(null)
+  const [editing,    setEditing]    = useState(false)
+  const [editForm,   setEditForm]   = useState(null)
+  const [saving,     setSaving]     = useState(false)
+  const [saveMsg,    setSaveMsg]    = useState('')
+  const [importMsg,  setImportMsg]  = useState('')
 
-  /* ── UI state ── */
-  const [loading,    setLoading]    = useState(true)
-  const [err,        setErr]        = useState(null)
-  const [selectedId, setSelectedId] = useState(null)
-  const [composing,  setComposing]  = useState(false)
+  /* Formulaire nouvelle note */
+  const EMPTY = { titre: '', client: '', categorie: 'Séance', date: isoToday, contenu: '' }
+  const [form,    setForm]    = useState(EMPTY)
+  const [formMsg, setFormMsg] = useState('')
+  const f = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
 
-  /* ── Filters (list) ── */
-  const [filterClient, setFilterClient] = useState('')
+  /* Filtres */
+  const filtered = notes.filter(n => {
+    const q = search.toLowerCase()
+    const matchQ   = !q || (n.titre||'').toLowerCase().includes(q) || (n.contenu||'').toLowerCase().includes(q) || (n.client||'').toLowerCase().includes(q)
+    const matchCat = filterCat === 'Toutes' || n.categorie === filterCat
+    return matchQ && matchCat
+  })
 
-  /* ── Compose form ── */
-  const [draftText,     setDraftText]     = useState('')
-  const [draftClientId, setDraftClientId] = useState('')
-  const [draftSeanceId, setDraftSeanceId] = useState('')
-  const [saving,        setSaving]        = useState(false)
-  const [saveErr,       setSaveErr]       = useState(null)
+  /* Stats */
+  const ceMois = notes.filter(n => (n.date||'').startsWith(isoToday.slice(0,7))).length
 
-  /* ── Load notes ── */
-  const loadNotes = useCallback(async () => {
-    setLoading(true)
-    setErr(null)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setErr('Non connecté'); return }
-
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*, clients(id, nom, prenom), seances(id, date, heure, type)')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      setNotes(data ?? [])
-    } catch (e) {
-      setErr(e.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  /* ── Load clients (for filters + compose dropdown) ── */
-  const loadClients = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('clients')
-        .select('id, nom, prenom')
-        .eq('user_id', user.id)
-        .order('nom')
-      setClients(data ?? [])
-    } catch { /* silent */ }
-  }, [])
-
-  useEffect(() => {
-    loadNotes()
-    loadClients()
-  }, [loadNotes, loadClients])
-
-  /* ── Load séances when compose client changes ── */
-  useEffect(() => {
-    if (!draftClientId) { setSeances([]); setDraftSeanceId(''); return }
-    ;(async () => {
-      const { data } = await supabase
-        .from('seances')
-        .select('id, date, heure, type')
-        .eq('client_id', draftClientId)
-        .order('date', { ascending: false })
-      setSeances(data ?? [])
-      setDraftSeanceId('')
-    })()
-  }, [draftClientId])
-
-  /* ── Derived ── */
-  const filtered = filterClient
-    ? notes.filter(n => n.client_id === filterClient)
-    : notes
-
-  const selected = notes.find(n => n.id === selectedId) ?? null
-
-  /* ── Handlers ── */
-  function openCompose() {
-    setSelectedId(null)
-    setComposing(true)
-    setDraftText('')
-    setDraftClientId('')
-    setDraftSeanceId('')
-    setSaveErr(null)
-  }
-
-  function selectNote(id) {
-    setSelectedId(id)
-    setComposing(false)
-  }
-
-  async function saveNote() {
-    if (!draftText.trim() || !draftClientId) return
-    setSaving(true)
-    setSaveErr(null)
+  /* Sauvegarde Supabase */
+  async function handleSave() {
+    setSaving(true); setSaveMsg('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
-      const { error } = await supabase.from('notes').insert({
-        user_id:   user.id,
-        client_id: draftClientId || null,
-        seance_id: draftSeanceId || null,
-        contenu:   draftText.trim(),
-      })
+      const rows = notes.map(n => ({ ...n, user_id: user.id }))
+      const { error } = await supabase.from('notes').upsert(rows, { onConflict: 'id' })
       if (error) throw error
-      setComposing(false)
-      setDraftText('')
-      setDraftClientId('')
-      setDraftSeanceId('')
-      await loadNotes()
+      setSaveMsg('✓ Sauvegarde effectuée')
     } catch (e) {
-      setSaveErr(e.message)
-    } finally {
-      setSaving(false)
+      setSaveMsg(`✗ Erreur : ${e.message}`)
     }
+    setSaving(false)
+    setTimeout(() => setSaveMsg(''), 3000)
   }
 
-  async function deleteNote(id) {
-    await supabase.from('notes').delete().eq('id', id)
-    setSelectedId(null)
-    setComposing(false)
-    await loadNotes()
+  /* Import CSV */
+  function handleImport(e) {
+    const file = e.target.files[0]; if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const imported = parseCSV(ev.target.result)
+      if (!imported.length) { setImportMsg('Fichier invalide.'); return }
+      setNotes(prev => [...imported, ...prev])
+      setImportMsg(`✓ ${imported.length} note(s) importée(s).`)
+      setTimeout(() => setImportMsg(''), 3000)
+    }
+    reader.readAsText(file, 'utf-8')
+    e.target.value = ''
   }
 
-  /* ── Styles ── */
-  const panelBg = '#f9fafb'
+  /* Édition d'une note */
+  function startEdit(note) {
+    setEditForm({ titre: note.titre || '', client: note.client || '', categorie: note.categorie || 'Autre', date: note.date || isoToday, contenu: note.contenu || '' })
+    setEditing(true)
+  }
+
+  function saveEdit() {
+    if (!editForm.titre.trim() && !editForm.contenu.trim()) return
+    setNotes(prev => prev.map(n => n.id === selected.id ? { ...n, ...editForm } : n))
+    const updated = { ...selected, ...editForm }
+    setSelected(updated)
+    setEditing(false)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    setEditForm(null)
+  }
+
+  /* Nouvelle note */
+  function handleAdd() {
+    if (!form.titre.trim() && !form.contenu.trim()) { setFormMsg('Titre ou contenu requis.'); return }
+    setNotes(prev => [{ ...form, id: Date.now() }, ...prev])
+    setForm(EMPTY)
+    setFormMsg('✓ Note ajoutée.')
+    setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)
+  }
+
+  const TABS = [
+    { id: 'liste',   label: 'Mes notes',      icon: 'ti-notes' },
+    { id: 'nouveau', label: 'Nouvelle note',   icon: 'ti-plus' },
+    { id: 'export',  label: 'Import / Export', icon: 'ti-arrows-transfer-down' },
+  ]
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: 'inherit' }}>
+    <div style={{ padding: '1.6rem 2rem', fontFamily: 'inherit' }}>
 
-      {/* ── Panneau gauche — liste ── */}
-      <div style={{ width: 272, flexShrink: 0, borderRight: '0.5px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: panelBg }}>
-
-        {/* Header */}
-        <div style={{ padding: '16px 16px 10px', borderBottom: '0.5px solid #e5e7eb' }}>
-          <h1 style={{ fontSize: 16, fontWeight: 600, color: '#111827', margin: 0 }}>Notes</h1>
-          <p style={{ fontSize: 11, color: '#6b7280', margin: '3px 0 0' }}>
-            {filtered.length} note{filtered.length !== 1 ? 's' : ''}
-          </p>
+      {/* ── En-tête ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <i className="ti ti-notes" style={{ fontSize: 24, color: 'var(--color-accent)' }} />
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)' }}>Notes</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{notes.length} notes enregistrées</div>
+          </div>
         </div>
-
-        {/* Actions + filtre */}
-        <div style={{ padding: '10px 12px 8px', borderBottom: '0.5px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <button
-            onClick={openCompose}
-            style={{
-              padding: '7px 12px', borderRadius: 4,
-              border: '0.5px solid #1a2744',
-              background: composing && !selectedId ? '#1a2744' : '#fff',
-              color: composing && !selectedId ? '#c9a84c' : '#1a2744',
-              fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <i className="ti ti-plus" style={{ fontSize: 14 }} />
-            Nouvelle note
-          </button>
-
-          {clients.length > 0 && (
-            <select
-              value={filterClient}
-              onChange={e => setFilterClient(e.target.value)}
-              style={{
-                width: '100%', padding: '5px 8px', borderRadius: 4,
-                border: '0.5px solid #e5e7eb', background: '#fff',
-                fontSize: 11, color: '#374151', cursor: 'pointer', outline: 'none',
-              }}
-            >
-              <option value=''>Tous les clients</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{clientFullName(c)}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Liste */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#9ca3af' }}>Chargement…</div>
-            </div>
-          ) : err ? (
-            <div style={{ padding: '20px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: '#ef4444' }}>{err}</div>
-              <button onClick={loadNotes} style={{ marginTop: 8, fontSize: 11, color: '#1a2744', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Réessayer</button>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-              <i className="ti ti-notebook-off" style={{ fontSize: 28, color: '#d1d5db', display: 'block', marginBottom: 8 }} aria-hidden="true" />
-              <div style={{ fontSize: 12, color: '#9ca3af' }}>Aucune note</div>
-            </div>
-          ) : filtered.map(n => {
-            const active = selectedId === n.id
-            const preview = (n.contenu ?? '').split('\n')[0].slice(0, 60)
-            return (
-              <div
-                key={n.id}
-                onClick={() => selectNote(n.id)}
-                style={{
-                  padding: '10px 14px',
-                  borderBottom: '0.5px solid #f3f4f6',
-                  cursor: 'pointer',
-                  background: active ? '#e8f0fe' : 'transparent',
-                  borderLeft: `3px solid ${active ? '#1a2744' : 'transparent'}`,
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 500, color: '#111827', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {preview || '(sans contenu)'}
-                </div>
-                <div style={{ fontSize: 10, color: '#9ca3af' }}>
-                  {clientFullName(n.clients)} · {formatDate(n.created_at)}
-                </div>
-                {n.seances && (
-                  <div style={{ fontSize: 10, color: '#6b7280', marginTop: 1 }}>
-                    Séance {n.seances.type} — {formatDateShort(n.seances.date)}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input ref={importRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
+          <Btn icon="ti-upload"        label="Importer"      onClick={() => importRef.current.click()} secondary />
+          <Btn icon="ti-download"      label="Exporter"      onClick={() => downloadCSV(toCSV(notes), 'notes-napocrm.csv')} secondary />
+          <Btn icon="ti-device-floppy" label={saving ? 'Sauvegarde…' : 'Sauvegarder'} onClick={handleSave} secondary />
+          <Btn icon="ti-plus"          label="Nouvelle note" onClick={() => setActiveTab('nouveau')} />
         </div>
       </div>
 
-      {/* ── Panneau droit ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Messages flash */}
+      {(importMsg || saveMsg) && (
+        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, background: (importMsg||saveMsg).startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: (importMsg||saveMsg).startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
+          {importMsg || saveMsg}
+        </div>
+      )}
 
-        {composing ? (
-          /* Compositeur nouvelle note */
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px 12px', borderBottom: '0.5px solid #e5e7eb', flexShrink: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>Nouvelle note</span>
-              <button
-                onClick={saveNote}
-                disabled={saving || !draftText.trim() || !draftClientId}
-                style={{
-                  padding: '6px 16px', borderRadius: 4, border: 'none',
-                  background: draftText.trim() && draftClientId ? '#1a2744' : '#e5e7eb',
-                  color: draftText.trim() && draftClientId ? '#c9a84c' : '#9ca3af',
-                  fontSize: 12, fontWeight: 700,
-                  cursor: draftText.trim() && draftClientId ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  transition: 'background .15s',
-                }}
-              >
-                <i className="ti ti-device-floppy" style={{ fontSize: 14 }} />
-                {saving ? 'Sauvegarde…' : 'Sauvegarder'}
-              </button>
-            </div>
+      {/* ── Stats ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
+        <StatCard icon="ti-notes"        iconBg="#E6F1FB" iconColor="#185FA5" label="Total notes"    value={notes.length} />
+        <StatCard icon="ti-calendar"     iconBg="#EEEDFE" iconColor="#534AB7" label="Ce mois"        value={ceMois} />
+        <StatCard icon="ti-user"         iconBg="#E1F5EE" iconColor="#0F6E56" label="Avec client"    value={notes.filter(n => n.client).length} />
+        <StatCard icon="ti-bookmark"     iconBg="#FAEEDA" iconColor="#854F0B" label="Perso"          value={notes.filter(n => n.categorie === 'Perso').length} />
+      </div>
 
-            {/* Selects client + séance */}
-            <div style={{ padding: '14px 24px 0', display: 'flex', gap: 12, flexShrink: 0 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 10, color: '#6b7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Client *</label>
-                <select
-                  value={draftClientId}
-                  onChange={e => setDraftClientId(e.target.value)}
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: 4, border: '0.5px solid #d1d5db', fontSize: 12, color: '#111827', outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value=''>— Sélectionner —</option>
-                  {clients.map(c => (
-                    <option key={c.id} value={c.id}>{clientFullName(c)}</option>
-                  ))}
-                </select>
+      {/* ── Tabs ── */}
+      <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 16 }}>
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
+            fontWeight: activeTab === tab.id ? 600 : 400,
+            color: activeTab === tab.id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+            borderBottom: activeTab === tab.id ? '2px solid var(--color-accent)' : '2px solid transparent',
+            marginBottom: -1,
+          }}>
+            <i className={`ti ${tab.icon}`} style={{ fontSize: 14 }} />{tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ═══════════ LISTE NOTES ═══════════ */}
+      {activeTab === 'liste' && (
+        <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 340px)', minHeight: 400 }}>
+
+          {/* Panneau gauche — liste */}
+          <div style={{ width: 300, flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--color-background-secondary)', borderRadius: 12, border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden' }}>
+
+            {/* Filtres */}
+            <div style={{ padding: '12px 12px 10px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ position: 'relative' }}>
+                <i className="ti ti-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--color-text-secondary)', pointerEvents: 'none' }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
+                  style={{ width: '100%', padding: '6px 8px 6px 28px', borderRadius: 7, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, boxSizing: 'border-box' }} />
               </div>
-
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 10, color: '#6b7280', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Séance associée</label>
-                <select
-                  value={draftSeanceId}
-                  onChange={e => setDraftSeanceId(e.target.value)}
-                  disabled={!draftClientId || seances.length === 0}
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: 4, border: '0.5px solid #d1d5db', fontSize: 12, color: '#111827', outline: 'none', cursor: draftClientId ? 'pointer' : 'default', opacity: draftClientId ? 1 : 0.5 }}
-                >
-                  <option value=''>— Aucune —</option>
-                  {seances.map(s => (
-                    <option key={s.id} value={s.id}>{s.type} — {formatDateShort(s.date)}{s.heure ? ` ${s.heure}` : ''}</option>
-                  ))}
-                </select>
-              </div>
+              <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+                style={{ width: '100%', padding: '5px 8px', borderRadius: 7, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, cursor: 'pointer' }}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
 
-            {saveErr && (
-              <div style={{ margin: '8px 24px 0', padding: '6px 10px', borderRadius: 4, background: '#fef2f2', border: '0.5px solid #fca5a5', fontSize: 11, color: '#b91c1c' }}>{saveErr}</div>
-            )}
-
-            <textarea
-              value={draftText}
-              onChange={e => setDraftText(e.target.value)}
-              placeholder="Écrivez votre note ici… (Ctrl+Entrée pour sauvegarder)"
-              onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveNote() }}
-              style={{
-                flex: 1, resize: 'none', border: 'none', outline: 'none',
-                padding: '16px 24px',
-                fontSize: 13, color: '#111827', lineHeight: 1.8,
-                fontFamily: 'inherit', background: '#fff',
-              }}
-              autoFocus
-            />
-            <div style={{ padding: '4px 24px 10px', fontSize: 10, color: '#9ca3af', textAlign: 'right', flexShrink: 0 }}>
-              Ctrl+Entrée pour sauvegarder · Client requis
-            </div>
-          </>
-
-        ) : selected ? (
-          /* Vue note existante */
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px 12px', borderBottom: '0.5px solid #e5e7eb', flexShrink: 0 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{clientFullName(selected.clients)}</div>
-                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{formatDate(selected.created_at)}</div>
-                {selected.seances && (
-                  <button
-                    onClick={() => navigate(`/seances/${selected.seance_id}`)}
-                    style={{ marginTop: 4, fontSize: 10, color: '#1a2744', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 4 }}
+            {/* Liste */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {filtered.length === 0 ? (
+                <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                  <i className="ti ti-notebook-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />Aucune note
+                </div>
+              ) : filtered.map((n, idx) => {
+                const cat = CAT_COLOR[n.categorie] || CAT_COLOR['Autre']
+                const isActive = selected?.id === n.id
+                return (
+                  <div key={n.id}
+                    style={{ padding: '11px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer', borderLeft: `3px solid ${isActive ? 'var(--color-accent)' : 'transparent'}`, background: isActive ? 'var(--color-background-primary)' : 'transparent', transition: 'background .1s' }}
+                    onClick={() => { setSelected(n); setEditing(false); setEditForm(null) }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-background-primary)' }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
                   >
-                    <i className="ti ti-calendar" style={{ fontSize: 11 }} />
-                    Séance {selected.seances.type} — {formatDateShort(selected.seances.date)}
-                  </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3, gap: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {n.titre || n.contenu.split('\n')[0].slice(0, 40) || '(sans titre)'}
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 600, background: cat.bg, color: cat.color, padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{n.categorie}</span>
+                    </div>
+                    {n.client && <div style={{ fontSize: 11, color: 'var(--color-accent)', marginBottom: 2 }}>{n.client}</div>}
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {n.contenu.replace(/\n/g, ' ').slice(0, 55)}…
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{fmtDate(n.date)}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Panneau droit — détail */}
+          <div style={{ flex: 1, background: 'var(--color-background-secondary)', borderRadius: 12, border: '0.5px solid var(--color-border-tertiary)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {selected ? (
+              <>
+                {/* ── Header détail ── */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
+                  <div style={{ flex: 1 }}>
+                    {editing ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <input value={editForm.titre} onChange={e => setEditForm(f => ({ ...f, titre: e.target.value }))}
+                          placeholder="Titre"
+                          style={{ fontSize: 15, fontWeight: 600, width: '100%', padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }} />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input value={editForm.client} onChange={e => setEditForm(f => ({ ...f, client: e.target.value }))}
+                            placeholder="Client"
+                            style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
+                          <select value={editForm.categorie} onChange={e => setEditForm(f => ({ ...f, categorie: e.target.value }))}
+                            style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, cursor: 'pointer' }}>
+                            {CATEGORIES.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                          <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                            style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 6 }}>{selected.titre || '(sans titre)'}</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {(() => { const cat = CAT_COLOR[selected.categorie] || CAT_COLOR['Autre']; return (
+                            <span style={{ fontSize: 11, fontWeight: 600, background: cat.bg, color: cat.color, padding: '2px 8px', borderRadius: 20 }}>{selected.categorie}</span>
+                          )})()}
+                          {selected.client && <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 500 }}>{selected.client}</span>}
+                          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(selected.date)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                    {editing ? (
+                      <>
+                        <button onClick={cancelEdit}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>
+                          Annuler
+                        </button>
+                        <button onClick={saveEdit}
+                          style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                          <i className="ti ti-check" style={{ marginRight: 4 }} />Sauvegarder
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => startEdit(selected)}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <i className="ti ti-pencil" style={{ fontSize: 13 }} />Modifier
+                        </button>
+                        <button onClick={() => downloadCSV(toCSV([selected]), `note-${selected.id}.csv`)}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
+                          <i className="ti ti-download" />
+                        </button>
+                        <button onClick={() => { setNotes(prev => prev.filter(n => n.id !== selected.id)); setSelected(null) }}
+                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 12 }}>
+                          <i className="ti ti-trash" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Corps de la note ── */}
+                {editing ? (
+                  <textarea value={editForm.contenu} onChange={e => setEditForm(f => ({ ...f, contenu: e.target.value }))}
+                    onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveEdit() }}
+                    placeholder="Contenu de la note…"
+                    style={{ flex: 1, padding: '20px 22px', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, fontFamily: 'inherit', border: 'none', outline: 'none', resize: 'none', background: 'var(--color-background-primary)' }}
+                    autoFocus
+                  />
+                ) : (
+                  <div style={{ flex: 1, padding: '20px 22px', overflowY: 'auto', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
+                    {selected.contenu}
+                  </div>
                 )}
+
+                {editing && (
+                  <div style={{ padding: '4px 22px 10px', fontSize: 10, color: 'var(--color-text-secondary)', textAlign: 'right', flexShrink: 0 }}>
+                    Ctrl+Entrée pour sauvegarder
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--color-text-secondary)' }}>
+                <i className="ti ti-notebook" style={{ fontSize: 40, color: 'var(--color-border-secondary)' }} />
+                <div style={{ fontSize: 14, fontWeight: 500 }}>Sélectionnez une note</div>
+                <div style={{ fontSize: 12 }}>ou créez-en une nouvelle</div>
               </div>
-              <button
-                onClick={() => deleteNote(selected.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 11px', borderRadius: 4,
-                  border: '0.5px solid #fca5a5', background: '#fef2f2',
-                  color: '#b91c1c', fontSize: 11, cursor: 'pointer',
-                }}
-              >
-                <i className="ti ti-trash" style={{ fontSize: 13 }} />
-                Supprimer
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════ NOUVELLE NOTE ═══════════ */}
+      {activeTab === 'nouveau' && (
+        <div style={{ maxWidth: 660 }}>
+          {formMsg && (
+            <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: formMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: formMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
+              {formMsg}
+            </div>
+          )}
+          <div style={{ background: 'var(--color-background-secondary)', borderRadius: 14, border: '0.5px solid var(--color-border-tertiary)', padding: '28px' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 22 }}>Nouvelle note</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <Field label="Titre">
+                <input value={form.titre} onChange={f('titre')} placeholder="Titre de la note" style={inp} />
+              </Field>
+              <Field label="Catégorie">
+                <select value={form.categorie} onChange={f('categorie')} style={inp}>
+                  {CATEGORIES.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
+              <Field label="Client (optionnel)">
+                <input value={form.client} onChange={f('client')} placeholder="Nom du client" style={inp} />
+              </Field>
+              <Field label="Date">
+                <input type="date" value={form.date} onChange={f('date')} style={inp} />
+              </Field>
+            </div>
+
+            <Field label="Contenu">
+              <textarea value={form.contenu} onChange={f('contenu')}
+                placeholder="Écrivez votre note ici… (observations, compte-rendu, idées, tâches…)"
+                rows={8} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.7 }} />
+            </Field>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+              <button onClick={() => { setForm(EMPTY); setFormMsg('') }}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+                Réinitialiser
+              </button>
+              <button onClick={handleAdd}
+                style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <i className="ti ti-check" style={{ marginRight: 6 }} />Enregistrer la note
               </button>
             </div>
-            <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto', fontSize: 13, color: '#111827', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-              {selected.contenu}
-            </div>
-          </>
-
-        ) : (
-          /* État vide */
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#9ca3af' }}>
-            <i className="ti ti-notebook" style={{ fontSize: 40, color: '#d1d5db' }} />
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#6b7280' }}>Sélectionnez une note</div>
-            <div style={{ fontSize: 12 }}>ou créez-en une nouvelle</div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* ═══════════ IMPORT / EXPORT ═══════════ */}
+      {activeTab === 'export' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 800 }}>
+
+          {/* Export */}
+          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ti ti-download" style={{ fontSize: 20, color: '#0F6E56' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Exporter les notes</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Format CSV compatible Excel</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              Colonnes : Titre, Client, Catégorie, Date, Contenu.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => downloadCSV(toCSV(notes), 'notes-napocrm.csv')} style={xBtn('#0F6E56', '#E1F5EE')}>
+                <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({notes.length} notes)
+              </button>
+              <button onClick={() => { const m = notes.filter(n => (n.date||'').startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `notes-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
+                <i className="ti ti-calendar-down" style={{ fontSize: 15 }} /> Exporter ce mois ({ceMois} notes)
+              </button>
+            </div>
+          </div>
+
+          {/* Import */}
+          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ti ti-upload" style={{ fontSize: 20, color: '#534AB7' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Importer des notes</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Fichier CSV (même format export)</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+              Format attendu : <code style={{ fontSize: 11, background: 'var(--color-background-primary)', padding: '1px 5px', borderRadius: 4 }}>Titre, Client, Catégorie, Date, Contenu</code>
+            </div>
+            <button onClick={() => importRef.current.click()} style={xBtn('#534AB7', '#EEEDFE')}>
+              <i className="ti ti-file-upload" style={{ fontSize: 15 }} /> Choisir un fichier CSV
+            </button>
+          </div>
+
+          {/* Sauvegarde Supabase */}
+          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ti ti-device-floppy" style={{ fontSize: 20, color: '#854F0B' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Sauvegarde cloud</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Synchronisation avec votre base Supabase</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                Sauvegardez toutes vos notes dans la base cloud. Les notes créées localement ne sont pas automatiquement synchronisées.
+              </div>
+              <button onClick={handleSave} disabled={saving} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#854F0B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? .7 : 1 }}>
+                <i className="ti ti-cloud-upload" style={{ fontSize: 16 }} />
+                {saving ? 'Sauvegarde…' : 'Sauvegarder maintenant'}
+              </button>
+            </div>
+            {saveMsg && (
+              <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: saveMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: saveMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
+                {saveMsg}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Composants utilitaires ─────────────────────────────────────────── */
+
+function Btn({ icon, label, onClick, secondary }) {
+  return (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500, border: secondary ? '0.5px solid var(--color-border-secondary)' : 'none', background: secondary ? 'transparent' : 'var(--color-accent)', color: secondary ? 'var(--color-text-primary)' : '#fff' }}>
+      <i className={`ti ${icon}`} style={{ fontSize: 15 }} />{label}
+    </button>
+  )
+}
+
+function StatCard({ icon, iconBg, iconColor, label, value }) {
+  return (
+    <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ width: 42, height: 42, borderRadius: 10, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <i className={`ti ${icon}`} style={{ fontSize: 20, color: iconColor }} />
+      </div>
+      <div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1 }}>{value}</div>
       </div>
     </div>
   )
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>{label}</div>
+      {children}
+    </div>
+  )
+}
+
+const inp = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
+
+function xBtn(color, bg) {
+  return { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: `0.5px solid ${color}44`, background: bg, color, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
 }
