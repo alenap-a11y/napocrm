@@ -12,7 +12,7 @@ const IA_ITEMS = [
     iconColor: '#534AB7',
     title: 'Assistant Napo IA',
     description: 'Posez vos questions business, bien-être ou admin. L\'IA répond en contexte NapoCRM avec votre activité comme référence.',
-    badge: 'Inclus',
+    badge: 'Bientôt',
     badgeBg: '#E6F4EE',
     badgeColor: '#1A7A4A',
     price: null,
@@ -597,7 +597,7 @@ function IACard({ item, onNavigate }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#1A7A4A' : 'var(--color-text-primary)' }}>
-          {item.price ?? (isActive ? 'Inclus' : '')}
+          {item.price ?? (isActive ? 'Bientôt' : '')}
         </div>
         <button
           disabled={isSoon}
