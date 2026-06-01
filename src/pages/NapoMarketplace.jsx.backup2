@@ -12,11 +12,11 @@ const IA_ITEMS = [
     iconColor: '#534AB7',
     title: 'Assistant Napo IA',
     description: 'Posez vos questions business, bien-être ou admin. L\'IA répond en contexte NapoCRM avec votre activité comme référence.',
-    badge: 'Bientôt',
+    badge: 'Inclus',
     badgeBg: '#E6F4EE',
     badgeColor: '#1A7A4A',
     price: null,
-    cta: 'Bientôt disponible',
+    cta: 'Ouvrir',
     status: 'active',
   },
   {
@@ -26,11 +26,11 @@ const IA_ITEMS = [
     iconColor: '#A05A00',
     title: 'Générateur de documents',
     description: 'CGV, contrats de séance, formulaires de consentement, modèles de factures — générés et personnalisés par IA en 30 secondes.',
-    badge: 'Bientôt',
+    badge: 'Disponible',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '3,99 €/mois',
-    cta: 'Bientôt disponible',
+    cta: 'Activer',
     status: 'available',
   },
   {
@@ -40,11 +40,11 @@ const IA_ITEMS = [
     iconColor: '#1565A8',
     title: 'Analyse client IA',
     description: 'L\'IA identifie les tendances dans vos séances, prédit les risques de désengagement et suggère des actions de suivi personnalisées.',
-    badge: 'Bientôt',
+    badge: 'Disponible',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '4,99 €/mois',
-    cta: 'Bientôt disponible',
+    cta: 'Activer',
     status: 'available',
   },
   {
@@ -82,11 +82,11 @@ const IA_ITEMS = [
     iconColor: '#7A4500',
     title: 'Optimisation tarifaire',
     description: 'L\'IA analyse votre marché local, votre taux de remplissage et vos charges pour vous recommander une grille tarifaire optimale.',
-    badge: 'Bientôt',
+    badge: 'Disponible',
     badgeBg: '#EEEDFE',
     badgeColor: '#534AB7',
     price: '2,99 €/mois',
-    cta: 'Bientôt disponible',
+    cta: 'Activer',
     status: 'available',
   },
 ]
@@ -299,18 +299,7 @@ const chipStyle = (label) => ({
 export default function NapoMarketplace() {
   const [activeTab, setActiveTab] = useState('Tous')
   const [activeExpert, setActiveExpert] = useState('juridique')
-  const [suggModal, setSuggModal] = useState(false)
-  const [suggText, setSuggText] = useState('')
   const navigate = useNavigate()
-
-  function sendSuggestion() {
-    if (!suggText.trim()) return
-    const subject = encodeURIComponent('Suggestion Napo Marketplace')
-    const body = encodeURIComponent(suggText.trim())
-    window.location.href = `mailto:alessandrelli.fr@gmail.com?subject=${subject}&body=${body}`
-    setSuggModal(false)
-    setSuggText('')
-  }
 
   const expert = EXPERTS.find(e => e.id === activeExpert)
 
@@ -480,7 +469,7 @@ export default function NapoMarketplace() {
                       ))}
                     </div>
                     <button style={{ marginTop: 4, padding: '7px 0', fontSize: 12, cursor: 'pointer', borderRadius: 8, width: '100%', border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)' }}>
-                      {plan.key === 'mensuel' ? 'Contacter' : 'Bientôt disponible'}
+                      {plan.key === 'mensuel' ? 'Contacter' : 'Activer'}
                     </button>
                   </div>
                 ))}
@@ -509,44 +498,10 @@ export default function NapoMarketplace() {
           <div style={{ fontSize: 14, fontWeight: 600, color: '#0F1A2E', marginBottom: 3 }}>Une idée pour la Marketplace ?</div>
           <div style={{ fontSize: 12, color: '#185FA5' }}>Dites-nous ce qui vous ferait gagner du temps — nous construisons avec vos retours.</div>
         </div>
-        <button onClick={() => setSuggModal(true)} style={{ flexShrink: 0, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#185FA5', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+        <button style={{ flexShrink: 0, padding: '8px 18px', borderRadius: 8, border: 'none', background: '#185FA5', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
           Faire une suggestion
         </button>
       </div>
-
-      {/* Modal suggestion */}
-      {suggModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
-          onClick={e => e.target === e.currentTarget && setSuggModal(false)}>
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 460, maxWidth: '95vw', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Faire une suggestion</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>Votre idée sera envoyée directement à l'équipe Napo.</div>
-              </div>
-              <button onClick={() => setSuggModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--color-text-secondary)', lineHeight: 1, padding: 0 }}>×</button>
-            </div>
-            <textarea
-              autoFocus
-              value={suggText}
-              onChange={e => setSuggText(e.target.value)}
-              placeholder="Décrivez votre idée ou ce qui vous ferait gagner du temps…"
-              rows={5}
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6 }}
-            />
-            <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
-              <button onClick={() => setSuggModal(false)}
-                style={{ padding: '8px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 13, cursor: 'pointer' }}>
-                Annuler
-              </button>
-              <button onClick={sendSuggestion} disabled={!suggText.trim()}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: suggText.trim() ? '#185FA5' : 'var(--color-border-secondary)', color: suggText.trim() ? '#fff' : 'var(--color-text-secondary)', fontSize: 13, fontWeight: 600, cursor: suggText.trim() ? 'pointer' : 'default' }}>
-                <i className="ti ti-send" style={{ marginRight: 6 }} />Envoyer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -597,7 +552,7 @@ function IACard({ item, onNavigate }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#1A7A4A' : 'var(--color-text-primary)' }}>
-          {item.price ?? (isActive ? 'Bientôt' : '')}
+          {item.price ?? (isActive ? 'Inclus' : '')}
         </div>
         <button
           disabled={isSoon}
@@ -629,7 +584,7 @@ function OutilCard({ outil }) {
           <i className={`ti ${outil.icon}`} style={{ fontSize: 20, color: outil.iconColor }} aria-hidden="true" />
         </div>
         <span style={{ fontSize: 10, fontWeight: 600, background: '#EEEDFE', color: '#534AB7', padding: '3px 8px', borderRadius: 20 }}>
-          Bientôt
+          Disponible
         </span>
       </div>
       <div>
@@ -639,7 +594,7 @@ function OutilCard({ outil }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{outil.price}</div>
         <button style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#534AB7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          Bientôt disponible
+          Activer
         </button>
       </div>
     </div>
