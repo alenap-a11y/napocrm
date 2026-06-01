@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import CorpsHumain3D from './CorpsHumain3D'
 import { supabase } from '../lib/supabase'
 
@@ -49,7 +49,8 @@ export default function FicheSeance({ userId }) {
   const [prenom, setPrenom] = useState('')
   const [genre, setGenre] = useState('Femme')
   const [telephone, setTelephone] = useState('')
-  const [email, setEmail] = useState('')
+  const [email,         setEmail]         = useState('')
+  const [dateNaissance, setDateNaissance] = useState('')
 
   /* Séance */
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
@@ -70,8 +71,25 @@ export default function FicheSeance({ userId }) {
   const [notes, setNotes] = useState([])
 
   /* UI */
-  const [saving, setSaving] = useState(false)
+  const [saving,     setSaving]     = useState(false)
   const [saveStatus, setSaveStatus] = useState(null) // 'ok' | 'error' | null
+
+  /* Historique client (déclenché par email) */
+  const [history, setHistory] = useState([])
+
+  useEffect(() => {
+    if (!email.trim()) { setHistory([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('seances')
+        .select('*')
+        .eq('email', email.trim())
+        .order('date_seance', { ascending: false })
+        .limit(10)
+      setHistory(data || [])
+    }, 500)
+    return () => clearTimeout(t)
+  }, [email])
 
   /* ── Handlers annotations ── */
   function addAnnotation(point) {
@@ -133,14 +151,17 @@ export default function FicheSeance({ userId }) {
     const { error: seanceErr } = await supabase
       .from('seances')
       .insert({
-        user_id: userId,
-        client_id: client.id,
-        date,
-        duree,
-        prix: prix ? parseFloat(prix) : null,
-        notes_json: notes,
+        user_id:          userId,
+        client_id:        client.id,
+        email:            email || null,
+        date_naissance:   dateNaissance || null,
+        date_creation:    new Date().toISOString(),
+        date:             date,
+        duree:            duree,
+        prix:             prix ? parseFloat(prix) : null,
+        notes_json:       notes,
         annotations_json: annotations,
-        tags_json: tags,
+        tags_json:        tags,
       })
 
     setSaving(false)
@@ -191,13 +212,18 @@ export default function FicheSeance({ userId }) {
 
           {[
             { lbl: 'Téléphone', val: telephone, set: setTelephone, type: 'tel' },
-            { lbl: 'Email', val: email, set: setEmail, type: 'email' },
+            { lbl: 'Email',     val: email,     set: setEmail,     type: 'email' },
           ].map(f => (
-            <div key={f.lbl} style={{ ...S.field, marginBottom: f.lbl === 'Email' ? 0 : 8 }}>
+            <div key={f.lbl} style={S.field}>
               <span style={S.label}>{f.lbl}</span>
               <input style={S.input} type={f.type} value={f.val} onChange={e => f.set(e.target.value)} />
             </div>
           ))}
+
+          <div style={{ ...S.field, marginBottom: 0 }}>
+            <span style={S.label}>Date de naissance</span>
+            <input style={S.input} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} />
+          </div>
         </div>
 
         {/* Détails séance */}
@@ -220,6 +246,59 @@ export default function FicheSeance({ userId }) {
             <span style={S.label}>Prix (€)</span>
             <input style={S.input} type="number" min="0" placeholder="0" value={prix} onChange={e => setPrix(e.target.value)} />
           </div>
+        </div>
+
+        {/* Historique client */}
+        <div style={S.card}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+            <span style={S.sectionTitle}>Historique client</span>
+            {email.trim() && (
+              <span style={{
+                fontSize: 9, fontWeight: 700,
+                background: history.length > 0 ? '#c17a3a' : '#e5e7eb',
+                color: history.length > 0 ? '#fff' : '#9ca3af',
+                padding: '1px 7px', borderRadius: 10,
+              }}>{history.length}</span>
+            )}
+          </div>
+
+          {!email.trim() ? (
+            <div style={{ fontSize: 11, color: '#b8a090', lineHeight: 1.5 }}>
+              Renseignez l'email pour afficher l'historique.
+            </div>
+          ) : history.length === 0 ? (
+            <div>
+              <span style={{ fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 10, border: '1px solid #fcd34d' }}>
+                1ère séance
+              </span>
+              <div style={{ fontSize: 11, color: '#b8a090', marginTop: 8 }}>Aucun historique.</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {history.map((s, idx) => {
+                const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                const [, hm, hj] = (s.date_seance || '').split('-')
+                const dateLabel = s.date_seance ? `${hj} ${MOIS[parseInt(hm)-1]}` : '—'
+                return (
+                  <div key={s.id} style={{ position: 'relative', paddingLeft: 14 }}>
+                    {idx < history.length - 1 && (
+                      <div style={{ position: 'absolute', left: 4, top: 12, bottom: -7, width: 1, background: 'rgba(193,122,58,0.25)' }} />
+                    )}
+                    <div style={{ position: 'absolute', left: 0, top: 5, width: 8, height: 8, borderRadius: '50%', background: '#c17a3a', border: '2px solid #f5ede0' }} />
+                    <div style={{ background: '#fdfaf6', borderRadius: 6, padding: '5px 8px', border: '0.5px solid rgba(193,122,58,0.22)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: '#c17a3a', marginBottom: 2 }}>{dateLabel}</div>
+                      <div style={{ fontSize: 10, color: '#8a7060' }}>
+                        {s.type_seance}{s.duree_minutes ? ` · ${s.duree_minutes} min` : ''}{s.prix_euros != null ? ` · ${s.prix_euros} €` : ''}
+                      </div>
+                      {s.premiere_seance && (
+                        <span style={{ fontSize: 8, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: 8, display: 'inline-block', marginTop: 3 }}>1ère</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
