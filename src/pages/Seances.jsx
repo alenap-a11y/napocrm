@@ -102,7 +102,7 @@ export default function Seances() {
   const [btnActive,     setBtnActive]     = useState(false)
 
   const EMPTY_FORM = {
-    prenom: '', nom: '', type_seance: 'Sophrologie',
+    prenom: '', nom: '', email: '', type_seance: 'Sophrologie',
     date_seance:  new Date().toISOString().slice(0, 10),
     heure_seance: '10:00',
     duree_minutes: '60',
@@ -466,6 +466,10 @@ export default function Seances() {
               </Field>
             </div>
 
+            <Field label="Email">
+              <input type="email" value={form.email} onChange={e => setForm(f => ({...f, email: e.target.value}))} placeholder="email@exemple.com" style={inputStyle} />
+            </Field>
+
             <Field label="Notes">
               <textarea value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} placeholder="Observations, compte-rendu de séance…" rows={4} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
             </Field>
@@ -485,6 +489,7 @@ export default function Seances() {
                     user_id:       user.id,
                     prenom:        form.prenom,
                     nom:           form.nom,
+                    email:         form.email || null,
                     type_seance:   form.type_seance,
                     date_seance:   form.date_seance,
                     heure_seance:  form.heure_seance,
