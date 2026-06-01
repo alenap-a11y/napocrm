@@ -290,7 +290,7 @@ export default function Seances() {
             }}
           >
             <i className="ti ti-plus" style={{ fontSize: 15 }} />
-            Nouvelle séance
+            Nouvelle séance 3D
           </button>
 
           {/* Titre */}
