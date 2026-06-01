@@ -1,17 +1,17 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 /* ─── Mock data ────────────────────────────────────────────────────────── */
 
 const MOCK = [
-  { id: 1,  client: 'Sophie Legrand',  categorie: 'Séance',    date: '2026-05-27', titre: 'Séance sophrologie – retour positif', contenu: 'Sophie a bien progressé sur la gestion du stress. Les exercices de respiration sont désormais automatiques. Elle signale une amélioration notable du sommeil depuis 2 semaines. Prochaine séance dans 3 semaines.' },
-  { id: 2,  client: 'Pierre Dumont',   categorie: 'Suivi',     date: '2026-05-26', titre: 'Appel téléphonique de suivi', contenu: 'Pierre a appelé pour signaler une rechute de stress liée à une restructuration dans son entreprise. Nous avons convenu d\'un rendez-vous en urgence la semaine prochaine. Penser à retravailler les outils anti-anxiété.' },
-  { id: 3,  client: 'Marie Caron',     categorie: 'Bilan',     date: '2026-05-24', titre: 'Bilan naturopathie mois 2', contenu: 'Les résultats sanguins confirment une amélioration du taux de magnésium. Fatigue toujours présente mais moins intense. Continuer le protocole 1 mois. Ajouter Vitamine D3 5000 UI.' },
-  { id: 4,  client: 'Lucie Bernard',   categorie: 'Fleurs de Bach', date: '2026-05-22', titre: 'Formule Bach renouvellement', contenu: 'Formule renouvelée : Star of Bethlehem, Walnut, Olive. Score bien-être passé de 3/10 à 6/10 en 21 jours. Excellent résultat. Continuer avec formule allégée.' },
-  { id: 5,  client: '',               categorie: 'Perso',     date: '2026-05-20', titre: 'Idées formations 2026', contenu: 'Formations à prévoir :\n- Hypnose Eriksonienne (octobre)\n- Cohérence cardiaque avancée (septembre)\n- Supervision groupale mensuelle\nBudget estimé : 2 400 €' },
-  { id: 6,  client: 'Paul Renard',     categorie: 'Séance',    date: '2026-05-18', titre: 'Séance énergie lombaires', contenu: 'Libération du blocage L4-L5. Paul signale 70% de diminution de la douleur après la séance. Exercices posturaux donnés à faire quotidiennement. Revoir dans 2 semaines.' },
-  { id: 7,  client: 'Anna Leblanc',    categorie: 'Suivi',     date: '2026-05-15', titre: 'Protocole anxiété – J+14', contenu: 'Anna pratique les exercices matin et soir comme convenu. Les crises de panique sont passées de 4/semaine à 1/semaine. Progression encourageante. Maintenir le rythme actuel.' },
-  { id: 8,  client: '',               categorie: 'Perso',     date: '2026-05-10', titre: 'Organisation cabinet – mai', contenu: 'Tâches en cours :\n✓ Renouveler assurance RC Pro\n✓ Commander flacons Bach\n→ Mettre à jour CGV\n→ Créer modèle de consentement RGPD' },
+  { id: 1, client_nom: 'Sophie Legrand', categorie: 'Séance',        date_note: '2026-05-27', titre: 'Séance sophrologie – retour positif',   contenu: 'Sophie a bien progressé sur la gestion du stress. Les exercices de respiration sont désormais automatiques. Elle signale une amélioration notable du sommeil depuis 2 semaines. Prochaine séance dans 3 semaines.' },
+  { id: 2, client_nom: 'Pierre Dumont',  categorie: 'Suivi',         date_note: '2026-05-26', titre: 'Appel téléphonique de suivi',            contenu: "Pierre a appelé pour signaler une rechute de stress liée à une restructuration dans son entreprise. Nous avons convenu d'un rendez-vous en urgence la semaine prochaine." },
+  { id: 3, client_nom: 'Marie Caron',    categorie: 'Bilan',         date_note: '2026-05-24', titre: 'Bilan naturopathie mois 2',              contenu: 'Les résultats sanguins confirment une amélioration du taux de magnésium. Fatigue toujours présente mais moins intense. Continuer le protocole 1 mois. Ajouter Vitamine D3 5000 UI.' },
+  { id: 4, client_nom: 'Lucie Bernard',  categorie: 'Fleurs de Bach', date_note: '2026-05-22', titre: 'Formule Bach renouvellement',            contenu: 'Formule renouvelée : Star of Bethlehem, Walnut, Olive. Score bien-être passé de 3/10 à 6/10 en 21 jours. Excellent résultat. Continuer avec formule allégée.' },
+  { id: 5, client_nom: '',              categorie: 'Perso',          date_note: '2026-05-20', titre: 'Idées formations 2026',                  contenu: 'Formations à prévoir :\n- Hypnose Eriksonienne (octobre)\n- Cohérence cardiaque avancée (septembre)\nBudget estimé : 2 400 €' },
+  { id: 6, client_nom: 'Paul Renard',    categorie: 'Séance',        date_note: '2026-05-18', titre: 'Séance énergie lombaires',               contenu: 'Libération du blocage L4-L5. Paul signale 70% de diminution de la douleur après la séance. Exercices posturaux donnés à faire quotidiennement. Revoir dans 2 semaines.' },
+  { id: 7, client_nom: 'Anna Leblanc',   categorie: 'Suivi',         date_note: '2026-05-15', titre: 'Protocole anxiété – J+14',               contenu: 'Anna pratique les exercices matin et soir comme convenu. Les crises de panique sont passées de 4/semaine à 1/semaine. Progression encourageante.' },
+  { id: 8, client_nom: '',              categorie: 'Perso',          date_note: '2026-05-10', titre: 'Organisation cabinet – mai',             contenu: 'Tâches en cours :\n✓ Renouveler assurance RC Pro\n✓ Commander flacons Bach\n→ Mettre à jour CGV\n→ Créer modèle de consentement RGPD' },
 ]
 
 const CATEGORIES = ['Toutes', 'Séance', 'Suivi', 'Bilan', 'Fleurs de Bach', 'Perso', 'Autre']
@@ -30,7 +30,7 @@ const CAT_COLOR = {
 function toCSV(rows) {
   const header = 'Titre,Client,Catégorie,Date,Contenu'
   const lines  = rows.map(r =>
-    `"${(r.titre||'').replace(/"/g,"'")}","${r.client||''}","${r.categorie}","${r.date}","${(r.contenu||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
+    `"${(r.titre||'').replace(/"/g,"'")}","${r.client_nom||''}","${r.categorie||''}","${r.date_note||''}","${(r.contenu||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
   )
   return [header, ...lines].join('\n')
 }
@@ -47,7 +47,7 @@ function parseCSV(text) {
   return lines.map((line, i) => {
     const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g) || []
     const c    = cols.map(x => x.replace(/^"|"$/g, '').trim())
-    return { id: Date.now() + i, titre: c[0]||'', client: c[1]||'', categorie: c[2]||'Autre', date: c[3]||new Date().toISOString().slice(0,10), contenu: c[4]||'' }
+    return { id: Date.now() + i, titre: c[0]||'', client_nom: c[1]||'', categorie: c[2]||'Autre', date_note: c[3]||new Date().toISOString().slice(0,10), contenu: c[4]||'' }
   }).filter(r => r.titre || r.contenu)
 }
 
@@ -79,21 +79,62 @@ export default function Notes() {
   const [importMsg,  setImportMsg]  = useState('')
 
   /* Formulaire nouvelle note */
-  const EMPTY = { titre: '', client: '', categorie: 'Séance', date: isoToday, contenu: '' }
+  const EMPTY = { titre: '', client_nom: '', categorie: 'Séance', date_note: isoToday, contenu: '' }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
 
-  /* Filtres */
-  const filtered = notes.filter(n => {
-    const q = search.toLowerCase()
-    const matchQ   = !q || (n.titre||'').toLowerCase().includes(q) || (n.contenu||'').toLowerCase().includes(q) || (n.client||'').toLowerCase().includes(q)
+  /* Chargement initial depuis Supabase */
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data, error } = await supabase
+          .from('notes')
+          .select('id, titre, categorie, client_nom, date_note, contenu')
+          .order('date_note', { ascending: false })
+        if (!error && data?.length) setNotes(data)
+      } catch { /* garde le mock */ }
+    }
+    load()
+  }, [])
+
+  /* Recherche full-text via Supabase (≥ 3 caractères) */
+  const [ftsResults, setFtsResults] = useState(null)
+  const [ftsLoading, setFtsLoading] = useState(false)
+
+  const runFts = useCallback(async (q) => {
+    if (!q || q.length < 3) { setFtsResults(null); return }
+    setFtsLoading(true)
+    const { data } = await supabase
+      .from('notes')
+      .select('id, titre, categorie, client_nom, date_note, contenu')
+      .textSearch('fts', q, { type: 'plain', config: 'french' })
+      .order('date_note', { ascending: false })
+      .limit(50)
+    setFtsResults(data || [])
+    setFtsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => runFts(search), 300)
+    return () => clearTimeout(t)
+  }, [search, runFts])
+
+  /* Filtres (appliqués sur fts ou notes locales) */
+  const base     = ftsResults ?? notes
+  const filtered = base.filter(n => {
     const matchCat = filterCat === 'Toutes' || n.categorie === filterCat
+    if (ftsResults) return matchCat
+    const q = search.toLowerCase()
+    const matchQ = !q ||
+      (n.titre||'').toLowerCase().includes(q) ||
+      (n.contenu||'').toLowerCase().includes(q) ||
+      (n.client_nom||'').toLowerCase().includes(q)
     return matchQ && matchCat
   })
 
   /* Stats */
-  const ceMois = notes.filter(n => (n.date||'').startsWith(isoToday.slice(0,7))).length
+  const ceMois = notes.filter(n => (n.date_note||'').startsWith(isoToday.slice(0,7))).length
 
   /* Sauvegarde Supabase */
   async function handleSave() {
@@ -101,10 +142,13 @@ export default function Notes() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
-      const rows = notes.map(n => ({ ...n, user_id: user.id }))
+      const rows = notes
+        .filter(n => typeof n.id === 'string')
+        .map(n => ({ ...n, user_id: user.id }))
+      if (!rows.length) { setSaveMsg('Aucune note à synchroniser.'); setSaving(false); return }
       const { error } = await supabase.from('notes').upsert(rows, { onConflict: 'id' })
       if (error) throw error
-      setSaveMsg('✓ Sauvegarde effectuée')
+      setSaveMsg('✓ Synchronisation effectuée')
     } catch (e) {
       setSaveMsg(`✗ Erreur : ${e.message}`)
     }
@@ -129,7 +173,7 @@ export default function Notes() {
 
   /* Édition d'une note */
   function startEdit(note) {
-    setEditForm({ titre: note.titre || '', client: note.client || '', categorie: note.categorie || 'Autre', date: note.date || isoToday, contenu: note.contenu || '' })
+    setEditForm({ titre: note.titre || '', client_nom: note.client_nom || '', categorie: note.categorie || 'Autre', date_note: note.date_note || isoToday, contenu: note.contenu || '' })
     setEditing(true)
   }
 
@@ -147,9 +191,24 @@ export default function Notes() {
   }
 
   /* Nouvelle note */
-  function handleAdd() {
+  async function handleAdd() {
     if (!form.titre.trim() && !form.contenu.trim()) { setFormMsg('Titre ou contenu requis.'); return }
-    setNotes(prev => [{ ...form, id: Date.now() }, ...prev])
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error()
+      const { data, error } = await supabase.from('notes').insert({
+        user_id:    user.id,
+        titre:      form.titre || null,
+        client_nom: form.client_nom || null,
+        categorie:  form.categorie,
+        date_note:  form.date_note,
+        contenu:    form.contenu,
+      }).select('id, titre, categorie, client_nom, date_note, contenu').single()
+      if (error) throw error
+      setNotes(prev => [data, ...prev])
+    } catch {
+      setNotes(prev => [{ ...form, id: Date.now() }, ...prev])
+    }
     setForm(EMPTY)
     setFormMsg('✓ Note ajoutée.')
     setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)
@@ -193,7 +252,7 @@ export default function Notes() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
         <StatCard icon="ti-notes"        iconBg="#E6F1FB" iconColor="#185FA5" label="Total notes"    value={notes.length} />
         <StatCard icon="ti-calendar"     iconBg="#EEEDFE" iconColor="#534AB7" label="Ce mois"        value={ceMois} />
-        <StatCard icon="ti-user"         iconBg="#E1F5EE" iconColor="#0F6E56" label="Avec client"    value={notes.filter(n => n.client).length} />
+        <StatCard icon="ti-user"         iconBg="#E1F5EE" iconColor="#0F6E56" label="Avec client"    value={notes.filter(n => n.client_nom).length} />
         <StatCard icon="ti-bookmark"     iconBg="#FAEEDA" iconColor="#854F0B" label="Perso"          value={notes.filter(n => n.categorie === 'Perso').length} />
       </div>
 
@@ -223,8 +282,8 @@ export default function Notes() {
             {/* Filtres */}
             <div style={{ padding: '12px 12px 10px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ position: 'relative' }}>
-                <i className="ti ti-search" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--color-text-secondary)', pointerEvents: 'none' }} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher…"
+                <i className={`ti ${ftsLoading ? 'ti-loader-2' : 'ti-search'}`} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'var(--color-text-secondary)', pointerEvents: 'none', animation: ftsLoading ? 'spin 1s linear infinite' : 'none' }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher… (full-text dès 3 car.)"
                   style={{ width: '100%', padding: '6px 8px 6px 28px', borderRadius: 7, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, boxSizing: 'border-box' }} />
               </div>
               <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
@@ -255,11 +314,11 @@ export default function Notes() {
                       </div>
                       <span style={{ fontSize: 10, fontWeight: 600, background: cat.bg, color: cat.color, padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{n.categorie}</span>
                     </div>
-                    {n.client && <div style={{ fontSize: 11, color: 'var(--color-accent)', marginBottom: 2 }}>{n.client}</div>}
+                    {n.client_nom && <div style={{ fontSize: 11, color: 'var(--color-accent)', marginBottom: 2 }}>{n.client_nom}</div>}
                     <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {n.contenu.replace(/\n/g, ' ').slice(0, 55)}…
+                      {(n.contenu||'').replace(/\n/g, ' ').slice(0, 55)}…
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{fmtDate(n.date)}</div>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{fmtDate(n.date_note)}</div>
                   </div>
                 )
               })}
@@ -279,14 +338,14 @@ export default function Notes() {
                           placeholder="Titre"
                           style={{ fontSize: 15, fontWeight: 600, width: '100%', padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }} />
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <input value={editForm.client} onChange={e => setEditForm(f => ({ ...f, client: e.target.value }))}
+                          <input value={editForm.client_nom} onChange={e => setEditForm(f => ({ ...f, client_nom: e.target.value }))}
                             placeholder="Client"
                             style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
                           <select value={editForm.categorie} onChange={e => setEditForm(f => ({ ...f, categorie: e.target.value }))}
                             style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, cursor: 'pointer' }}>
                             {CATEGORIES.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
                           </select>
-                          <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                          <input type="date" value={editForm.date_note} onChange={e => setEditForm(f => ({ ...f, date_note: e.target.value }))}
                             style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
                         </div>
                       </div>
@@ -297,8 +356,8 @@ export default function Notes() {
                           {(() => { const cat = CAT_COLOR[selected.categorie] || CAT_COLOR['Autre']; return (
                             <span style={{ fontSize: 11, fontWeight: 600, background: cat.bg, color: cat.color, padding: '2px 8px', borderRadius: 20 }}>{selected.categorie}</span>
                           )})()}
-                          {selected.client && <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 500 }}>{selected.client}</span>}
-                          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(selected.date)}</span>
+                          {selected.client_nom && <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 500 }}>{selected.client_nom}</span>}
+                          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(selected.date_note)}</span>
                         </div>
                       </>
                     )}
@@ -387,10 +446,10 @@ export default function Notes() {
                 </select>
               </Field>
               <Field label="Client (optionnel)">
-                <input value={form.client} onChange={f('client')} placeholder="Nom du client" style={inp} />
+                <input value={form.client_nom} onChange={f('client_nom')} placeholder="Nom du client" style={inp} />
               </Field>
               <Field label="Date">
-                <input type="date" value={form.date} onChange={f('date')} style={inp} />
+                <input type="date" value={form.date_note} onChange={f('date_note')} style={inp} />
               </Field>
             </div>
 
@@ -436,7 +495,7 @@ export default function Notes() {
               <button onClick={() => downloadCSV(toCSV(notes), 'notes-napocrm.csv')} style={xBtn('#0F6E56', '#E1F5EE')}>
                 <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({notes.length} notes)
               </button>
-              <button onClick={() => { const m = notes.filter(n => (n.date||'').startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `notes-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
+              <button onClick={() => { const m = notes.filter(n => (n.date_note||'').startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `notes-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
                 <i className="ti ti-calendar-down" style={{ fontSize: 15 }} /> Exporter ce mois ({ceMois} notes)
               </button>
             </div>

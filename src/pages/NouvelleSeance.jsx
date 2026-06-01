@@ -229,21 +229,23 @@ export default function NouvelleSeance() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
 
+      const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
+
       const { error } = await supabase.from('seances').insert({
-        user_id:           user.id,
+        user_id:            user.id,
         prenom,
         nom,
-        genre,
-        tel,
-        email,
-        date,
-        heure,
-        duree,
-        prix:              parseFloat(prix) || 0,
-        type_seance:       type,
-        annotations_json:  annots,
-        notes:             notes.map(n => n.text).join('\n'),
-        observations_cles: tags,
+        genre:              GENRE_MAP[genre] ?? genre ?? null,
+        tel:                tel || null,
+        email:              email || null,
+        date_seance:        date,
+        heure_seance:       heure,
+        duree_minutes:      parseInt(duree, 10),
+        prix_euros:         parseFloat(prix) || null,
+        type_seance:        type,
+        schema_annotations: annots.length ? annots : null,
+        notes:              notes.map(n => n.text).join('\n') || null,
+        tags:               tags.length ? tags : null,
       })
 
       if (error) {
