@@ -271,7 +271,9 @@ export default function Seances() {
           <Btn icon="ti-upload"        label="Importer"         onClick={() => importRef.current.click()} secondary />
           <Btn icon="ti-download"      label="Exporter"         onClick={() => downloadCSV(toCSV(seances), 'seances-napocrm.csv')} secondary />
           <Btn icon="ti-cloud-upload"  label={saving ? 'Sync…' : 'Synchroniser'} onClick={handleSave} secondary />
-          <Btn icon="ti-plus"          label="Nouvelle séance"  onClick={() => navigate('/seances/nouvelle')} />
+          <button onClick={() => navigate('/seances/nouvelle')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, border: 'none', background: '#22c55e', color: '#fff' }}>
+            <i className="ti ti-plus" style={{ fontSize: 15 }} />Nouvelle séance
+          </button>
         </div>
       </div>
 

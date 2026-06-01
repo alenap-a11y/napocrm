@@ -260,8 +260,6 @@ export default function NouvelleSeance() {
         tags:               validTags.length ? validTags : null,
       }
 
-      console.log('[NouvelleSeance] insert payload →', payload)
-
       const { error } = await supabase.from('seances').insert(payload)
 
       if (error) {

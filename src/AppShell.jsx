@@ -186,6 +186,10 @@ export default function AppShell({ user, onSignOut }) {
   }, [fs])
 
   useEffect(() => {
+    document.documentElement.style.setProperty('--color-accent', accent)
+  }, [accent])
+
+  useEffect(() => {
     localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
   }, [sbItems])
 
