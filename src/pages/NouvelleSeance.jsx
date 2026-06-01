@@ -134,11 +134,12 @@ export default function NouvelleSeance() {
   const modelHeightRef = useRef(0.3)
 
   /* Client */
-  const [prenom, setPrenom] = useState('')
-  const [nom,    setNom]    = useState('')
-  const [genre,  setGenre]  = useState('')
-  const [tel,    setTel]    = useState('')
-  const [email,  setEmail]  = useState('')
+  const [prenom,        setPrenom]        = useState('')
+  const [nom,           setNom]           = useState('')
+  const [genre,         setGenre]         = useState('')
+  const [tel,           setTel]           = useState('')
+  const [email,         setEmail]         = useState('')
+  const [dateNaissance, setDateNaissance] = useState('')
 
   /* Séance */
   const today = new Date().toISOString().slice(0, 10)
@@ -147,6 +148,23 @@ export default function NouvelleSeance() {
   const [duree, setDuree] = useState('60')
   const [prix,  setPrix]  = useState('')
   const [type,  setType]  = useState('Sophrologie')
+
+  /* Historique client */
+  const [history, setHistory] = useState([])
+  useEffect(() => {
+    if (!prenom.trim() || !nom.trim()) { setHistory([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('seances')
+        .select('id, date_seance, type_seance, duree_minutes, prix_euros, tags')
+        .ilike('prenom', prenom.trim())
+        .ilike('nom', nom.trim())
+        .order('date_seance', { ascending: false })
+        .limit(8)
+      setHistory(data || [])
+    }, 500)
+    return () => clearTimeout(t)
+  }, [prenom, nom])
 
   /* 3D */
   const [activeView, setActiveView] = useState('front')
@@ -247,9 +265,10 @@ export default function NouvelleSeance() {
         user_id:            user.id,
         prenom,
         nom,
-        genre:              GENRE_MAP[genre] || null,   // || null : '' → null
+        genre:              GENRE_MAP[genre] || null,
         tel:                tel || null,
         email:              email || null,
+        date_naissance:     dateNaissance || null,
         date_seance:        date,
         heure_seance:       heure,
         duree_minutes:      parseInt(duree, 10),
@@ -322,8 +341,8 @@ export default function NouvelleSeance() {
         <div style={{ width: 220, flexShrink: 0, background: '#f9fafb', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e5e7eb' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 0' }}>
 
-            {/* Section Client */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>Client</div>
+            {/* ── Section 1 : Informations du client ── */}
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>Informations du client</div>
 
             <div style={{ display: 'flex', gap: 6, ...gap }}>
               <div style={{ flex: 1 }}>
@@ -337,18 +356,8 @@ export default function NouvelleSeance() {
             </div>
 
             <div style={gap}>
-              <label style={lbl}>Genre</label>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[['H','Homme'],['F','Femme'],['A','Autre']].map(([g, l]) => (
-                  <button key={g} onClick={() => setGenre(g === genre ? '' : g)} style={{
-                    flex: 1, padding: '5px 0', borderRadius: 3, cursor: 'pointer',
-                    border: `1px solid ${genre === g ? '#c9a84c' : '#e5e7eb'}`,
-                    background: genre === g ? '#c9a84c' : '#fff',
-                    color: genre === g ? '#1a2744' : '#6b7280',
-                    fontSize: 10, fontWeight: genre === g ? 700 : 400,
-                  }}>{l}</button>
-                ))}
-              </div>
+              <label style={lbl}>Date de naissance</label>
+              <input style={inp} type="date" value={dateNaissance} onChange={e => setDateNaissance(e.target.value)} />
             </div>
 
             <div style={gap}>
@@ -356,14 +365,29 @@ export default function NouvelleSeance() {
               <input style={inp} type="tel" value={tel} onChange={e => setTel(e.target.value)} placeholder="06 00 00 00 00" />
             </div>
 
-            <div style={{ ...gap, marginBottom: 16 }}>
+            <div style={gap}>
               <label style={lbl}>Email</label>
               <input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemple.com" />
             </div>
 
-            {/* Section Séance */}
-            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 14, marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12 }}>Séance</div>
+            <div style={{ ...gap, marginBottom: 4 }}>
+              <label style={lbl}>Genre</label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[['H','Homme'],['F','Femme'],['A','Autre']].map(([g, l]) => (
+                  <button key={g} onClick={() => setGenre(g === genre ? '' : g)} style={{
+                    flex: 1, padding: '5px 0', borderRadius: 3, cursor: 'pointer',
+                    border: `1px solid ${genre === g ? '#22c55e' : '#e5e7eb'}`,
+                    background: genre === g ? '#22c55e' : '#fff',
+                    color: genre === g ? '#fff' : '#6b7280',
+                    fontSize: 10, fontWeight: genre === g ? 700 : 400,
+                  }}>{l}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Section 2 : Informations de la séance ── */}
+            <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12, marginTop: 14, marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase' }}>Informations de la séance</div>
             </div>
 
             <div style={{ display: 'flex', gap: 6, ...gap }}>
@@ -399,6 +423,42 @@ export default function NouvelleSeance() {
                 ))}
               </select>
             </div>
+
+            {/* ── Historique client ── */}
+            {history.length > 0 && (
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Historique · {prenom} {nom}
+                </div>
+                {history.map(s => {
+                  const isToday = s.date_seance === date
+                  const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                  const [y, m, j] = (s.date_seance || '').split('-')
+                  const dateLabel = s.date_seance ? `${j} ${MOIS[parseInt(m)-1]} ${y}` : '—'
+                  return (
+                    <div key={s.id} style={{ marginBottom: 8, padding: '7px 9px', borderRadius: 4, background: isToday ? '#f0fdf4' : '#f9fafb', border: `1px solid ${isToday ? '#86efac' : '#e5e7eb'}` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#1a2744' }}>{dateLabel}</span>
+                        {isToday && (
+                          <span style={{ fontSize: 9, fontWeight: 700, background: '#22c55e', color: '#fff', padding: '1px 6px', borderRadius: 10 }}>En cours</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 10, color: '#6b7280' }}>
+                        {s.type_seance} · {s.duree_minutes} min
+                        {s.prix_euros ? ` · ${s.prix_euros} €` : ''}
+                      </div>
+                      {(s.tags || []).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
+                          {s.tags.map(t => (
+                            <span key={t} style={{ fontSize: 9, background: '#e5e7eb', color: '#374151', padding: '1px 5px', borderRadius: 8 }}>{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Bouton Sauvegarder */}
