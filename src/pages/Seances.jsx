@@ -98,6 +98,8 @@ export default function Seances() {
   const [importMsg,     setImportMsg]     = useState('')
   const [saving,        setSaving]        = useState(false)
   const [saveMsg,       setSaveMsg]       = useState('')
+  const [btnHover,      setBtnHover]      = useState(false)
+  const [btnActive,     setBtnActive]     = useState(false)
 
   const EMPTY_FORM = {
     prenom: '', nom: '', type_seance: 'Sophrologie',
@@ -259,21 +261,54 @@ export default function Seances() {
 
       {/* ── En-tête ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <i className="ti ti-calendar-plus" style={{ fontSize: 24, color: 'var(--color-accent)' }} />
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)' }}>Séances</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{seances.length} séances enregistrées</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+
+          {/* Bouton 3D — à gauche du titre */}
+          <button
+            onClick={() => navigate('/seances/nouvelle')}
+            onMouseEnter={() => setBtnHover(true)}
+            onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
+            onMouseDown={() => setBtnActive(true)}
+            onMouseUp={() => setBtnActive(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '10px 22px',
+              borderRadius: 10,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#fff',
+              background: 'linear-gradient(145deg, #6b9e5e, #4a7a3d)',
+              boxShadow: btnActive
+                ? '0px 0px 0px #2d5a24'
+                : btnHover
+                  ? '2px 2px 0px #2d5a24'
+                  : '4px 4px 0px #2d5a24, inset 0px 1px 0px rgba(255,255,255,0.2)',
+              transform: btnActive ? 'translateY(4px)' : btnHover ? 'translateY(2px)' : 'none',
+              transition: 'all 0.1s ease',
+            }}
+          >
+            <i className="ti ti-plus" style={{ fontSize: 15 }} />
+            Nouvelle séance
+          </button>
+
+          {/* Titre */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <i className="ti ti-calendar-plus" style={{ fontSize: 24, color: 'var(--color-accent)' }} />
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)' }}>Séances</div>
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{seances.length} séances enregistrées</div>
+            </div>
           </div>
         </div>
+
+        {/* Actions secondaires */}
         <div style={{ display: 'flex', gap: 8 }}>
           <input ref={importRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
-          <Btn icon="ti-upload"        label="Importer"         onClick={() => importRef.current.click()} secondary />
-          <Btn icon="ti-download"      label="Exporter"         onClick={() => downloadCSV(toCSV(seances), 'seances-napocrm.csv')} secondary />
-          <Btn icon="ti-cloud-upload"  label={saving ? 'Sync…' : 'Synchroniser'} onClick={handleSave} secondary />
-          <button onClick={() => navigate('/seances/nouvelle')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, border: 'none', background: '#22c55e', color: '#fff' }}>
-            <i className="ti ti-plus" style={{ fontSize: 15 }} />Nouvelle séance
-          </button>
+          <Btn icon="ti-upload"       label="Importer"                        onClick={() => importRef.current.click()} secondary />
+          <Btn icon="ti-download"     label="Exporter"                        onClick={() => downloadCSV(toCSV(seances), 'seances-napocrm.csv')} secondary />
+          <Btn icon="ti-cloud-upload" label={saving ? 'Sync…' : 'Synchroniser'} onClick={handleSave} secondary />
         </div>
       </div>
 
