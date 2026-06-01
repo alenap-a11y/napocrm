@@ -5,6 +5,13 @@ import { OrbitControls, Html, useGLTF } from '@react-three/drei'
 import { supabase } from '../lib/supabase'
 import * as THREE from 'three'
 
+// Supprime le warning THREE.Clock deprecated (r3f interne, pas corrigeable autrement)
+const _warn = console.warn.bind(console)
+console.warn = (...args) => {
+  if (typeof args[0] === 'string' && args[0].includes('THREE.Clock')) return
+  _warn(...args)
+}
+
 /* ─── Constants ─────────────────────────────────────────── */
 
 const PALETTE = [
@@ -155,6 +162,9 @@ export default function NouvelleSeance() {
   /* Tags */
   const [tags,      setTags]      = useState([])
   const [customTag, setCustomTag] = useState('')
+
+  /* Canvas WebGL — clé pour forcer le remount après context loss */
+  const [canvasKey, setCanvasKey] = useState(0)
 
   /* Save */
   const [saving,     setSaving]     = useState(false)
@@ -424,9 +434,16 @@ export default function NouvelleSeance() {
           {/* Canvas 3D */}
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             <Canvas
-              camera={{ position: CAM_POS[activeView], fov: 20 }}
-              onCreated={({ camera }) => { cameraRef.current = camera }}
-              gl={{ antialias: true }}
+              key={canvasKey}
+              camera={{ position: CAM_POS['front'], fov: 20 }}
+              onCreated={({ gl, camera }) => {
+                cameraRef.current = camera
+                gl.domElement.addEventListener('webglcontextlost', e => {
+                  e.preventDefault()
+                  setTimeout(() => setCanvasKey(k => k + 1), 200)
+                })
+              }}
+              gl={{ antialias: true, powerPreference: 'default' }}
               style={{ background: '#f8f8f8', width: '100%', height: '100%' }}
             >
               <ambientLight intensity={0.7} />
