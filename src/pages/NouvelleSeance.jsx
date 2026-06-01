@@ -240,12 +240,14 @@ export default function NouvelleSeance() {
       if (!user) throw new Error('Non connecté')
 
       const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
+      // Seuls les tags présents dans l'enum tag_observation sont valides en DB
+      const validTags = tags.filter(t => PRESET_TAGS.includes(t))
 
-      const { error } = await supabase.from('seances').insert({
+      const payload = {
         user_id:            user.id,
         prenom,
         nom,
-        genre:              GENRE_MAP[genre] ?? genre ?? null,
+        genre:              GENRE_MAP[genre] || null,   // || null : '' → null
         tel:                tel || null,
         email:              email || null,
         date_seance:        date,
@@ -255,8 +257,12 @@ export default function NouvelleSeance() {
         type_seance:        type,
         schema_annotations: annots.length ? annots : null,
         notes:              notes.map(n => n.text).join('\n') || null,
-        tags:               tags.length ? tags : null,
-      })
+        tags:               validTags.length ? validTags : null,
+      }
+
+      console.log('[NouvelleSeance] insert payload →', payload)
+
+      const { error } = await supabase.from('seances').insert(payload)
 
       if (error) {
         console.error('Erreur Supabase:', error)
