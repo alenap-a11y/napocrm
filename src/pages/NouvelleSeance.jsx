@@ -249,6 +249,43 @@ export default function NouvelleSeance() {
     setCustomTag('')
   }
 
+  function reprogrammer(s) {
+    setType(s.type_seance || 'Sophrologie')
+    setDuree(String(s.duree_minutes || 60))
+    setPrix(s.prix_euros != null ? String(s.prix_euros) : '')
+    setDate('')
+    setHeure('')
+  }
+
+  async function syncClient(userId) {
+    try {
+      const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
+      let query = supabase.from('clients').select('id').limit(1)
+      if (email?.trim()) {
+        query = query.ilike('email', email.trim())
+      } else {
+        query = query.ilike('prenom', prenom.trim()).ilike('nom', nom.trim())
+      }
+      const { data: existing } = await query
+      if (!existing || existing.length === 0) {
+        await supabase.from('clients').insert({
+          user_id:        userId,
+          prenom,
+          nom,
+          email:          email || null,
+          telephone:      tel || null,
+          date_naissance: dateNaissance || null,
+          genre:          GENRE_MAP[genre] || null,
+          date_creation:  new Date().toISOString(),
+        })
+      } else {
+        await supabase.from('clients').update({ derniere_seance: date }).eq('id', existing[0].id)
+      }
+    } catch {
+      // sync CRM non bloquant
+    }
+  }
+
   async function handleSave() {
     setSaving(true)
     setSaveStatus(null)
@@ -258,8 +295,8 @@ export default function NouvelleSeance() {
       if (!user) throw new Error('Non connecté')
 
       const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
-      // Seuls les tags présents dans l'enum tag_observation sont valides en DB
       const validTags = tags.filter(t => PRESET_TAGS.includes(t))
+      const premiereSeance = history.length === 0
 
       const payload = {
         user_id:            user.id,
@@ -277,6 +314,8 @@ export default function NouvelleSeance() {
         schema_annotations: annots.length ? annots : null,
         notes:              notes.map(n => n.text).join('\n') || null,
         tags:               validTags.length ? validTags : null,
+        date_creation:      new Date().toISOString(),
+        premiere_seance:    premiereSeance,
       }
 
       const { error } = await supabase.from('seances').insert(payload)
@@ -287,6 +326,7 @@ export default function NouvelleSeance() {
         setSaveStatus('err')
         setSaving(false)
       } else {
+        await syncClient(user.id)
         setSaveStatus('ok')
         setTimeout(() => navigate('/seances'), 1400)
       }
@@ -445,6 +485,21 @@ export default function NouvelleSeance() {
                 )}
               </div>
 
+              {/* Badge statut client */}
+              {(prenom.trim() || nom.trim()) && (
+                <div style={{ marginBottom: 10 }}>
+                  {history.length === 0 ? (
+                    <span style={{ fontSize: 9, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 10, border: '1px solid #fcd34d' }}>
+                      1ère séance
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 9, fontWeight: 700, background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: 10, border: '1px solid #7dd3fc' }}>
+                      Suivi · {history.length} séance{history.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Contenu */}
               {!prenom.trim() && !nom.trim() ? (
                 <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.6, margin: 0 }}>
@@ -464,8 +519,7 @@ export default function NouvelleSeance() {
                     return (
                       <div
                         key={s.id}
-                        onClick={() => navigate(`/clients?search=${encodeURIComponent(`${prenom} ${nom}`.trim())}`)}
-                        style={{ position: 'relative', paddingLeft: 18, marginBottom: 12, cursor: 'pointer' }}
+                        style={{ position: 'relative', paddingLeft: 18, marginBottom: 12 }}
                       >
                         {/* Ligne verticale */}
                         {idx < history.length - 1 && (
@@ -481,21 +535,37 @@ export default function NouvelleSeance() {
                         }} />
                         {/* Carte séance */}
                         <div
-                          style={{ background: '#fff', borderRadius: 5, padding: '7px 9px', border: `1px solid ${isToday ? '#86efac' : '#e5e7eb'}`, transition: 'border-color .1s' }}
+                          style={{ background: '#fff', borderRadius: 5, padding: '7px 9px', border: `1px solid ${isToday ? '#86efac' : '#e5e7eb'}` }}
                           onMouseEnter={e => { e.currentTarget.style.borderColor = '#c9a84c' }}
                           onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? '#86efac' : '#e5e7eb' }}
                         >
-                          <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', marginBottom: 2 }}>{dateLabel}</div>
-                          <div style={{ fontSize: 10, color: '#6b7280' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744' }}>{dateLabel}</div>
+                            {s.premiere_seance && (
+                              <span style={{ fontSize: 8, fontWeight: 700, background: '#fef3c7', color: '#92400e', padding: '1px 5px', borderRadius: 8 }}>1ère</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 10, color: '#6b7280', marginBottom: 2 }}>
                             {s.type_seance} · {s.duree_minutes} min{s.prix_euros != null ? ` · ${s.prix_euros} €` : ''}
                           </div>
                           {(s.tags || []).length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 4 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 3 }}>
                               {s.tags.map(t => (
                                 <span key={t} style={{ fontSize: 9, background: '#f3f4f6', color: '#374151', padding: '1px 5px', borderRadius: 8 }}>{t}</span>
                               ))}
                             </div>
                           )}
+                          {s.notes && (
+                            <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 4, lineHeight: 1.4, borderTop: '1px solid #f3f4f6', paddingTop: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                              {s.notes}
+                            </div>
+                          )}
+                          <button
+                            onClick={e => { e.stopPropagation(); reprogrammer(s) }}
+                            style={{ marginTop: 6, width: '100%', padding: '3px 0', fontSize: 9, fontWeight: 600, color: '#1a2744', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 3, cursor: 'pointer' }}
+                          >
+                            ↻ Reprogrammer
+                          </button>
                         </div>
                       </div>
                     )

@@ -378,7 +378,9 @@ const inputStyle = {
 export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidgets, onNavigate }) {
   const [time, setTime] = useState(new Date())
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
-  const [prenom, setPrenom] = useState('')
+  const [prenom, setPrenom]               = useState('')
+  const [recentSeances, setRecentSeances] = useState([])
+  const [monthStats, setMonthStats]       = useState({ count: 0, revenue: 0 })
 
   useEffect(() => {
     const getUser = async () => {
@@ -392,6 +394,20 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const monthStart = new Date()
+    monthStart.setDate(1)
+    const monthStartStr = monthStart.toISOString().slice(0, 10)
+    Promise.all([
+      supabase.from('seances').select('*').order('created_at', { ascending: false }).limit(5),
+      supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
+    ]).then(([{ data: recent }, { data: monthly }]) => {
+      setRecentSeances(recent || [])
+      const m = monthly || []
+      setMonthStats({ count: m.length, revenue: m.reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0) })
+    })
   }, [])
 
   const activeSbItem = sbItems.find(i => i.id === sbActif)
@@ -494,6 +510,68 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           AGENDA
         </div>
         <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
+      </div>
+
+      {/* Activité récente */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>ACTIVITÉ RÉCENTE</div>
+        <div style={cardStyle}>
+          {/* Compteurs du mois */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+              <i className="ti ti-calendar-stats" style={{ fontSize: 20, color: accent }} aria-hidden="true" />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Séances ce mois</div>
+                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.count}</div>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+              <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
+                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+              </div>
+            </div>
+          </div>
+          {/* Liste */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Dernières séances</span>
+            <button onClick={() => onNavigate?.('/seances')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
+          </div>
+          {recentSeances.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text-secondary)', fontSize: 13 }}>Aucune séance enregistrée</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {recentSeances.map(s => {
+                const MOIS_D = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                const [, dm, dj] = (s.date_seance || '').split('-')
+                const dateLabel = s.date_seance ? `${dj} ${MOIS_D[parseInt(dm)-1]}` : '—'
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => onNavigate?.('/seances')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                      {(s.prenom?.[0] || '?')}{(s.nom?.[0] || '')}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prenom} {s.nom}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.type_seance}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{dateLabel}</div>
+                      {s.prix_euros != null && <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.prix_euros} €</div>}
+                    </div>
+                    <i className="ti ti-chevron-right" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }} aria-hidden="true" />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Ligne 3 : Clients récents + Anniversaires */}
