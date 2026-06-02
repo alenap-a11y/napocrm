@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 /* ─── Mock data ────────────────────────────────────────────────────────── */
@@ -107,10 +107,25 @@ export default function Clients() {
 
   /* Formulaire nouveau client */
   const EMPTY = { prenom: '', nom: '', email: '', tel: '', naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
-  const [form,    setForm]    = useState(EMPTY)
-  const [formMsg, setFormMsg] = useState('')
+  const [form,          setForm]          = useState(EMPTY)
+  const [formMsg,       setFormMsg]       = useState('')
+  const [clientSeances, setClientSeances] = useState([])
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
   const ef = (k) => e => setEditForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  /* Historique séances déclenché par email */
+  useEffect(() => {
+    if (!form.email?.trim()) { setClientSeances([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from('seances')
+        .select('*')
+        .eq('email', form.email.trim())
+        .order('date_seance', { ascending: false })
+      setClientSeances(data || [])
+    }, 500)
+    return () => clearTimeout(t)
+  }, [form.email])
 
   /* Filtres */
   const filtered = clients.filter(c => {
@@ -173,10 +188,31 @@ export default function Clients() {
   }
 
   /* Enregistrer nouveau client */
-  function handleAddClient() {
+  async function handleAddClient() {
     if (!form.prenom.trim() || !form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
-    setClients(prev => [{ ...form, id: Date.now(), nb_seances: parseInt(form.nb_seances) || 0 }, ...prev])
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Non connecté')
+      const { data, error } = await supabase.from('clients').insert({
+        user_id:        user.id,
+        prenom:         form.prenom,
+        nom:            form.nom,
+        email:          form.email         || null,
+        telephone:      form.tel           || null,
+        date_naissance: form.naissance     || null,
+        ville:          form.ville         || null,
+        specialite:     form.specialite    || null,
+        statut:         form.statut        || 'actif',
+        notes:          form.notes         || null,
+        date_creation:  new Date().toISOString(),
+      }).select().single()
+      if (error) throw error
+      setClients(prev => [{ ...form, ...data, nb_seances: 0 }, ...prev])
+    } catch {
+      setClients(prev => [{ ...form, id: Date.now(), nb_seances: 0 }, ...prev])
+    }
     setForm(EMPTY)
+    setClientSeances([])
     setFormMsg('✓ Client ajouté.')
     setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)
   }
@@ -344,7 +380,7 @@ export default function Clients() {
             </Field>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setForm(EMPTY); setFormMsg('') }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+              <button onClick={() => { setForm(EMPTY); setFormMsg(''); setClientSeances([]) }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
                 Réinitialiser
               </button>
               <button onClick={handleAddClient} style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
@@ -352,6 +388,66 @@ export default function Clients() {
               </button>
             </div>
           </div>
+
+          {/* ── Historique séances ── */}
+          {form.email.trim() && (
+            <div style={{ background: 'var(--color-background-secondary)', borderRadius: 14, border: '0.5px solid var(--color-border-tertiary)', padding: '22px 28px', marginTop: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Historique séances</div>
+                <span style={{
+                  fontSize: 10, fontWeight: 700,
+                  background: clientSeances.length > 0 ? 'var(--color-accent)' : 'var(--color-background-primary)',
+                  color: clientSeances.length > 0 ? '#fff' : 'var(--color-text-secondary)',
+                  padding: '1px 8px', borderRadius: 10,
+                  border: '0.5px solid var(--color-border-secondary)',
+                }}>{clientSeances.length}</span>
+              </div>
+
+              {clientSeances.length === 0 ? (
+                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '20px 0' }}>
+                  Aucun historique pour cet email.
+                </div>
+              ) : (
+                <div>
+                  {clientSeances.map((s, idx) => {
+                    const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                    const [y, m, j] = (s.date_seance || '').split('-')
+                    const dateLabel = s.date_seance ? `${j} ${MOIS[parseInt(m)-1]} ${y}` : '—'
+                    return (
+                      <div key={s.id} style={{ position: 'relative', paddingLeft: 22, marginBottom: 14 }}>
+                        {idx < clientSeances.length - 1 && (
+                          <div style={{ position: 'absolute', left: 6, top: 14, bottom: -14, width: 1, background: 'var(--color-border-tertiary)' }} />
+                        )}
+                        <div style={{
+                          position: 'absolute', left: 0, top: 5,
+                          width: 12, height: 12, borderRadius: '50%',
+                          background: s.premiere_seance ? '#F59E0B' : 'var(--color-accent)',
+                          border: '2px solid var(--color-background-secondary)',
+                        }} />
+                        <div style={{ background: 'var(--color-background-primary)', borderRadius: 8, padding: '10px 14px', border: '0.5px solid var(--color-border-tertiary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{dateLabel}</span>
+                            {s.heure_seance && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.heure_seance}</span>}
+                            {s.premiere_seance && (
+                              <span style={{ fontSize: 10, fontWeight: 700, background: '#FEF3C7', color: '#92400E', padding: '1px 7px', borderRadius: 10, border: '1px solid #FCD34D' }}>1ère séance</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: s.notes ? 5 : 0 }}>
+                            {s.type_seance}{s.duree_minutes ? ` · ${s.duree_minutes} min` : ''}{s.prix_euros != null ? ` · ${s.prix_euros} €` : ''}
+                          </div>
+                          {s.notes && (
+                            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                              {s.notes}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
