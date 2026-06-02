@@ -71,8 +71,9 @@ export default function FicheClients({ userId }) {
   const [detail, setDetail]             = useState(null)   // null | clientObj | { isNew:true }
   const [detailSeances, setDetailSeances] = useState([])
   const [confirmDel, setConfirmDel]     = useState(false)
-  const [saving, setSaving]             = useState(false)
-  const [saveOk, setSaveOk]             = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [saveOk,  setSaveOk]  = useState(false)
+  const [saveErr, setSaveErr] = useState('')
 
   /* Champs formulaire */
   const [fNom,          setFNom]          = useState('')
@@ -117,6 +118,7 @@ export default function FicheClients({ userId }) {
     setFDateNaissance(client.date_naissance || '')
     setConfirmDel(false)
     setSaveOk(false)
+    setSaveErr('')
     setDetailSeances(seancesAll.filter(s => s.client_id === client.id))
   }
 
@@ -128,43 +130,61 @@ export default function FicheClients({ userId }) {
     setDetailSeances([])
     setConfirmDel(false)
     setSaveOk(false)
+    setSaveErr('')
   }
 
   /* ── Sauvegarde ── */
   async function saveDetail() {
+    if (!fNom.trim() && !fPrenom.trim()) return
     setSaving(true)
-    const payload = {
-      user_id:           userId,
+    setSaveErr('')
+
+    /* Récupérer user_id depuis la session si le prop est absent */
+    let uid = userId
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser()
+      uid = user?.id
+    }
+
+    const now = new Date().toISOString()
+    const base = {
+      user_id:           uid,
       nom:               fNom.trim(),
       prenom:            fPrenom.trim(),
-      genre:             fGenre,
-      tel:               fTel.trim(),
-      email:             fEmail.trim(),
-      notes:             fNotes.trim() || null,
-      ville:             fVille.trim() || null,
-      specialite:        fSpecialite   || null,
-      statut:            fStatut       || 'actif',
-      date_naissance:    fDateNaissance || null,
-      date_modification: new Date().toISOString(),
+      genre:             fGenre             || null,
+      telephone:         fTel.trim()        || null,   // colonne DB = telephone
+      email:             fEmail.trim()      || null,
+      notes:             fNotes.trim()      || null,
+      ville:             fVille.trim()      || null,
+      specialite:        fSpecialite        || null,
+      statut:            fStatut            || 'actif',
+      date_naissance:    fDateNaissance     || null,
+      date_modification: now,
     }
 
     if (detail.isNew) {
+      const payload = { ...base, date_creation: now }
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
-      if (!error && data) {
+      if (error) {
+        setSaveErr(`Erreur : ${error.message}`)
+      } else if (data) {
         setClients(prev => [...prev, data].sort((a, b) => (a.nom || '').localeCompare(b.nom || '')))
         setDetail(data)
         setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2500)
       }
     } else {
-      const { data, error } = await supabase.from('clients').update(payload).eq('id', detail.id).select().single()
-      if (!error && data) {
+      const { data, error } = await supabase.from('clients').update(base).eq('id', detail.id).select().single()
+      if (error) {
+        setSaveErr(`Erreur : ${error.message}`)
+      } else if (data) {
         setClients(prev => prev.map(c => c.id === data.id ? data : c))
         setDetail(data)
         setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2500)
       }
     }
     setSaving(false)
-    setTimeout(() => setSaveOk(false), 2500)
   }
 
   /* ── Suppression ── */
@@ -433,14 +453,20 @@ export default function FicheClients({ userId }) {
             style={{
               width: '100%', padding: '10px', borderRadius: 10,
               border: 'none',
-              background: saveOk ? '#48BB78' : '#c17a3a',
+              background: saveOk ? '#48BB78' : saveErr ? '#E53E3E' : '#c17a3a',
               color: '#fff', fontSize: 13, fontWeight: 600,
               cursor: saving ? 'not-allowed' : 'pointer',
               opacity: saving ? 0.7 : 1, transition: 'background .25s',
             }}
           >
-            {saving ? 'Sauvegarde…' : saveOk ? '✓ Sauvegardé' : detail.isNew ? 'Créer le client' : 'Sauvegarder'}
+            {saving ? 'Sauvegarde…' : saveOk ? '✓ Client enregistré ✅' : saveErr ? '✗ Échec' : detail.isNew ? 'Créer le client' : 'Sauvegarder'}
           </button>
+
+          {saveErr && (
+            <div style={{ fontSize: 11, color: '#A32D2D', background: '#FCEBEB', border: '0.5px solid #F09595', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
+              {saveErr}
+            </div>
+          )}
 
           {/* Suppression */}
           {!detail.isNew && (
