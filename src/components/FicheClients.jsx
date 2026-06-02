@@ -93,6 +93,7 @@ export default function FicheClients({ userId }) {
   useEffect(() => { fetchAll() }, [userId])
 
   async function fetchAll() {
+    if (!userId) return   // ne pas lancer de requête sans user_id
     setLoading(true)
     const [resClients, resSeances] = await Promise.all([
       supabase.from('clients').select('*').eq('user_id', userId).order('nom'),

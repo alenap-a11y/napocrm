@@ -16,7 +16,7 @@ export default function SeanceTimeline({ clientId }) {
       const { data, error } = await supabase
         .from('seances')
         .select('id, date_seance, notes, tags, type_seance')
-        .eq('user_id', clientId)
+        .eq('client_id', clientId)
         .order('date_seance', { ascending: false })
       if (!error) setSeances(data || [])
       setLoading(false)

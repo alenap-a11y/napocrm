@@ -134,7 +134,7 @@ export default function FicheSeance({ userId }) {
     const { data: client, error: clientErr } = await supabase
       .from('clients')
       .upsert(
-        { user_id: userId, nom, prenom, genre, tel: telephone, email },
+        { user_id: userId, nom, prenom, genre, telephone, email },
         { onConflict: 'user_id,email', ignoreDuplicates: false }
       )
       .select('id')
