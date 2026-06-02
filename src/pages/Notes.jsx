@@ -60,6 +60,13 @@ function fmtDate(d) {
   return `${j} ${MOIS[parseInt(m)-1]} ${y}`
 }
 
+function fmtDatetime(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  const p = n => String(n).padStart(2, '0')
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 const isoToday = new Date().toISOString().slice(0, 10)
 
 /* ─── Composant principal ─────────────────────────────────────────────── */
@@ -177,10 +184,23 @@ export default function Notes() {
     setEditing(true)
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     if (!editForm.titre.trim() && !editForm.contenu.trim()) return
-    setNotes(prev => prev.map(n => n.id === selected.id ? { ...n, ...editForm } : n))
-    const updated = { ...selected, ...editForm }
+    const date_modification = new Date().toISOString()
+    if (typeof selected.id === 'string') {
+      await supabase.from('notes')
+        .update({
+          titre:             editForm.titre,
+          client_nom:        editForm.client_nom || null,
+          categorie:         editForm.categorie,
+          date_note:         editForm.date_note,
+          contenu:           editForm.contenu,
+          date_modification,
+        })
+        .eq('id', selected.id)
+    }
+    const updated = { ...selected, ...editForm, date_modification }
+    setNotes(prev => prev.map(n => n.id === selected.id ? updated : n))
     setSelected(updated)
     setEditing(false)
   }
@@ -197,13 +217,14 @@ export default function Notes() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error()
       const { data, error } = await supabase.from('notes').insert({
-        user_id:    user.id,
-        titre:      form.titre || null,
-        client_nom: form.client_nom || null,
-        categorie:  form.categorie,
-        date_note:  form.date_note,
-        contenu:    form.contenu,
-      }).select('id, titre, categorie, client_nom, date_note, contenu').single()
+        user_id:       user.id,
+        titre:         form.titre || null,
+        client_nom:    form.client_nom || null,
+        categorie:     form.categorie,
+        date_note:     form.date_note,
+        contenu:       form.contenu,
+        date_creation: new Date().toISOString(),
+      }).select('id, titre, categorie, client_nom, date_note, contenu, date_creation').single()
       if (error) throw error
       setNotes(prev => [data, ...prev])
     } catch {
@@ -312,7 +333,16 @@ export default function Notes() {
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                         {n.titre || n.contenu.split('\n')[0].slice(0, 40) || '(sans titre)'}
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: 600, background: cat.bg, color: cat.color, padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{n.categorie}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, background: cat.bg, color: cat.color, padding: '1px 6px', borderRadius: 10, whiteSpace: 'nowrap' }}>{n.categorie}</span>
+                        <button
+                          onClick={e => { e.stopPropagation(); setSelected(n); startEdit(n) }}
+                          title="Modifier"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: '2px 3px', borderRadius: 4, lineHeight: 1 }}
+                        >
+                          <i className="ti ti-pencil" style={{ fontSize: 11 }} />
+                        </button>
+                      </div>
                     </div>
                     {n.client_nom && <div style={{ fontSize: 11, color: 'var(--color-accent)', marginBottom: 2 }}>{n.client_nom}</div>}
                     <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -403,9 +433,25 @@ export default function Notes() {
                     autoFocus
                   />
                 ) : (
-                  <div style={{ flex: 1, padding: '20px 22px', overflowY: 'auto', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
-                    {selected.contenu}
-                  </div>
+                  <>
+                    <div style={{ flex: 1, padding: '20px 22px', overflowY: 'auto', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
+                      {selected.contenu}
+                    </div>
+                    {(selected.date_creation || selected.date_modification) && (
+                      <div style={{ padding: '8px 22px 12px', borderTop: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {selected.date_creation && (
+                          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                            Créé le {fmtDatetime(selected.date_creation)}
+                          </div>
+                        )}
+                        {selected.date_modification && (
+                          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                            Modifié le {fmtDatetime(selected.date_modification)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {editing && (
