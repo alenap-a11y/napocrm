@@ -11,7 +11,7 @@ function computeStatut(clientId, seancesData) {
   const cs = seancesData.filter(s => s.client_id === clientId)
   if (!cs.length) return 'Nouveau'
   const latest = cs.reduce((max, s) => {
-    const d = new Date(s.date || s.created_at)
+    const d = new Date(s.date_seance || s.created_at)
     return d > max ? d : max
   }, new Date(0))
   return (Date.now() - latest) / 86400000 < 90 ? 'Actif' : 'Inactif'
@@ -94,12 +94,14 @@ export default function FicheClients({ userId }) {
 
   async function fetchAll() {
     setLoading(true)
-    const [{ data: c }, { data: s }] = await Promise.all([
+    const [resClients, resSeances] = await Promise.all([
       supabase.from('clients').select('*').eq('user_id', userId).order('nom'),
-      supabase.from('seances').select('client_id,date,duree,prix,created_at').eq('user_id', userId).order('date', { ascending: false }),
+      supabase.from('seances').select('client_id,date_seance,duree_minutes,prix_euros,created_at').eq('user_id', userId).order('date_seance', { ascending: false }),
     ])
-    setClients(c || [])
-    setSeancesAll(s || [])
+    if (resClients.error) console.log('Erreur clients:', JSON.stringify(resClients.error))
+    if (resSeances.error) console.log('Erreur clients (seances):', JSON.stringify(resSeances.error))
+    setClients(resClients.data || [])
+    setSeancesAll(resSeances.data || [])
     setLoading(false)
   }
 
@@ -166,6 +168,7 @@ export default function FicheClients({ userId }) {
       const payload = { ...base, date_creation: now }
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
       if (error) {
+        console.log('Erreur clients:', JSON.stringify(error))
         setSaveErr(`Erreur : ${error.message}`)
       } else if (data) {
         setClients(prev => [...prev, data].sort((a, b) => (a.nom || '').localeCompare(b.nom || '')))
@@ -176,6 +179,7 @@ export default function FicheClients({ userId }) {
     } else {
       const { data, error } = await supabase.from('clients').update(base).eq('id', detail.id).select().single()
       if (error) {
+        console.log('Erreur clients:', JSON.stringify(error))
         setSaveErr(`Erreur : ${error.message}`)
       } else if (data) {
         setClients(prev => prev.map(c => c.id === data.id ? data : c))
@@ -201,15 +205,16 @@ export default function FicheClients({ userId }) {
     if (!file) return
     const rows = parseCSV(await file.text())
     const payload = rows.map(r => ({
-      user_id: userId,
+      user_id:   userId,
       nom:       r.nom       || r['Nom']       || '',
       prenom:    r.prenom    || r['Prénom']     || r['Prenom']    || '',
       genre:     r.genre     || r['Genre']      || 'Autre',
-      tel: r.tel || r.telephone || r['Téléphone'] || r['Telephone'] || '',
+      telephone: r.telephone || r.tel || r['Téléphone'] || r['Telephone'] || '',
       email:     r.email     || r['Email']      || '',
     }))
     if (payload.length) {
-      await supabase.from('clients').insert(payload)
+      const { error } = await supabase.from('clients').insert(payload)
+      if (error) console.log('Erreur:', JSON.stringify(error))
       fetchAll()
     }
     e.target.value = ''
@@ -424,12 +429,12 @@ export default function FicheClients({ userId }) {
                 }}>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 500, color: '#1a1208' }}>
-                      {s.date ? new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR') : '—'}
+                      {s.date_seance ? new Date(s.date_seance + 'T00:00:00').toLocaleDateString('fr-FR') : '—'}
                     </div>
-                    <div style={{ fontSize: 10, color: '#a07848' }}>{s.duree || '—'}</div>
+                    <div style={{ fontSize: 10, color: '#a07848' }}>{s.duree_minutes ? `${s.duree_minutes} min` : '—'}</div>
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#c17a3a' }}>
-                    {s.prix != null ? `${s.prix} €` : '—'}
+                    {s.prix_euros != null ? `${s.prix_euros} €` : '—'}
                   </div>
                 </div>
               ))}
