@@ -379,8 +379,10 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [time, setTime] = useState(new Date())
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
   const [prenom, setPrenom]               = useState('')
-  const [recentSeances, setRecentSeances] = useState([])
-  const [monthStats, setMonthStats]       = useState({ count: 0, revenue: 0 })
+  const [recentSeances,   setRecentSeances]   = useState([])
+  const [monthStats,      setMonthStats]      = useState({ count: 0, revenue: 0, clientsCount: 0 })
+  const [derniersClients, setDerniersClients] = useState([])
+  const [dernieresSeances,setDernieresSeances]= useState([])
 
   useEffect(() => {
     const getUser = async () => {
@@ -401,12 +403,22 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     monthStart.setDate(1)
     const monthStartStr = monthStart.toISOString().slice(0, 10)
     Promise.all([
-      supabase.from('seances').select('*').order('created_at', { ascending: false }).limit(5),
+      supabase.from('seances').select('*').order('created_at',    { ascending: false }).limit(5),
       supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
-    ]).then(([{ data: recent }, { data: monthly }]) => {
+      supabase.from('clients').select('*').order('date_creation', { ascending: false }).limit(5),
+      supabase.from('seances').select('*').order('date_seance',   { ascending: false }).limit(5),
+      supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
+    ]).then(([{ data: recent }, { data: monthly }, { data: clients }, { data: seances }, { data: newClients }]) => {
       setRecentSeances(recent || [])
-      const m = monthly || []
-      setMonthStats({ count: m.length, revenue: m.reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0) })
+      setDerniersClients(clients || [])
+      setDernieresSeances(seances || [])
+      const m  = monthly    || []
+      const cc = newClients || []
+      setMonthStats({
+        count:        m.length,
+        revenue:      m.reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0),
+        clientsCount: cc.length,
+      })
     })
   }, [])
 
@@ -510,6 +522,104 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           AGENDA
         </div>
         <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
+      </div>
+
+      {/* Vue d'ensemble */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>VUE D'ENSEMBLE</div>
+
+        {/* Compteurs */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="ti ti-users" style={{ fontSize: 18, color: accent }} aria-hidden="true" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Clients ce mois</div>
+              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.clientsCount}</div>
+            </div>
+          </div>
+          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="ti ti-coin" style={{ fontSize: 18, color: '#1D9E75' }} aria-hidden="true" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Revenus ce mois</div>
+              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Listes côte à côte */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+          {/* 5 derniers clients */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Derniers clients</span>
+              <button onClick={() => onNavigate?.('/clients')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
+            </div>
+            {derniersClients.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucun client</div>
+            ) : derniersClients.map(c => (
+              <div key={c.id}
+                onClick={() => onNavigate?.('/clients')}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                  {(c.prenom?.[0] || '?')}{(c.nom?.[0] || '')}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.prenom} {c.nom}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{c.specialite || c.ville || '—'}</div>
+                </div>
+                {c.statut && (
+                  <span style={{ fontSize: 10, fontWeight: 500, background: c.statut === 'actif' ? '#E1F5EE' : '#F5F5F5', color: c.statut === 'actif' ? '#0F6E56' : '#6B7280', padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
+                    {c.statut}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 5 dernières séances */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Dernières séances</span>
+              <button onClick={() => onNavigate?.('/seances')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
+            </div>
+            {dernieresSeances.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucune séance</div>
+            ) : dernieresSeances.map(s => {
+              const MOIS_V = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+              const [, vm, vj] = (s.date_seance || '').split('-')
+              const dateLabel = s.date_seance ? `${vj} ${MOIS_V[parseInt(vm)-1]}` : '—'
+              return (
+                <div key={s.id}
+                  onClick={() => onNavigate?.('/seances')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                    {(s.prenom?.[0] || '?')}{(s.nom?.[0] || '')}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prenom} {s.nom}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.type_seance}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{dateLabel}</div>
+                    {s.prix_euros != null && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.prix_euros} €</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+        </div>
       </div>
 
       {/* Activité récente */}
