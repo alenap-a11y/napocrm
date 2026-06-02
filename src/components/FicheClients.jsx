@@ -75,12 +75,16 @@ export default function FicheClients({ userId }) {
   const [saveOk, setSaveOk]             = useState(false)
 
   /* Champs formulaire */
-  const [fNom, setFNom]       = useState('')
-  const [fPrenom, setFPrenom] = useState('')
-  const [fGenre, setFGenre]   = useState('Femme')
-  const [fTel, setFTel]       = useState('')
-  const [fEmail, setFEmail]   = useState('')
-  const [fNotes, setFNotes]   = useState('')
+  const [fNom,          setFNom]          = useState('')
+  const [fPrenom,       setFPrenom]       = useState('')
+  const [fGenre,        setFGenre]        = useState('Femme')
+  const [fTel,          setFTel]          = useState('')
+  const [fEmail,        setFEmail]        = useState('')
+  const [fNotes,        setFNotes]        = useState('')
+  const [fVille,        setFVille]        = useState('')
+  const [fSpecialite,   setFSpecialite]   = useState('Sophrologie')
+  const [fStatut,       setFStatut]       = useState('actif')
+  const [fDateNaissance,setFDateNaissance]= useState('')
 
   const importRef = useRef(null)
 
@@ -104,9 +108,13 @@ export default function FicheClients({ userId }) {
     setFNom(client.nom || '')
     setFPrenom(client.prenom || '')
     setFGenre(client.genre || 'Femme')
-    setFTel(client.tel || '')
+    setFTel(client.tel || client.telephone || '')
     setFEmail(client.email || '')
     setFNotes(client.notes || '')
+    setFVille(client.ville || '')
+    setFSpecialite(client.specialite || 'Sophrologie')
+    setFStatut(client.statut || 'actif')
+    setFDateNaissance(client.date_naissance || '')
     setConfirmDel(false)
     setSaveOk(false)
     setDetailSeances(seancesAll.filter(s => s.client_id === client.id))
@@ -116,6 +124,7 @@ export default function FicheClients({ userId }) {
     setDetail({ isNew: true })
     setFNom(''); setFPrenom(''); setFGenre('Femme')
     setFTel(''); setFEmail(''); setFNotes('')
+    setFVille(''); setFSpecialite('Sophrologie'); setFStatut('actif'); setFDateNaissance('')
     setDetailSeances([])
     setConfirmDel(false)
     setSaveOk(false)
@@ -124,7 +133,20 @@ export default function FicheClients({ userId }) {
   /* ── Sauvegarde ── */
   async function saveDetail() {
     setSaving(true)
-    const payload = { user_id: userId, nom: fNom.trim(), prenom: fPrenom.trim(), genre: fGenre, tel: fTel.trim(), email: fEmail.trim(), notes: fNotes.trim() }
+    const payload = {
+      user_id:           userId,
+      nom:               fNom.trim(),
+      prenom:            fPrenom.trim(),
+      genre:             fGenre,
+      tel:               fTel.trim(),
+      email:             fEmail.trim(),
+      notes:             fNotes.trim() || null,
+      ville:             fVille.trim() || null,
+      specialite:        fSpecialite   || null,
+      statut:            fStatut       || 'actif',
+      date_naissance:    fDateNaissance || null,
+      date_modification: new Date().toISOString(),
+    }
 
     if (detail.isNew) {
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
@@ -327,6 +349,34 @@ export default function FicheClients({ userId }) {
                 <input style={S.inp} type={f.type} value={f.val} onChange={e => f.set(e.target.value)} />
               </div>
             ))}
+
+            <div>
+              <span style={S.lbl}>Date de naissance</span>
+              <input style={S.inp} type="date" value={fDateNaissance} onChange={e => setFDateNaissance(e.target.value)} />
+            </div>
+
+            <div>
+              <span style={S.lbl}>Ville</span>
+              <input style={S.inp} value={fVille} onChange={e => setFVille(e.target.value)} placeholder="Paris" />
+            </div>
+
+            <div>
+              <span style={S.lbl}>Spécialité</span>
+              <select style={S.inp} value={fSpecialite} onChange={e => setFSpecialite(e.target.value)}>
+                {['Sophrologie','Coaching','Fleurs de Bach','Naturopathie','Énergie','Massage','Autre'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <span style={S.lbl}>Statut</span>
+              <select style={S.inp} value={fStatut} onChange={e => setFStatut(e.target.value)}>
+                <option value="actif">Actif</option>
+                <option value="inactif">Inactif</option>
+                <option value="en_attente">En attente</option>
+              </select>
+            </div>
 
             <div>
               <span style={S.lbl}>Notes internes</span>
