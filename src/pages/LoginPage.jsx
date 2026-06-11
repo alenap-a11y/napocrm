@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import logo from '../assets/napopetitv1.png'
+import napopetit from '../assets/napopetitv1.png'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <div className="login-wrap">
       <div className="login-box">
-        <div className="login-logo"><img src={napopetit} alt="NapoCRM" style={{ height: 32, width: 'auto', objectFit: 'contain' }} /></div>
+        <div className="login-logo"><img src={napopetit} alt="Naposolo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} /></div>
         <div className="login-sub">Espace praticien</div>
 
         <form className="login-form" onSubmit={handleSubmit}>
