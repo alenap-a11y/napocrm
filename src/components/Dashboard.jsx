@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useRealtimeTable } from '../hooks/useRealtimeTable'
+import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -376,6 +378,13 @@ const inputStyle = {
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 
 export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidgets, onNavigate }) {
+  const { revenusCeMois } = useRealtimeDashboard()
+
+  const { data: taches } = useRealtimeTable(
+    'taches',
+    () => supabase.from('taches').select('*, clients(nom, prenom)').eq('statut', 'todo').limit(5)
+  )
+
   const [time, setTime] = useState(new Date())
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
   const [prenom, setPrenom]               = useState('')
@@ -500,7 +509,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           {[
             { label: 'Clients actifs', val: 12, icon: 'ti-users', color: accent },
             { label: 'Séances à venir', val: 5, icon: 'ti-calendar-event', color: '#1D9E75' },
-            { label: 'Tâches', val: 3, icon: 'ti-checkbox', color: '#D4537E' },
           ].map(m => (
             <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -512,6 +520,34 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               </div>
             </div>
           ))}
+
+          <div style={{ ...cardStyle, flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 8, background: '#D4537E18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="ti ti-checkbox" style={{ fontSize: 16, color: '#D4537E' }} aria-hidden="true" />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Tâches</span>
+            </div>
+            {taches.length === 0 ? (
+              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
+                Aucune tâche en cours
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {taches.map(t => (
+                  <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <input type="checkbox" style={{ marginTop: 2, accentColor: '#D4537E', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                        {t.clients?.prenom} {t.clients?.nom}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{t.contenu}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
@@ -545,7 +581,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Revenus ce mois</div>
-              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
             </div>
           </div>
         </div>
@@ -639,7 +675,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
               <div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
               </div>
             </div>
           </div>

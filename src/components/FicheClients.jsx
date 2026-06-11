@@ -169,7 +169,7 @@ export default function FicheClients({ userId }) {
       const payload = { ...base, date_creation: now }
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
       if (error) {
-        console.log('Erreur clients:', JSON.stringify(error))
+        console.log('INSERT erreur complète:', JSON.stringify(error, null, 2))
         setSaveErr(`Erreur : ${error.message}`)
       } else if (data) {
         setClients(prev => [...prev, data].sort((a, b) => (a.nom || '').localeCompare(b.nom || '')))
