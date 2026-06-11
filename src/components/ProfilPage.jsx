@@ -1,14 +1,5 @@
-import { useState } from 'react'
-
-const INIT = {
-  prenom:   'Nathalie',
-  nom:      'Alpha',
-  activite: 'Sophrologue',
-  ville:    'Nancy',
-  email:    'nathalie@exemple.fr',
-  tel:      '06 12 34 56 78',
-  siret:    '123 456 789 00012',
-}
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 const inpStyle = {
   width: '100%', padding: '5px 8px', borderRadius: 6,
@@ -18,23 +9,91 @@ const inpStyle = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
+const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '' }
+
 export default function ProfilPage({ accent, onSignOut }) {
-  const [info,    setInfo]    = useState(INIT)
-  const [draft,   setDraft]   = useState(INIT)
+  const [user,    setUser]    = useState(null)
+  const [profil,  setProfil]  = useState(EMPTY)
+  const [stats,   setStats]   = useState({ nbClients: 0, nbSeances: 0, moisActif: 0 })
+  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(EMPTY)
+  const [saving,  setSaving]  = useState(false)
   const [saveMsg, setSaveMsg] = useState('')
 
-  const initials = `${draft.prenom[0] || ''}${draft.nom[0] || ''}`.toUpperCase() || 'NA'
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: { user: u } } = await supabase.auth.getUser()
+        if (!u) return
 
-  function startEdit() { setDraft({ ...info }); setEditing(true) }
-  function cancel()    { setEditing(false) }
-  function save()      {
-    setInfo({ ...draft })
-    setEditing(false)
-    setSaveMsg('✓ Profil mis à jour')
-    setTimeout(() => setSaveMsg(''), 2500)
+        setUser(u)
+
+        const [{ data: p }, { count: nbClients }, { count: nbSeances }] = await Promise.all([
+          supabase.from('profils').select('*').eq('id', u.id).single(),
+          supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', u.id),
+          supabase.from('seances').select('*', { count: 'exact', head: true }).eq('user_id', u.id),
+        ])
+
+        setProfil({
+          prenom:    p?.prenom    || u.user_metadata?.prenom || '',
+          nom:       p?.nom       || '',
+          telephone: p?.telephone || '',
+          ville:     p?.ville     || '',
+          siret:     p?.siret     || '',
+          activite:  p?.activite  || '',
+        })
+
+        const moisActif = Math.max(1, Math.floor(
+          (new Date() - new Date(u.created_at)) / (1000 * 60 * 60 * 24 * 30)
+        ))
+        setStats({ nbClients: nbClients || 0, nbSeances: nbSeances || 0, moisActif })
+      } catch (e) {
+        console.error('Erreur chargement profil :', e.message)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const initials   = `${profil.prenom[0] || ''}${profil.nom[0] || ''}`.toUpperCase() || '?'
+  const membreSince = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    : '—'
+
+  function startEdit() { setDraft({ ...profil }); setEditing(true); setSaveMsg('') }
+  function cancel()    { setEditing(false); setSaveMsg('') }
+  const d = k => e => setDraft(p => ({ ...p, [k]: e.target.value }))
+
+  async function save() {
+    setSaving(true); setSaveMsg('')
+    try {
+      const { error } = await supabase.from('profils').upsert({
+        id:        user.id,
+        prenom:    draft.prenom,
+        nom:       draft.nom,
+        telephone: draft.telephone,
+        ville:     draft.ville,
+        siret:     draft.siret,
+        activite:  draft.activite,
+      }, { onConflict: 'id' })
+      if (error) throw error
+      setProfil({ ...draft })
+      setEditing(false)
+      setSaveMsg('✓ Profil mis à jour')
+    } catch (e) {
+      setSaveMsg(`✗ Erreur : ${e.message}`)
+    }
+    setSaving(false)
+    setTimeout(() => setSaveMsg(''), 3000)
   }
-  const d = (k) => e => setDraft(p => ({ ...p, [k]: e.target.value }))
+
+  if (loading) return (
+    <div className="profil" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, color: 'var(--color-text-secondary)', gap: 8, fontSize: 13 }}>
+      <i className="ti ti-loader-2" style={{ animation: 'spin 1s linear infinite' }} />
+      Chargement…
+    </div>
+  )
 
   return (
     <div className="profil">
@@ -49,7 +108,7 @@ export default function ProfilPage({ accent, onSignOut }) {
               <input value={draft.nom}    onChange={d('nom')}    placeholder="Nom"    style={{ ...inpStyle, fontSize: 14, fontWeight: 500 }} />
             </div>
           ) : (
-            <div className="pf-name">{info.prenom} {info.nom}</div>
+            <div className="pf-name">{profil.prenom} {profil.nom}</div>
           )}
           <div className="pf-role">
             {editing ? (
@@ -59,7 +118,7 @@ export default function ProfilPage({ accent, onSignOut }) {
                 <input value={draft.ville}    onChange={d('ville')}    placeholder="Ville"    style={{ ...inpStyle, width: 90 }} />
               </>
             ) : (
-              <>{info.activite} · {info.ville}</>
+              <>{profil.activite}{profil.ville ? ` · ${profil.ville}` : ''}</>
             )}
             <span className="pf-plan">Plan Créateur</span>
           </div>
@@ -68,7 +127,7 @@ export default function ProfilPage({ accent, onSignOut }) {
 
       {/* Message flash */}
       {saveMsg && (
-        <div style={{ marginBottom: 10, padding: '7px 12px', borderRadius: 8, background: '#EAF3DE', color: '#3B6D11', fontSize: 12 }}>
+        <div style={{ marginBottom: 10, padding: '7px 12px', borderRadius: 8, background: saveMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: saveMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 12 }}>
           {saveMsg}
         </div>
       )}
@@ -76,9 +135,9 @@ export default function ProfilPage({ accent, onSignOut }) {
       {/* ── Stats ── */}
       <div className="pf-section-title">Statistiques</div>
       <div className="pf-stats">
-        <div className="pf-stat"><div className="pf-stat-val">12</div><div className="pf-stat-lbl">Clients</div></div>
-        <div className="pf-stat"><div className="pf-stat-val">47</div><div className="pf-stat-lbl">Séances</div></div>
-        <div className="pf-stat"><div className="pf-stat-val">3</div><div className="pf-stat-lbl">Mois actif</div></div>
+        <div className="pf-stat"><div className="pf-stat-val">{stats.nbClients}</div><div className="pf-stat-lbl">Clients</div></div>
+        <div className="pf-stat"><div className="pf-stat-val">{stats.nbSeances}</div><div className="pf-stat-lbl">Séances</div></div>
+        <div className="pf-stat"><div className="pf-stat-val">{stats.moisActif}</div><div className="pf-stat-lbl">Mois actif</div></div>
       </div>
 
       {/* ── Informations ── */}
@@ -88,11 +147,12 @@ export default function ProfilPage({ accent, onSignOut }) {
           <>
             <div className="pf-field">
               <div className="pf-field-lbl">Email</div>
-              <input value={draft.email} onChange={d('email')} type="email" style={inpStyle} />
+              <div className="pf-field-val" style={{ fontSize: 11, padding: '5px 0', color: 'var(--color-text-primary)' }}>{user?.email}</div>
+              <div style={{ fontSize: 9, color: 'var(--color-text-secondary)', marginTop: 2 }}>Non modifiable ici — lié au compte</div>
             </div>
             <div className="pf-field">
               <div className="pf-field-lbl">Téléphone</div>
-              <input value={draft.tel} onChange={d('tel')} type="tel" style={inpStyle} />
+              <input value={draft.telephone} onChange={d('telephone')} type="tel" style={inpStyle} />
             </div>
             <div className="pf-field">
               <div className="pf-field-lbl">Ville</div>
@@ -100,7 +160,7 @@ export default function ProfilPage({ accent, onSignOut }) {
             </div>
             <div className="pf-field">
               <div className="pf-field-lbl">Membre depuis</div>
-              <div className="pf-field-val" style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>Mars 2026</div>
+              <div className="pf-field-val" style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>{membreSince}</div>
             </div>
             <div className="pf-field">
               <div className="pf-field-lbl">SIRET</div>
@@ -113,12 +173,12 @@ export default function ProfilPage({ accent, onSignOut }) {
           </>
         ) : (
           [
-            { lbl: 'Email',          val: info.email    },
-            { lbl: 'Téléphone',      val: info.tel      },
-            { lbl: 'Ville',          val: `${info.ville}, France` },
-            { lbl: 'Membre depuis',  val: 'Mars 2026'   },
-            { lbl: 'SIRET',          val: info.siret    },
-            { lbl: 'Activité',       val: info.activite },
+            { lbl: 'Email',         val: user?.email                                    },
+            { lbl: 'Téléphone',     val: profil.telephone || '—'                        },
+            { lbl: 'Ville',         val: profil.ville ? `${profil.ville}, France` : '—' },
+            { lbl: 'Membre depuis', val: membreSince                                    },
+            { lbl: 'SIRET',         val: profil.siret    || '—'                         },
+            { lbl: 'Activité',      val: profil.activite || '—'                         },
           ].map(f => (
             <div className="pf-field" key={f.lbl}>
               <div className="pf-field-lbl">{f.lbl}</div>
@@ -133,11 +193,11 @@ export default function ProfilPage({ accent, onSignOut }) {
       <div className="pf-actions">
         {editing ? (
           <>
-            <button className="pf-btn" onClick={save} style={{ background: accent, border: 'none' }}>
+            <button className="pf-btn" onClick={save} disabled={saving} style={{ background: accent, border: 'none', opacity: saving ? .7 : 1 }}>
               <i className="ti ti-check" style={{ color: '#fff' }} aria-hidden="true" />
-              <span style={{ color: '#fff', fontWeight: 600 }}>Sauvegarder les modifications</span>
+              <span style={{ color: '#fff', fontWeight: 600 }}>{saving ? 'Sauvegarde…' : 'Sauvegarder les modifications'}</span>
             </button>
-            <button className="pf-btn" onClick={cancel}>
+            <button className="pf-btn" onClick={cancel} disabled={saving}>
               <i className="ti ti-x" style={{ color: 'var(--color-text-secondary)' }} aria-hidden="true" />
               <span>Annuler</span>
             </button>

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertNotif } from '../lib/notif'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -178,8 +179,10 @@ export default function Agenda() {
     if (!modalForm.date) { setModalMsg('Date requise.'); return }
     if (editingId) {
       setEvents(prev => prev.map(e => e.id === editingId ? { ...e, ...modalForm, duree: parseInt(modalForm.duree)||60, prix: parseFloat(modalForm.prix)||0 } : e))
+      insertNotif({ msg: `RDV modifié — ${modalForm.prenom} ${modalForm.nom}`, icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
     } else {
       setEvents(prev => [{ ...modalForm, id: Date.now(), duree: parseInt(modalForm.duree)||60, prix: parseFloat(modalForm.prix)||0 }, ...prev])
+      insertNotif({ msg: `Nouveau RDV — ${modalForm.prenom} ${modalForm.nom}`, icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
     }
     setModal(false)
     setModalMsg('')

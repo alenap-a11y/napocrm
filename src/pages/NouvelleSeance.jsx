@@ -312,6 +312,7 @@ export default function NouvelleSeance() {
         prix_euros:         parseFloat(prix) || null,
         type_seance:        type,
         schema_annotations: annots.length ? annots : null,
+        zones_corps:        (() => { const z = [...new Set(notes.filter(n => n.auto && n.zone).map(n => n.zone))]; return z.length ? z : null })(),
         notes:              notes.map(n => n.text).join('\n') || null,
         tags:               validTags.length ? validTags : null,
         date_creation:      new Date().toISOString(),

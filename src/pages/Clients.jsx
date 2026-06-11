@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertNotif } from '../lib/notif'
 
 
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
@@ -135,6 +136,7 @@ export default function Clients() {
       const { error } = await supabase.from('clients').upsert(rows, { onConflict: 'id' })
       if (error) throw error
       setSaveMsg('✓ Sauvegarde effectuée')
+      insertNotif({ msg: `Base clients synchronisée (${clients.length} client${clients.length > 1 ? 's' : ''})`, icon: 'ti-users', iconColor: '#3B6D11', bg: '#EAF3DE' })
     } catch (e) {
       setSaveMsg(`✗ Erreur : ${e.message}`)
     }
@@ -174,6 +176,7 @@ export default function Clients() {
   function handleAddClient() {
     if (!form.prenom.trim() || !form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
     setClients(prev => [{ ...form, id: Date.now(), nb_seances: parseInt(form.nb_seances) || 0 }, ...prev])
+    insertNotif({ msg: `Nouveau client — ${form.prenom} ${form.nom}`, icon: 'ti-user-plus', iconColor: '#185FA5', bg: '#E6F1FB' })
     setForm(EMPTY)
     setFormMsg('✓ Client ajouté.')
     setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)

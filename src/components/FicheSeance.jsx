@@ -15,7 +15,18 @@ const PALETTE = [
 ]
 
 const DUREES = ['15 min', '30 min', '45 min', '1h', '1h15', '1h30', '2h']
+const DUREE_MIN = { '15 min': 15, '30 min': 30, '45 min': 45, '1h': 60, '1h15': 75, '1h30': 90, '2h': 120 }
 const GENRES = ['Femme', 'Homme', 'Autre']
+
+function yToZone(y) {
+  if (y > 0.75)  return 'Tête'
+  if (y > 0.45)  return 'Cou / épaules'
+  if (y > 0.10)  return 'Thorax / abdomen'
+  if (y > -0.20) return 'Hanches / bassin'
+  if (y > -0.55) return 'Cuisses / genoux'
+  if (y > -0.80) return 'Jambes'
+  return 'Pieds / chevilles'
+}
 
 /* ─── Styles partagés ─── */
 const S = {
@@ -156,12 +167,13 @@ export default function FicheSeance({ userId }) {
         email:            email || null,
         date_naissance:   dateNaissance || null,
         date_creation:    new Date().toISOString(),
-        date:             date,
-        duree:            duree,
-        prix:             prix ? parseFloat(prix) : null,
-        notes_json:       notes,
-        annotations_json: annotations,
-        tags_json:        tags,
+        date_seance:        date,
+        duree_minutes:      DUREE_MIN[duree] ?? 60,
+        prix_euros:         prix ? parseFloat(prix) : null,
+        notes:              notes.length ? notes : null,
+        schema_annotations: annotations.length ? annotations : null,
+        zones_corps:        annotations.length ? [...new Set(annotations.map(a => yToZone(a.y)))] : null,
+        tags:               tags.length ? tags : null,
       })
 
     setSaving(false)

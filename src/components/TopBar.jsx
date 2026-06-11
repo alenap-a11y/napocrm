@@ -7,7 +7,7 @@ export default function TopBar({
   accent,
   username, initials,
   notifOpen, setNotifOpen,
-  notifDot, setNotifDot,
+  notifDot,
   searchOpen, setSearchOpen,
   decoOpen, setDecoOpen,
   onNavigate,

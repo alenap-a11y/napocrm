@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
+import { fmtNotifTime } from './lib/notif'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -92,13 +93,8 @@ export default function AppShell({ user, onSignOut }) {
   const [widgets, setWidgets] = useState(DEFAULT_WIDGETS)
   const [activePanel, setActivePanel] = useState(null)
   const [notifOpen, setNotifOpen] = useState(false)
-  const [notifDot, setNotifDot] = useState(true)
-  const [notifs, setNotifs] = useState([
-    { id: 1, unread: true, bg: '#E6F1FB', icon: 'ti-user-plus', iconColor: '#185FA5', msg: 'Nouveau client — Anne Bernard', time: 'Il y a 12 min' },
-    { id: 2, unread: true, bg: '#FAEEDA', icon: 'ti-clock', iconColor: '#854F0B', msg: 'Rappel — Marie Joubert demain 10h', time: 'Il y a 1h' },
-    { id: 3, unread: true, bg: '#EAF3DE', icon: 'ti-check', iconColor: '#3B6D11', msg: 'Facture #0042 payée — Sophie Caron', time: 'Il y a 3h' },
-    { id: 4, unread: false, bg: '#EEEDFE', icon: 'ti-mail', iconColor: '#534AB7', msg: 'Message de Pierre Laurent', time: 'Hier' },
-  ])
+  const [notifs, setNotifs] = useState([])
+  const notifDot = notifs.some(n => n.unread)
   const [searchOpen, setSearchOpen] = useState(false)
   const [decoOpen, setDecoOpen] = useState(false)
   const [username, setUsername] = useState(() => {
@@ -120,6 +116,30 @@ export default function AppShell({ user, onSignOut }) {
   }, [])
 
   useEffect(() => {
+    async function fetchNotifs() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+        if (data?.length) setNotifs(data.map(n => ({
+          id:        n.id,
+          unread:    n.unread,
+          bg:        n.bg        || '#F3F4F6',
+          icon:      n.icon      || 'ti-bell',
+          iconColor: n.icon_color || '#6B7280',
+          msg:       n.msg,
+          time:      fmtNotifTime(n.created_at),
+        })))
+      } catch {}
+    }
+    fetchNotifs()
+  }, [])
+
+  useEffect(() => {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus()
   }, [searchOpen])
 
@@ -137,9 +157,12 @@ export default function AppShell({ user, onSignOut }) {
     setCurView(view)
   }
 
-  function clearNotifs() {
+  async function clearNotifs() {
     setNotifs(n => n.map(x => ({ ...x, unread: false })))
-    setNotifDot(false)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await supabase.from('notifications').update({ unread: false }).eq('user_id', user.id)
+    } catch {}
   }
 
   function addSbItem(id) {
@@ -220,7 +243,7 @@ export default function AppShell({ user, onSignOut }) {
         accent={accent}
         username={username} initials={username.charAt(0).toUpperCase()}
         notifOpen={notifOpen} setNotifOpen={setNotifOpen}
-        notifDot={notifDot} setNotifDot={setNotifDot}
+        notifDot={notifDot}
         searchOpen={searchOpen} setSearchOpen={setSearchOpen}
         decoOpen={decoOpen} setDecoOpen={setDecoOpen}
         onNavigate={id => routerNavigate(`/${id}`)}
@@ -230,20 +253,24 @@ export default function AppShell({ user, onSignOut }) {
       <div className={`notif-drop${notifOpen ? ' open' : ''}`} id="notif-drop">
         <div className="nd-head">
           <span className="nd-title">Notifications</span>
-          <button className="nd-clear" onClick={clearNotifs}>Tout marquer lu</button>
+          {notifDot && <button className="nd-clear" onClick={clearNotifs}>Tout marquer lu</button>}
         </div>
-        {notifs.map(n => (
-          <div key={n.id} className={`nd-item${n.unread ? ' unread' : ''}`}>
-            <div className="nd-ico" style={{ background: n.bg }}>
-              <i className={`ti ${n.icon}`} style={{ color: n.iconColor }} aria-hidden="true" />
+        {notifs.length === 0 ? (
+          <div className="nd-empty">Aucune notification</div>
+        ) : (
+          notifs.map(n => (
+            <div key={n.id} className={`nd-item${n.unread ? ' unread' : ''}`}>
+              <div className="nd-ico" style={{ background: n.bg }}>
+                <i className={`ti ${n.icon}`} style={{ color: n.iconColor }} aria-hidden="true" />
+              </div>
+              <div className="nd-body">
+                <div className="nd-msg">{n.msg}</div>
+                <div className="nd-time">{n.time}</div>
+              </div>
+              {n.unread && <div className="nd-dot" />}
             </div>
-            <div className="nd-body">
-              <div className="nd-msg">{n.msg}</div>
-              <div className="nd-time">{n.time}</div>
-            </div>
-            {n.unread && <div className="nd-dot" />}
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Search overlay */}

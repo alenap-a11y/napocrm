@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertNotif } from '../lib/notif'
 
 
 const CATEGORIES = ['Toutes', 'Séance', 'Suivi', 'Bilan', 'Fleurs de Bach', 'Perso', 'Autre']
@@ -193,6 +194,7 @@ export default function Notes() {
     setNotes(prev => prev.map(n => n.id === selected.id ? updated : n))
     setSelected(updated)
     setEditing(false)
+    insertNotif({ msg: `Note modifiée — ${editForm.titre || 'Sans titre'}`, icon: 'ti-notebook', iconColor: '#854F0B', bg: '#FAEEDA' })
   }
 
   function cancelEdit() {
@@ -220,6 +222,7 @@ export default function Notes() {
     } catch {
       setNotes(prev => [{ ...form, id: Date.now() }, ...prev])
     }
+    insertNotif({ msg: `Nouvelle note — ${form.titre || 'Sans titre'}`, icon: 'ti-notebook', iconColor: '#854F0B', bg: '#FAEEDA' })
     setForm(EMPTY)
     setFormMsg('✓ Note ajoutée.')
     setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { insertNotif } from '../lib/notif'
 import SeanceTimeline from './SeanceTimeline'
 
 /* ─── Données ──────────────────────────────────────────────────────────── */
@@ -176,6 +177,7 @@ export default function FicheClientBach({ client }) {
       const { error } = await supabase.from('bach_seances').upsert(rows, { onConflict: 'id' })
       if (error) throw error
       setSaveMsg('✓ Sauvegarde effectuée')
+      insertNotif({ msg: `Fleurs de Bach — ${hist.length} séance${hist.length > 1 ? 's' : ''} sauvegardée${hist.length > 1 ? 's' : ''}`, icon: 'ti-leaf', iconColor: '#534AB7', bg: '#EEEDFE' })
     } catch (e) {
       setSaveMsg(`✗ Erreur : ${e.message}`)
     }

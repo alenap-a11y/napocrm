@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { insertNotif } from '../lib/notif'
 
 
 // ── CSV helpers ────────────────────────────────────────────────────────────
@@ -221,6 +222,7 @@ export default function Seances() {
     setSeances(prev => prev.map(s => s.id === detail.id ? updated : s))
     setDetail(updated)
     setEditingDetail(false)
+    insertNotif({ msg: `Séance modifiée — ${updated.prenom} ${updated.nom}`, icon: 'ti-calendar-plus', iconColor: '#185FA5', bg: '#E6F1FB' })
   }
 
   const fmt = n => `${(parseFloat(n) || 0).toFixed(0)} €`
@@ -486,6 +488,7 @@ export default function Seances() {
                   }
                   setSeances(prev => [newSeance, ...prev])
                 }
+                insertNotif({ msg: `Nouvelle séance — ${form.prenom} ${form.nom}`, icon: 'ti-calendar-plus', iconColor: '#185FA5', bg: '#E6F1FB' })
                 setForm(EMPTY_FORM)
                 setFormMsg('✓ Séance ajoutée avec succès.')
                 setTimeout(() => { setFormMsg(''); setActiveTab('historique') }, 1500)
