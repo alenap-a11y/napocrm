@@ -328,7 +328,7 @@ export default function LoginPage() {
       <footer style={{
         borderTop: '0.5px solid rgba(14,165,233,0.15)',
         padding: '28px 40px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
         background: '#f0f9ff',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
