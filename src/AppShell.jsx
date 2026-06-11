@@ -27,8 +27,8 @@ const ALL_SB_ITEMS = [
   { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
-  { id: 'factures', label: 'Factures', icon: 'ti-file',             to: '/factures'  },
-  { id: 'fiscal',   label: 'Fiscal',   icon: 'ti-calculator',       to: '/fiscal'    },
+  { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
+  { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
   { id: 'napoplus',      label: 'Napo+',        icon: 'ti-sparkles',        to: '/napoplus'       },
   { id: 'marketplace',   label: 'Marketplace',  icon: 'ti-building-store',  to: '/marketplace'    },
 ]
@@ -47,6 +47,16 @@ function loadSbItems() {
     ALL_SB_ITEMS.filter(i => !resultIds.has(i.id)).forEach(i => result.push(i))
     return result
   } catch { return ALL_SB_ITEMS }
+}
+
+const SB_VIS_KEY = 'napo_sb_vis_v1'
+
+function loadSbVis() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SB_VIS_KEY))
+    if (saved && typeof saved === 'object') return saved
+  } catch {}
+  return { factures: false, fiscal: false }
 }
 
 const DEFAULT_TB_ITEMS = [
@@ -72,6 +82,7 @@ const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C
 export default function AppShell({ user, onSignOut }) {
   const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
+  const [sbVis, setSbVis] = useState(loadSbVis)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
@@ -141,6 +152,10 @@ export default function AppShell({ user, onSignOut }) {
     setSbItems(prev => prev.length <= 1 ? prev : prev.filter(i => i.id !== id))
   }
 
+  function toggleSbVis(id) {
+    setSbVis(prev => ({ ...prev, [id]: prev[id] === false }))
+  }
+
   function toggleTbVis(idx) {
     setTbItems(prev => prev.map((item, i) => i === idx ? { ...item, vis: !item.vis } : item))
   }
@@ -192,6 +207,10 @@ export default function AppShell({ user, onSignOut }) {
   useEffect(() => {
     localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
   }, [sbItems])
+
+  useEffect(() => {
+    localStorage.setItem(SB_VIS_KEY, JSON.stringify(sbVis))
+  }, [sbVis])
 
   return (
     <div className="app" id="app">
@@ -259,7 +278,7 @@ export default function AppShell({ user, onSignOut }) {
           accent={accent} bgCol={bgCol}
           activePanel={activePanel} setActivePanel={setActivePanel}
           username={username}
-          items={sbItems} setItems={setSbItems}
+          items={sbItems.filter(i => sbVis[i.id] !== false)} setItems={setSbItems}
         />
 
         {/* Panel Perso */}
@@ -274,14 +293,20 @@ export default function AppShell({ user, onSignOut }) {
             </button>
           </div>
           <div className="panel-body">
-            <div className="pl">Sidebar — glisse pour réordonner</div>
+            <div className="pl">Sidebar — glisse + œil pour masquer</div>
             {sbItems.map((item, idx) => (
               <DragRow
                 key={item.id}
                 icon={item.icon} label={item.label} accent={accent}
                 onDragStart={() => { sbDragSrc.current = idx }}
                 onDrop={() => { if (sbDragSrc.current !== null && sbDragSrc.current !== idx) { sbPanelDrop(sbDragSrc.current, idx); sbDragSrc.current = null } }}
-                action={<button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(item.id)}><i className="ti ti-trash" /></button>}
+                action={
+                  (item.id === 'factures' || item.id === 'fiscal')
+                    ? <button aria-label={sbVis[item.id] !== false ? `Masquer ${item.label}` : `Afficher ${item.label}`} onClick={() => toggleSbVis(item.id)}>
+                        <i className={`ti ${sbVis[item.id] !== false ? 'ti-eye' : 'ti-eye-off'}`} />
+                      </button>
+                    : <button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(item.id)}><i className="ti ti-trash" /></button>
+                }
               />
             ))}
             {ALL_SB_ITEMS.filter(i => !sbItems.find(s => s.id === i.id)).length > 0 && (

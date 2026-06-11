@@ -41,12 +41,36 @@ function scrollTo(id) {
 }
 
 export default function LoginPage() {
-  const [email,      setEmail]      = useState('')
-  const [password,   setPassword]   = useState('')
-  const [remember,   setRemember]   = useState(false)
-  const [loading,    setLoading]    = useState(false)
-  const [error,      setError]      = useState('')
-  const [magicSent,  setMagicSent]  = useState(false)
+  const [email,       setEmail]       = useState('')
+  const [password,    setPassword]    = useState('')
+  const [remember,    setRemember]    = useState(false)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const [magicSent,   setMagicSent]   = useState(false)
+  const [resetOpen,   setResetOpen]   = useState(false)
+  const [resetEmail,  setResetEmail]  = useState('')
+  const [resetSent,   setResetSent]   = useState(false)
+  const [resetError,  setResetError]  = useState('')
+  const [resetLoading,setResetLoading]= useState(false)
+
+  async function handleResetPassword() {
+    if (!resetEmail.trim()) { setResetError('Entrez votre adresse email.'); return }
+    setResetLoading(true)
+    setResetError('')
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    if (error) setResetError(error.message)
+    else setResetSent(true)
+    setResetLoading(false)
+  }
+
+  function closeReset() {
+    setResetOpen(false)
+    setResetEmail('')
+    setResetSent(false)
+    setResetError('')
+  }
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -61,9 +85,18 @@ export default function LoginPage() {
     if (!email.trim()) { setError('Entrez votre email pour recevoir un lien magique.'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOtp({ email })
-    if (error) setError(error.message)
-    else setMagicSent(true)
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin + '/dashboard',
+      },
+    })
+    if (error) {
+      console.error('Magic link error:', error.message, error.status, error)
+      setError(error.message)
+    } else {
+      setMagicSent(true)
+    }
     setLoading(false)
   }
 
@@ -228,7 +261,7 @@ export default function LoginPage() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => scrollTo('connexion')}
+                  onClick={() => { setResetOpen(true); setResetEmail(email) }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0EA5E9', fontWeight: 500 }}
                 >
                   Mot de passe oublié ?
@@ -333,6 +366,79 @@ export default function LoginPage() {
         </div>
         <span style={{ fontSize: 13, color: '#9ca3af' }}>Fait avec ❤️ à Vandœuvre-lès-Nancy</span>
       </footer>
+
+      {/* ── MODAL RESET MOT DE PASSE ── */}
+      {resetOpen && (
+        <div
+          onClick={e => e.target === e.currentTarget && closeReset()}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 500,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 16px',
+          }}
+        >
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 400,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+                  Mot de passe oublié ?
+                </div>
+                <div style={{ fontSize: 13, color: '#9ca3af' }}>
+                  Nous vous enverrons un lien de réinitialisation.
+                </div>
+              </div>
+              <button onClick={closeReset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }} aria-label="Fermer">×</button>
+            </div>
+
+            {resetSent ? (
+              <div style={{ padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
+                <i className="ti ti-mail-check" style={{ fontSize: 24, display: 'block', marginBottom: 8 }} aria-hidden="true" />
+                Email envoyé, vérifiez votre boîte mail.
+                <br />
+                <button onClick={closeReset} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>
+                  Fermer
+                </button>
+              </div>
+            ) : (
+              <>
+                {resetError && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}>
+                    <i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
+                    {resetError}
+                  </div>
+                )}
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                  Email
+                </label>
+                <input
+                  type="email" autoFocus
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleResetPassword()}
+                  placeholder="vous@exemple.com"
+                  style={{ ...inputStyle, marginBottom: 16 }}
+                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={closeReset} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={resetLoading}
+                    style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: resetLoading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600, cursor: resetLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}
+                  >
+                    {resetLoading ? 'Envoi…' : 'Envoyer le lien'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   )

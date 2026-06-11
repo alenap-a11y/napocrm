@@ -1,18 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-/* ─── Mock data ────────────────────────────────────────────────────────── */
-
-const MOCK = [
-  { id: 1, client_nom: 'Sophie Legrand', categorie: 'Séance',        date_note: '2026-05-27', titre: 'Séance sophrologie – retour positif',   contenu: 'Sophie a bien progressé sur la gestion du stress. Les exercices de respiration sont désormais automatiques. Elle signale une amélioration notable du sommeil depuis 2 semaines. Prochaine séance dans 3 semaines.' },
-  { id: 2, client_nom: 'Pierre Dumont',  categorie: 'Suivi',         date_note: '2026-05-26', titre: 'Appel téléphonique de suivi',            contenu: "Pierre a appelé pour signaler une rechute de stress liée à une restructuration dans son entreprise. Nous avons convenu d'un rendez-vous en urgence la semaine prochaine." },
-  { id: 3, client_nom: 'Marie Caron',    categorie: 'Bilan',         date_note: '2026-05-24', titre: 'Bilan naturopathie mois 2',              contenu: 'Les résultats sanguins confirment une amélioration du taux de magnésium. Fatigue toujours présente mais moins intense. Continuer le protocole 1 mois. Ajouter Vitamine D3 5000 UI.' },
-  { id: 4, client_nom: 'Lucie Bernard',  categorie: 'Fleurs de Bach', date_note: '2026-05-22', titre: 'Formule Bach renouvellement',            contenu: 'Formule renouvelée : Star of Bethlehem, Walnut, Olive. Score bien-être passé de 3/10 à 6/10 en 21 jours. Excellent résultat. Continuer avec formule allégée.' },
-  { id: 5, client_nom: '',              categorie: 'Perso',          date_note: '2026-05-20', titre: 'Idées formations 2026',                  contenu: 'Formations à prévoir :\n- Hypnose Eriksonienne (octobre)\n- Cohérence cardiaque avancée (septembre)\nBudget estimé : 2 400 €' },
-  { id: 6, client_nom: 'Paul Renard',    categorie: 'Séance',        date_note: '2026-05-18', titre: 'Séance énergie lombaires',               contenu: 'Libération du blocage L4-L5. Paul signale 70% de diminution de la douleur après la séance. Exercices posturaux donnés à faire quotidiennement. Revoir dans 2 semaines.' },
-  { id: 7, client_nom: 'Anna Leblanc',   categorie: 'Suivi',         date_note: '2026-05-15', titre: 'Protocole anxiété – J+14',               contenu: 'Anna pratique les exercices matin et soir comme convenu. Les crises de panique sont passées de 4/semaine à 1/semaine. Progression encourageante.' },
-  { id: 8, client_nom: '',              categorie: 'Perso',          date_note: '2026-05-10', titre: 'Organisation cabinet – mai',             contenu: 'Tâches en cours :\n✓ Renouveler assurance RC Pro\n✓ Commander flacons Bach\n→ Mettre à jour CGV\n→ Créer modèle de consentement RGPD' },
-]
 
 const CATEGORIES = ['Toutes', 'Séance', 'Suivi', 'Bilan', 'Fleurs de Bach', 'Perso', 'Autre']
 
@@ -74,7 +62,8 @@ const isoToday = new Date().toISOString().slice(0, 10)
 export default function Notes() {
   const importRef = useRef()
 
-  const [notes,      setNotes]      = useState(MOCK)
+  const [notes,      setNotes]      = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [activeTab,  setActiveTab]  = useState('liste')
   const [search,     setSearch]     = useState('')
   const [filterCat,  setFilterCat]  = useState('Toutes')
@@ -94,13 +83,14 @@ export default function Notes() {
   /* Chargement initial depuis Supabase */
   useEffect(() => {
     async function load() {
-      try {
-        const { data, error } = await supabase
-          .from('notes')
-          .select('id, titre, categorie, client_nom, date_note, contenu')
-          .order('date_note', { ascending: false })
-        if (!error && data?.length) setNotes(data)
-      } catch { /* garde le mock */ }
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, titre, categorie, client_nom, date_note, contenu')
+        .order('date_note', { ascending: false })
+      if (error) console.error('Erreur chargement notes:', error.message)
+      else setNotes(data || [])
+      setLoading(false)
     }
     load()
   }, [])
@@ -315,9 +305,17 @@ export default function Notes() {
 
             {/* Liste */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
-              {filtered.length === 0 ? (
+              {loading ? (
                 <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                  <i className="ti ti-notebook-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />Aucune note
+                  <i className="ti ti-loader-2" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />Chargement…
+                </div>
+              ) : notes.length === 0 ? (
+                <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                  <i className="ti ti-notebook" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />Aucune note pour le moment
+                </div>
+              ) : filtered.length === 0 ? (
+                <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                  <i className="ti ti-notebook-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />Aucune note trouvée
                 </div>
               ) : filtered.map((n, idx) => {
                 const cat = CAT_COLOR[n.categorie] || CAT_COLOR['Autre']

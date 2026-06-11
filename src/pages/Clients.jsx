@@ -1,22 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-/* ─── Mock data ────────────────────────────────────────────────────────── */
-
-const MOCK = [
-  { id: 1,  prenom: 'Sophie',   nom: 'Legrand',   email: 'sophie.legrand@mail.com',   tel: '06 11 22 33 44', naissance: '1988-03-14', specialite: 'Sophrologie',   ville: 'Paris',     statut: 'actif',   nb_seances: 8,  notes: 'Suivi stress chronique. Très assidue.' },
-  { id: 2,  prenom: 'Pierre',   nom: 'Dumont',    email: 'pierre.dumont@mail.com',    tel: '06 22 33 44 55', naissance: '1974-07-22', specialite: 'Coaching',      ville: 'Lyon',      statut: 'actif',   nb_seances: 5,  notes: 'Transition professionnelle.' },
-  { id: 3,  prenom: 'Marie',    nom: 'Caron',     email: 'marie.caron@mail.com',      tel: '06 33 44 55 66', naissance: '1995-11-08', specialite: 'Naturopathie',  ville: 'Bordeaux',  statut: 'actif',   nb_seances: 3,  notes: 'Bilan alimentaire en cours.' },
-  { id: 4,  prenom: 'Lucie',    nom: 'Bernard',   email: 'lucie.bernard@mail.com',    tel: '06 44 55 66 77', naissance: '1980-05-30', specialite: 'Fleurs de Bach',ville: 'Paris',     statut: 'actif',   nb_seances: 12, notes: 'Suivi long terme. Résultats excellents.' },
-  { id: 5,  prenom: 'Paul',     nom: 'Renard',    email: 'paul.renard@mail.com',      tel: '06 55 66 77 88', naissance: '1963-09-17', specialite: 'Énergie',       ville: 'Nantes',    statut: 'actif',   nb_seances: 4,  notes: 'Douleurs lombaires chroniques.' },
-  { id: 6,  prenom: 'Anna',     nom: 'Leblanc',   email: 'anna.leblanc@mail.com',     tel: '06 66 77 88 99', naissance: '1991-02-25', specialite: 'Sophrologie',   ville: 'Toulouse',  statut: 'actif',   nb_seances: 6,  notes: 'Anxiété généralisée. Bons progrès.' },
-  { id: 7,  prenom: 'Thomas',   nom: 'Bernard',   email: 'thomas.bernard@mail.com',   tel: '06 77 88 99 00', naissance: '1985-12-03', specialite: 'Massage',       ville: 'Paris',     statut: 'inactif', nb_seances: 2,  notes: 'A interrompu le suivi en mars.' },
-  { id: 8,  prenom: 'Camille',  nom: 'Dumas',     email: 'camille.dumas@mail.com',    tel: '06 88 99 00 11', naissance: '2000-06-19', specialite: 'Coaching',      ville: 'Lille',     statut: 'actif',   nb_seances: 1,  notes: 'Première séance. Orientation études/carrière.' },
-  { id: 9,  prenom: 'Isabelle', nom: 'Martin',    email: 'isabelle.martin@mail.com',  tel: '06 99 00 11 22', naissance: '1969-04-11', specialite: 'Naturopathie',  ville: 'Marseille', statut: 'archivé', nb_seances: 9,  notes: 'Dossier clôturé fin 2025.' },
-  { id: 10, prenom: 'Julien',   nom: 'Moreau',    email: 'julien.moreau@mail.com',    tel: '07 00 11 22 33', naissance: '1998-08-07', specialite: 'Énergie',       ville: 'Strasbourg',statut: 'actif',   nb_seances: 3,  notes: 'Fatigue chronique post-Covid.' },
-  { id: 11, prenom: 'Claire',   nom: 'Petit',     email: 'claire.petit@mail.com',     tel: '07 11 22 33 44', naissance: '1977-01-28', specialite: 'Fleurs de Bach',ville: 'Paris',     statut: 'actif',   nb_seances: 7,  notes: 'Deuil. Accompagnement en cours.' },
-  { id: 12, prenom: 'Marc',     nom: 'Dupont',    email: 'marc.dupont@mail.com',      tel: '07 22 33 44 55', naissance: '1955-10-15', specialite: 'Sophrologie',   ville: 'Nice',      statut: 'inactif', nb_seances: 5,  notes: 'Retraite récente. Pause séances.' },
-]
 
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
 const STATUTS     = ['Tous', 'actif', 'inactif', 'archivé']
@@ -93,7 +77,9 @@ const isoToday = new Date().toISOString().slice(0, 10)
 export default function Clients() {
   const importRef = useRef()
 
-  const [clients,      setClients]     = useState(MOCK)
+  const [clients,      setClients]     = useState([])
+  const [loading,      setLoading]     = useState(true)
+  const [fetchError,   setFetchError]  = useState('')
   const [activeTab,    setActiveTab]   = useState('liste')
   const [search,       setSearch]      = useState('')
   const [filterSpec,   setFilterSpec]  = useState('Toutes')
@@ -111,6 +97,18 @@ export default function Clients() {
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
   const ef = (k) => e => setEditForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  useEffect(() => {
+    async function fetchClients() {
+      setLoading(true)
+      setFetchError('')
+      const { data, error } = await supabase.from('clients').select('*')
+      if (error) setFetchError(error.message)
+      else setClients(data || [])
+      setLoading(false)
+    }
+    fetchClients()
+  }, [])
 
   /* Filtres */
   const filtered = clients.filter(c => {
@@ -261,7 +259,19 @@ export default function Clients() {
               ))}
             </div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                <i className="ti ti-loader-2" style={{ fontSize: 28, display: 'block', marginBottom: 10, animation: 'spin 1s linear infinite' }} />Chargement…
+              </div>
+            ) : fetchError ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#993556', fontSize: 13 }}>
+                <i className="ti ti-alert-circle" style={{ fontSize: 28, display: 'block', marginBottom: 10 }} />Erreur : {fetchError}
+              </div>
+            ) : clients.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                <i className="ti ti-users" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucun client pour le moment
+              </div>
+            ) : filtered.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                 <i className="ti ti-users-off" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucun client trouvé
               </div>

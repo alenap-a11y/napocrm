@@ -2,22 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-// ── Données mock (fallback si Supabase vide) ───────────────────────────────
-
-const MOCK = [
-  { id: 1,  prenom: 'Marie',   nom: 'Joubert',  type_seance: 'Sophrologie',  date_seance: '2026-05-27', heure_seance: '10:00', duree_minutes: 60,  prix_euros: 60,  tags: ['Stress','Sommeil'],   notes: 'Bon relâchement musculaire. Retour positif sur la respiration.' },
-  { id: 2,  prenom: 'Pierre',  nom: 'Laurent',  type_seance: 'Coaching',     date_seance: '2026-05-27', heure_seance: '14:30', duree_minutes: 45,  prix_euros: 80,  tags: ['Anxiété'],            notes: "Travail sur les objectifs Q3. Plan d'action établi." },
-  { id: 3,  prenom: 'Sophie',  nom: 'Caron',    type_seance: 'Naturopathie', date_seance: '2026-05-26', heure_seance: '09:00', duree_minutes: 90,  prix_euros: 95,  tags: ['Fatigue','Sommeil'],  notes: 'Bilan alimentaire complet. Compléments recommandés.' },
-  { id: 4,  prenom: 'Camille', nom: 'Dumas',    type_seance: 'Sophrologie',  date_seance: '2026-05-24', heure_seance: '11:00', duree_minutes: 60,  prix_euros: 60,  tags: ['Stress'],             notes: 'Première séance. Très réceptive aux exercices.' },
-  { id: 5,  prenom: 'Lucie',   nom: 'Martin',   type_seance: 'Coaching',     date_seance: '2026-05-22', heure_seance: '15:00', duree_minutes: 45,  prix_euros: 80,  tags: ['Douleur'],            notes: 'Suivi post-burn out. Reprise progressive.' },
-  { id: 6,  prenom: 'Paul',    nom: 'Renard',   type_seance: 'Naturopathie', date_seance: '2026-05-20', heure_seance: '10:00', duree_minutes: 60,  prix_euros: 75,  tags: ['Fatigue'],            notes: 'Protocole détox 21 jours démarré.' },
-  { id: 7,  prenom: 'Anna',    nom: 'Leblanc',  type_seance: 'Sophrologie',  date_seance: '2026-05-18', heure_seance: '14:00', duree_minutes: 60,  prix_euros: 60,  tags: ['Anxiété','Stress'],   notes: 'Travail sur la visualisation positive.' },
-  { id: 8,  prenom: 'Marie',   nom: 'Joubert',  type_seance: 'Sophrologie',  date_seance: '2026-05-13', heure_seance: '10:00', duree_minutes: 60,  prix_euros: 60,  tags: ['Sommeil'],            notes: "Nette amélioration du sommeil signalée." },
-  { id: 9,  prenom: 'Sophie',  nom: 'Caron',    type_seance: 'Naturopathie', date_seance: '2026-05-10', heure_seance: '09:30', duree_minutes: 90,  prix_euros: 95,  tags: ['Fatigue'],            notes: 'Contrôle des résultats sanguins. Magnésium augmenté.' },
-  { id: 10, prenom: 'Thomas',  nom: 'Bernard',  type_seance: 'Énergie',      date_seance: '2026-05-08', heure_seance: '11:30', duree_minutes: 60,  prix_euros: 70,  tags: ['Lombaires'],          notes: 'Blocage L4-L5 libéré. Exercices donnés.' },
-  { id: 11, prenom: 'Lucie',   nom: 'Martin',   type_seance: 'Coaching',     date_seance: '2026-05-05', heure_seance: '16:00', duree_minutes: 45,  prix_euros: 80,  tags: [],                     notes: 'Bilan mensuel. Progression notable.' },
-  { id: 12, prenom: 'Paul',    nom: 'Renard',   type_seance: 'Naturopathie', date_seance: '2026-04-28', heure_seance: '10:00', duree_minutes: 60,  prix_euros: 75,  tags: ['Fatigue'],            notes: 'Mi-parcours détox. Résultats encourageants.' },
-]
 
 // ── CSV helpers ────────────────────────────────────────────────────────────
 
@@ -113,22 +97,14 @@ export default function Seances() {
   const [form,    setForm]    = useState(EMPTY_FORM)
   const [formMsg, setFormMsg] = useState('')
 
-  // ── Chargement Supabase (fallback mock) ──────────────────────────────────
   useEffect(() => {
     async function load() {
-      try {
-        const { data, error } = await supabase
-          .from('seances')
-          .select('*')
-          .order('date_seance', { ascending: false })
-        if (error || !data || data.length === 0) {
-          setSeances(MOCK)
-        } else {
-          setSeances(data)
-        }
-      } catch {
-        setSeances(MOCK)
-      }
+      const { data, error } = await supabase
+        .from('seances')
+        .select('*')
+        .order('date_seance', { ascending: false })
+      if (error) console.error('Erreur chargement séances:', error.message)
+      else setSeances(data || [])
       setLoading(false)
     }
     load()

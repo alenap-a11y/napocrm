@@ -1,7 +1,22 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 /* ─── Mock data ────────────────────────────────────────────────────────── */
+
+const MOCK = [
+  { id: 1,  prenom: 'Sophie',   nom: 'Legrand',   email: 'sophie.legrand@mail.com',   tel: '06 11 22 33 44', naissance: '1988-03-14', specialite: 'Sophrologie',   ville: 'Paris',     statut: 'actif',   nb_seances: 8,  notes: 'Suivi stress chronique. Très assidue.' },
+  { id: 2,  prenom: 'Pierre',   nom: 'Dumont',    email: 'pierre.dumont@mail.com',    tel: '06 22 33 44 55', naissance: '1974-07-22', specialite: 'Coaching',      ville: 'Lyon',      statut: 'actif',   nb_seances: 5,  notes: 'Transition professionnelle.' },
+  { id: 3,  prenom: 'Marie',    nom: 'Caron',     email: 'marie.caron@mail.com',      tel: '06 33 44 55 66', naissance: '1995-11-08', specialite: 'Naturopathie',  ville: 'Bordeaux',  statut: 'actif',   nb_seances: 3,  notes: 'Bilan alimentaire en cours.' },
+  { id: 4,  prenom: 'Lucie',    nom: 'Bernard',   email: 'lucie.bernard@mail.com',    tel: '06 44 55 66 77', naissance: '1980-05-30', specialite: 'Fleurs de Bach',ville: 'Paris',     statut: 'actif',   nb_seances: 12, notes: 'Suivi long terme. Résultats excellents.' },
+  { id: 5,  prenom: 'Paul',     nom: 'Renard',    email: 'paul.renard@mail.com',      tel: '06 55 66 77 88', naissance: '1963-09-17', specialite: 'Énergie',       ville: 'Nantes',    statut: 'actif',   nb_seances: 4,  notes: 'Douleurs lombaires chroniques.' },
+  { id: 6,  prenom: 'Anna',     nom: 'Leblanc',   email: 'anna.leblanc@mail.com',     tel: '06 66 77 88 99', naissance: '1991-02-25', specialite: 'Sophrologie',   ville: 'Toulouse',  statut: 'actif',   nb_seances: 6,  notes: 'Anxiété généralisée. Bons progrès.' },
+  { id: 7,  prenom: 'Thomas',   nom: 'Bernard',   email: 'thomas.bernard@mail.com',   tel: '06 77 88 99 00', naissance: '1985-12-03', specialite: 'Massage',       ville: 'Paris',     statut: 'inactif', nb_seances: 2,  notes: 'A interrompu le suivi en mars.' },
+  { id: 8,  prenom: 'Camille',  nom: 'Dumas',     email: 'camille.dumas@mail.com',    tel: '06 88 99 00 11', naissance: '2000-06-19', specialite: 'Coaching',      ville: 'Lille',     statut: 'actif',   nb_seances: 1,  notes: 'Première séance. Orientation études/carrière.' },
+  { id: 9,  prenom: 'Isabelle', nom: 'Martin',    email: 'isabelle.martin@mail.com',  tel: '06 99 00 11 22', naissance: '1969-04-11', specialite: 'Naturopathie',  ville: 'Marseille', statut: 'archivé', nb_seances: 9,  notes: 'Dossier clôturé fin 2025.' },
+  { id: 10, prenom: 'Julien',   nom: 'Moreau',    email: 'julien.moreau@mail.com',    tel: '07 00 11 22 33', naissance: '1998-08-07', specialite: 'Énergie',       ville: 'Strasbourg',statut: 'actif',   nb_seances: 3,  notes: 'Fatigue chronique post-Covid.' },
+  { id: 11, prenom: 'Claire',   nom: 'Petit',     email: 'claire.petit@mail.com',     tel: '07 11 22 33 44', naissance: '1977-01-28', specialite: 'Fleurs de Bach',ville: 'Paris',     statut: 'actif',   nb_seances: 7,  notes: 'Deuil. Accompagnement en cours.' },
+  { id: 12, prenom: 'Marc',     nom: 'Dupont',    email: 'marc.dupont@mail.com',      tel: '07 22 33 44 55', naissance: '1955-10-15', specialite: 'Sophrologie',   ville: 'Nice',      statut: 'inactif', nb_seances: 5,  notes: 'Retraite récente. Pause séances.' },
+]
 
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
 const STATUTS     = ['Tous', 'actif', 'inactif', 'archivé']
@@ -92,25 +107,10 @@ export default function Clients() {
 
   /* Formulaire nouveau client */
   const EMPTY = { prenom: '', nom: '', email: '', tel: '', naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
-  const [form,          setForm]          = useState(EMPTY)
-  const [formMsg,       setFormMsg]       = useState('')
-  const [clientSeances, setClientSeances] = useState([])
+  const [form,    setForm]    = useState(EMPTY)
+  const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
   const ef = (k) => e => setEditForm(prev => ({ ...prev, [k]: e.target.value }))
-
-  /* Historique séances déclenché par email */
-  useEffect(() => {
-    if (!form.email?.trim()) { setClientSeances([]); return }
-    const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from('seances')
-        .select('*')
-        .eq('email', form.email.trim())
-        .order('date_seance', { ascending: false })
-      setClientSeances(data || [])
-    }, 500)
-    return () => clearTimeout(t)
-  }, [form.email])
 
   /* Filtres */
   const filtered = clients.filter(c => {
@@ -173,31 +173,10 @@ export default function Clients() {
   }
 
   /* Enregistrer nouveau client */
-  async function handleAddClient() {
+  function handleAddClient() {
     if (!form.prenom.trim() || !form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const { data, error } = await supabase.from('clients').insert({
-        user_id:        user.id,
-        prenom:         form.prenom,
-        nom:            form.nom,
-        email:          form.email         || null,
-        telephone:      form.tel           || null,
-        date_naissance: form.naissance     || null,
-        ville:          form.ville         || null,
-        specialite:     form.specialite    || null,
-        statut:         form.statut        || 'actif',
-        notes:          form.notes         || null,
-        date_creation:  new Date().toISOString(),
-      }).select().single()
-      if (error) throw error
-      setClients(prev => [{ ...form, ...data, nb_seances: 0 }, ...prev])
-    } catch {
-      setClients(prev => [{ ...form, id: Date.now(), nb_seances: 0 }, ...prev])
-    }
+    setClients(prev => [{ ...form, id: Date.now(), nb_seances: parseInt(form.nb_seances) || 0 }, ...prev])
     setForm(EMPTY)
-    setClientSeances([])
     setFormMsg('✓ Client ajouté.')
     setTimeout(() => { setFormMsg(''); setActiveTab('liste') }, 1200)
   }
@@ -365,7 +344,7 @@ export default function Clients() {
             </Field>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setForm(EMPTY); setFormMsg(''); setClientSeances([]) }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+              <button onClick={() => { setForm(EMPTY); setFormMsg('') }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
                 Réinitialiser
               </button>
               <button onClick={handleAddClient} style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
@@ -373,66 +352,6 @@ export default function Clients() {
               </button>
             </div>
           </div>
-
-          {/* ── Historique séances ── */}
-          {form.email.trim() && (
-            <div style={{ background: 'var(--color-background-secondary)', borderRadius: 14, border: '0.5px solid var(--color-border-tertiary)', padding: '22px 28px', marginTop: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Historique séances</div>
-                <span style={{
-                  fontSize: 10, fontWeight: 700,
-                  background: clientSeances.length > 0 ? 'var(--color-accent)' : 'var(--color-background-primary)',
-                  color: clientSeances.length > 0 ? '#fff' : 'var(--color-text-secondary)',
-                  padding: '1px 8px', borderRadius: 10,
-                  border: '0.5px solid var(--color-border-secondary)',
-                }}>{clientSeances.length}</span>
-              </div>
-
-              {clientSeances.length === 0 ? (
-                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '20px 0' }}>
-                  Aucun historique pour cet email.
-                </div>
-              ) : (
-                <div>
-                  {clientSeances.map((s, idx) => {
-                    const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-                    const [y, m, j] = (s.date_seance || '').split('-')
-                    const dateLabel = s.date_seance ? `${j} ${MOIS[parseInt(m)-1]} ${y}` : '—'
-                    return (
-                      <div key={s.id} style={{ position: 'relative', paddingLeft: 22, marginBottom: 14 }}>
-                        {idx < clientSeances.length - 1 && (
-                          <div style={{ position: 'absolute', left: 6, top: 14, bottom: -14, width: 1, background: 'var(--color-border-tertiary)' }} />
-                        )}
-                        <div style={{
-                          position: 'absolute', left: 0, top: 5,
-                          width: 12, height: 12, borderRadius: '50%',
-                          background: s.premiere_seance ? '#F59E0B' : 'var(--color-accent)',
-                          border: '2px solid var(--color-background-secondary)',
-                        }} />
-                        <div style={{ background: 'var(--color-background-primary)', borderRadius: 8, padding: '10px 14px', border: '0.5px solid var(--color-border-tertiary)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{dateLabel}</span>
-                            {s.heure_seance && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.heure_seance}</span>}
-                            {s.premiere_seance && (
-                              <span style={{ fontSize: 10, fontWeight: 700, background: '#FEF3C7', color: '#92400E', padding: '1px 7px', borderRadius: 10, border: '1px solid #FCD34D' }}>1ère séance</span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: s.notes ? 5 : 0 }}>
-                            {s.type_seance}{s.duree_minutes ? ` · ${s.duree_minutes} min` : ''}{s.prix_euros != null ? ` · ${s.prix_euros} €` : ''}
-                          </div>
-                          {s.notes && (
-                            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                              {s.notes}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
 

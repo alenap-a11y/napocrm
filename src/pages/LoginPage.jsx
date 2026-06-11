@@ -57,11 +57,16 @@ export default function LoginPage() {
     if (!resetEmail.trim()) { setResetError('Entrez votre adresse email.'); return }
     setResetLoading(true)
     setResetError('')
-    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: window.location.origin + '/reset-password',
-    })
-    if (error) setResetError(error.message)
-    else setResetSent(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: window.location.origin + '/reset-password',
+      })
+      if (error) throw error
+      setResetSent(true)
+    } catch (error) {
+      console.error('Reset password error:', error.message, error.status, error)
+      setResetError(`Erreur: ${error.message}`)
+    }
     setResetLoading(false)
   }
 
@@ -85,9 +90,19 @@ export default function LoginPage() {
     if (!email.trim()) { setError('Entrez votre email pour recevoir un lien magique.'); return }
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOtp({ email })
-    if (error) setError(error.message)
-    else setMagicSent(true)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard',
+        },
+      })
+      if (error) throw error
+      setMagicSent(true)
+    } catch (error) {
+      console.error('Magic link error:', error.message, error.status, error)
+      setError(`Erreur: ${error.message}`)
+    }
     setLoading(false)
   }
 

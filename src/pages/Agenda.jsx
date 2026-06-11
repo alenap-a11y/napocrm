@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -21,25 +22,7 @@ const TYPE_COLOR = {
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
 const MOIS  = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
-/* ─── Mock events ─────────────────────────────────────────── */
-
 const today = new Date()
-const Y = today.getFullYear()
-const M = String(today.getMonth() + 1).padStart(2, '0')
-
-const MOCK = [
-  { id: 1,  prenom: 'Marie',   nom: 'Joubert',  type_seance: 'Sophrologie',    date: `${Y}-${M}-05`, heure: '10:00', duree: 60,  prix: 60,  notes: 'Bon relâchement musculaire.' },
-  { id: 2,  prenom: 'Pierre',  nom: 'Laurent',  type_seance: 'Coaching',       date: `${Y}-${M}-05`, heure: '14:30', duree: 45,  prix: 80,  notes: "Plan d'action établi." },
-  { id: 3,  prenom: 'Sophie',  nom: 'Caron',    type_seance: 'Naturopathie',   date: `${Y}-${M}-10`, heure: '09:00', duree: 90,  prix: 95,  notes: 'Bilan alimentaire complet.' },
-  { id: 4,  prenom: 'Camille', nom: 'Dumas',    type_seance: 'Sophrologie',    date: `${Y}-${M}-12`, heure: '11:00', duree: 60,  prix: 60,  notes: 'Première séance.' },
-  { id: 5,  prenom: 'Lucie',   nom: 'Martin',   type_seance: 'Coaching',       date: `${Y}-${M}-14`, heure: '15:00', duree: 45,  prix: 80,  notes: 'Reprise progressive.' },
-  { id: 6,  prenom: 'Paul',    nom: 'Renard',   type_seance: 'Énergie',        date: `${Y}-${M}-16`, heure: '10:00', duree: 60,  prix: 70,  notes: 'Blocage libéré.' },
-  { id: 7,  prenom: 'Anna',    nom: 'Leblanc',  type_seance: 'Sophrologie',    date: `${Y}-${M}-19`, heure: '14:00', duree: 60,  prix: 60,  notes: 'Visualisation positive.' },
-  { id: 8,  prenom: 'Thomas',  nom: 'Bernard',  type_seance: 'Massage',        date: `${Y}-${M}-21`, heure: '11:30', duree: 60,  prix: 75,  notes: 'Tension cervicale réduite.' },
-  { id: 9,  prenom: 'Marie',   nom: 'Joubert',  type_seance: 'Sophrologie',    date: `${Y}-${M}-23`, heure: '10:00', duree: 60,  prix: 60,  notes: 'Amélioration sommeil.' },
-  { id: 10, prenom: 'Claire',  nom: 'Petit',    type_seance: 'Fleurs de Bach', date: `${Y}-${M}-26`, heure: '09:30', duree: 75,  prix: 85,  notes: 'Deuil. Accompagnement.' },
-  { id: 11, prenom: 'Julien',  nom: 'Moreau',   type_seance: 'Naturopathie',   date: `${Y}-${M}-28`, heure: '16:00', duree: 60,  prix: 75,  notes: 'Fatigue chronique.' },
-]
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
@@ -76,7 +59,7 @@ export default function Agenda() {
   const [year,      setYear]      = useState(today.getFullYear())
   const [fcTitle,   setFcTitle]   = useState('')
 
-  const [events,    setEvents]    = useState(MOCK)
+  const [events,    setEvents]    = useState([])
   const [detail,    setDetail]    = useState(null)
   const [notesMap,  setNotesMap]  = useState({})
   const [noteInput, setNoteInput] = useState('')
@@ -102,6 +85,24 @@ export default function Agenda() {
       extendedProps: { event: e },
     }
   })
+
+  useEffect(() => {
+    async function fetchEvents() {
+      const { data, error } = await supabase
+        .from('seances')
+        .select('*')
+        .order('date_seance', { ascending: true })
+      if (error) { console.error('Erreur chargement agenda:', error.message); return }
+      setEvents((data || []).map(s => ({
+        ...s,
+        date:  s.date_seance,
+        heure: s.heure_seance,
+        duree: s.duree_minutes,
+        prix:  s.prix_euros,
+      })))
+    }
+    fetchEvents()
+  }, [])
 
   /* Recalcul taille FC après affichage (sortie vue année) */
   useEffect(() => {
@@ -390,15 +391,6 @@ export default function Agenda() {
         </div>
 
         <div style={{ flex: 1 }} />
-
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 8, flexWrap: 'wrap' }}>
-          {Object.entries(TYPE_COLOR).map(([type, color]) => (
-            <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{type}</span>
-            </div>
-          ))}
-        </div>
 
         <div style={{ display: 'flex', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, overflow: 'hidden' }}>
           {[['annee','Année'],['mois','Mois'],['semaine','Semaine'],['jour','Jour']].map(([v, l]) => (

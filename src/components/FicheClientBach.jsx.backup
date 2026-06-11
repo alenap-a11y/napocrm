@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import SeanceTimeline from './SeanceTimeline'
 
@@ -31,6 +31,15 @@ const TOUS_ELIXIRS = {
 
 const ETATS = Object.keys(FLEUR_SUGGESTIONS)
 
+const MOCK_HIST = [
+  { id: 1,  nom: 'Sophie Legrand',  age: 38, date: '2026-05-15', motif: 'Stress chronique',       score: 4, fleurs: ['Mimulus', 'White Chestnut', 'Olive'],       notes: 'Tension au travail, difficulté à dormir.' },
+  { id: 2,  nom: 'Pierre Dumont',   age: 52, date: '2026-05-12', motif: 'Deuil',                  score: 3, fleurs: ['Star of Bethlehem', 'Sweet Chestnut', 'Willow'], notes: 'Perte récente. Très ému.' },
+  { id: 3,  nom: 'Marie Caron',     age: 29, date: '2026-05-08', motif: 'Manque de confiance',    score: 6, fleurs: ['Larch', 'Cerato', 'Mimulus'],                notes: 'Transition professionnelle.' },
+  { id: 4,  nom: 'Lucie Bernard',   age: 44, date: '2026-05-02', motif: 'Épuisement',             score: 3, fleurs: ['Olive', 'Hornbeam', 'Oak', 'Elm'],           notes: 'Burn-out modéré. Protocole 21j.' },
+  { id: 5,  nom: 'Paul Renard',     age: 61, date: '2026-04-24', motif: 'Irritabilité',           score: 5, fleurs: ['Holly', 'Impatiens', 'Beech'],               notes: 'Conflits familiaux récurrents.' },
+  { id: 6,  nom: 'Anna Leblanc',    age: 35, date: '2026-04-18', motif: 'Anxiété généralisée',    score: 4, fleurs: ['Aspen', 'Mimulus', 'Rock Rose', 'Agrimony'], notes: 'Antécédent d\'attaques de panique.' },
+  { id: 7,  nom: 'Sophie Legrand',  age: 38, date: '2026-04-10', motif: 'Suivi stress',           score: 6, fleurs: ['White Chestnut', 'Walnut', 'Scleranthus'],   notes: 'Amélioration notable depuis J+21.' },
+]
 
 /* ─── CSV helpers ─────────────────────────────────────────────────────── */
 
@@ -86,8 +95,7 @@ const scoreColor = s => s >= 8 ? '#1A7A4A' : s >= 5 ? '#185FA5' : s >= 3 ? '#854
 
 export default function FicheClientBach({ client }) {
   const [activeTab, setActiveTab] = useState('historique')
-  const [hist, setHist]           = useState([])
-  const [histLoading, setHistLoading] = useState(true)
+  const [hist, setHist]           = useState(MOCK_HIST)
   const [step, setStep]           = useState(1)
   const [detail,       setDetail]       = useState(null)
   const [editingDetail,setEditingDetail]= useState(false)
@@ -109,19 +117,6 @@ export default function FicheClientBach({ client }) {
   const [score,        setScore]        = useState(0)
   const [notes,        setNotes]        = useState('')
   const [fleursChoisies, setFleursChoisies] = useState([])
-
-  useEffect(() => {
-    async function fetchHist() {
-      const { data, error } = await supabase
-        .from('bach_seances')
-        .select('*')
-        .order('date', { ascending: false })
-      if (error) console.error('Erreur chargement bach_seances:', error.message)
-      else setHist(data || [])
-      setHistLoading(false)
-    }
-    fetchHist()
-  }, [])
 
   const togEtat  = (e) => setEtatsCoches(prev => prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e])
   const togFleur = (f) => {
@@ -290,15 +285,7 @@ export default function FicheClientBach({ client }) {
                 <div key={i} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</div>
               ))}
             </div>
-            {histLoading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-loader-2" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Chargement…
-              </div>
-            ) : hist.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-leaf" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucune séance Bach enregistrée
-              </div>
-            ) : filteredHist.length === 0 ? (
+            {filteredHist.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                 <i className="ti ti-leaf-off" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucune séance trouvée
               </div>

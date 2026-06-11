@@ -15,29 +15,6 @@ const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
 
-// ─── Données mock (à remplacer par Supabase) ─────────────────────────────────
-
-const MOCK_RDV = [
-  { id: 1, client: 'Marie Joubert', type: 'Sophrologie', date: new Date(2026, 4, 27, 10, 0), duree: 60 },
-  { id: 2, client: 'Pierre Laurent', type: 'Coaching', date: new Date(2026, 4, 27, 14, 30), duree: 45 },
-  { id: 3, client: 'Sophie Caron', type: 'Naturopathie', date: new Date(2026, 4, 28, 9, 0), duree: 90 },
-  { id: 4, client: 'Camille Dumas', type: 'Sophrologie', date: new Date(2026, 4, 29, 11, 0), duree: 60 },
-  { id: 5, client: 'Lucie Martin', type: 'Coaching', date: new Date(2026, 4, 30, 15, 0), duree: 45 },
-  { id: 6, client: 'Paul Renard', type: 'Naturopathie', date: new Date(2026, 5, 2, 10, 0), duree: 60 },
-  { id: 7, client: 'Anna Leblanc', type: 'Sophrologie', date: new Date(2026, 5, 3, 14, 0), duree: 60 },
-]
-
-const MOCK_ANNIVERSAIRES = [
-  { id: 1, client: 'Marie Joubert', date: new Date(2026, 4, 27) },
-  { id: 2, client: 'Paul Renard', date: new Date(2026, 5, 2) },
-  { id: 3, client: 'Sophie Caron', date: new Date(2026, 5, 10) },
-]
-
-const MOCK_CLIENTS = [
-  { initials: 'MJ', name: 'Marie Joubert', meta: 'Sophrologue · 3 séances', status: 'Actif' },
-  { initials: 'PL', name: 'Pierre Laurent', meta: 'Coaching · 1 séance', status: 'Actif' },
-  { initials: 'SC', name: 'Sophie Caron', meta: 'Naturo · 5 séances', status: 'Actif' },
-]
 
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
@@ -76,7 +53,20 @@ function AgendaCalendrier({ accent, onNavigate }) {
   const [selectedDay, setSelectedDay] = useState(today)
   const [showModal, setShowModal] = useState(false)
   const [newRdv, setNewRdv] = useState({ client: '', type: 'Sophrologie', heure: '09:00', duree: 60 })
-  const [rdvList, setRdvList] = useState(MOCK_RDV)
+  const [rdvList, setRdvList] = useState([])
+
+  useEffect(() => {
+    async function fetchRdv() {
+      const { data } = await supabase.from('seances').select('id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes').order('date_seance', { ascending: true })
+      setRdvList((data || []).map(s => {
+        const [h, m] = (s.heure_seance || '09:00').split(':').map(Number)
+        const d = new Date(s.date_seance)
+        d.setHours(h, m, 0, 0)
+        return { id: s.id, client: `${s.prenom || ''} ${s.nom || ''}`.trim(), type: s.type_seance, date: d, duree: s.duree_minutes }
+      }))
+    }
+    fetchRdv()
+  }, [])
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
@@ -309,11 +299,22 @@ function AgendaCalendrier({ accent, onNavigate }) {
 
 function Anniversaires({ accent }) {
   const today = new Date()
-  const prochains = MOCK_ANNIVERSAIRES
-    .map(a => {
-      const d = new Date(today.getFullYear(), a.date.getMonth(), a.date.getDate())
+  const [raw, setRaw] = useState([])
+
+  useEffect(() => {
+    supabase
+      .from('clients')
+      .select('id, prenom, nom, naissance')
+      .not('naissance', 'is', null)
+      .then(({ data }) => setRaw(data || []))
+  }, [])
+
+  const prochains = raw
+    .map(c => {
+      const bday = new Date(c.naissance)
+      const d = new Date(today.getFullYear(), bday.getMonth(), bday.getDate())
       if (d < today) d.setFullYear(today.getFullYear() + 1)
-      return { ...a, next: d, jours: daysUntil(d) }
+      return { id: c.id, client: `${c.prenom || ''} ${c.nom || ''}`.trim(), next: d, jours: daysUntil(d) }
     })
     .sort((a, b) => a.jours - b.jours)
     .slice(0, 4)
@@ -392,6 +393,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [monthStats,      setMonthStats]      = useState({ count: 0, revenue: 0, clientsCount: 0 })
   const [derniersClients, setDerniersClients] = useState([])
   const [dernieresSeances,setDernieresSeances]= useState([])
+  const [clientsActifs,   setClientsActifs]   = useState(0)
+  const [seancesAVenir,   setSeancesAVenir]   = useState(0)
 
   useEffect(() => {
     const getUser = async () => {
@@ -408,16 +411,35 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   }, [])
 
   useEffect(() => {
-    const monthStart = new Date()
-    monthStart.setDate(1)
-    const monthStartStr = monthStart.toISOString().slice(0, 10)
-    Promise.all([
-      supabase.from('seances').select('*').order('created_at',    { ascending: false }).limit(5),
-      supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
-      supabase.from('clients').select('*').order('date_creation', { ascending: false }).limit(5),
-      supabase.from('seances').select('*').order('date_seance',   { ascending: false }).limit(5),
-      supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
-    ]).then(([{ data: recent }, { data: monthly }, { data: clients }, { data: seances }, { data: newClients }]) => {
+    async function loadStats() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const uid = user?.id
+
+      const monthStart = new Date()
+      monthStart.setDate(1)
+      const monthStartStr = monthStart.toISOString().slice(0, 10)
+      const todayStr = new Date().toISOString().slice(0, 10)
+
+      const queries = [
+        supabase.from('seances').select('*').order('created_at',    { ascending: false }).limit(5),
+        supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
+        supabase.from('clients').select('*').order('date_creation', { ascending: false }).limit(5),
+        supabase.from('seances').select('*').order('date_seance',   { ascending: false }).limit(5),
+        supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
+        supabase.from('seances').select('*', { count: 'exact', head: true }).gte('date_seance', todayStr),
+      ]
+
+      const [
+        { data: recent },
+        { data: monthly },
+        { data: clients },
+        { data: seances },
+        { data: newClients },
+        { count: actifs },
+        { count: avenir },
+      ] = await Promise.all(queries)
+
       setRecentSeances(recent || [])
       setDerniersClients(clients || [])
       setDernieresSeances(seances || [])
@@ -428,7 +450,10 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         revenue:      m.reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0),
         clientsCount: cc.length,
       })
-    })
+      setClientsActifs(actifs ?? 0)
+      setSeancesAVenir(avenir ?? 0)
+    }
+    loadStats()
   }, [])
 
   const activeSbItem = sbItems.find(i => i.id === sbActif)
@@ -507,8 +532,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
-            { label: 'Clients actifs', val: 12, icon: 'ti-users', color: accent },
-            { label: 'Séances à venir', val: 5, icon: 'ti-calendar-event', color: '#1D9E75' },
+            { label: 'Clients actifs', val: clientsActifs, icon: 'ti-users', color: accent },
+            { label: 'Séances à venir', val: seancesAVenir, icon: 'ti-calendar-event', color: '#1D9E75' },
           ].map(m => (
             <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -731,27 +756,38 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {MOCK_CLIENTS.map(c => (
-              <div
-                key={c.initials}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.12s' }}
-                onClick={() => onNavigate?.('/clients')}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                role="button" tabIndex={0}
-                onKeyDown={e => e.key === 'Enter' && onNavigate?.('/clients')}
-                aria-label={`Voir la fiche de ${c.name}`}
-              >
-                <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                  {c.initials}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{c.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{c.meta}</div>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 500, color: '#1D9E75', background: '#E1F5EE', padding: '2px 8px', borderRadius: 20 }}>{c.status}</span>
+            {derniersClients.length === 0 ? (
+              <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                <i className="ti ti-users" style={{ fontSize: 22, display: 'block', marginBottom: 6 }} />Aucun client récent
               </div>
-            ))}
+            ) : derniersClients.map(c => {
+              const initials = `${(c.prenom||'')[0]||''}${(c.nom||'')[0]||''}`.toUpperCase()
+              const name = `${c.prenom||''} ${c.nom||''}`.trim()
+              const meta = `${c.specialite || '—'} · ${c.nb_seances || 0} séance(s)`
+              return (
+                <div
+                  key={c.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.12s' }}
+                  onClick={() => onNavigate?.('/clients')}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  role="button" tabIndex={0}
+                  onKeyDown={e => e.key === 'Enter' && onNavigate?.('/clients')}
+                  aria-label={`Voir la fiche de ${name}`}
+                >
+                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                    {initials}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{meta}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 500, color: '#1D9E75', background: '#E1F5EE', padding: '2px 8px', borderRadius: 20 }}>
+                    {c.statut === 'actif' ? 'Actif' : c.statut === 'inactif' ? 'Inactif' : 'Archivé'}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
