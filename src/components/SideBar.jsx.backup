@@ -49,9 +49,7 @@ export default function SideBar({
 
   return (
     <aside className="sidebar" style={{ background: bgCol }}>
-      <div className="sb-logo">
-        <span className="sb-logo-t" style={{ color: accent }}>NAPO</span>
-      </div>
+
 
       <div className="sb-items">
         {items.map(({ to, icon, label }, idx) => (
