@@ -129,7 +129,7 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .main { flex: 1; overflow-y: auto; background: var(--color-background-primary); }
 
 /* Dashboard */
-.dash { padding: 28px 32px; }
+.dash { padding: 1.6rem 2rem; }
 .dash-head { display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; }
 .dash-head i { font-size: 24px; }
 .dash-title { font-size: 22px; font-weight: 600; color: var(--color-text-primary); }
@@ -252,47 +252,6 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .ag-pill-label { font-size: 15px; }
 
 .hidden { display: none !important; }
-
-/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
-
-/* NAVBAR */
-.navbar { display: flex; align-items: center; gap: 8px; }
-.navbar-content { display: flex; align-items: center; gap: 8px; }
-.navbar-greeting { font-size: 11px; color: var(--color-text-secondary); }
-.navbar-burger { display: none; background: none; border: none; cursor: pointer; color: var(--color-text-secondary); padding: 4px; border-radius: 6px; align-items: center; justify-content: center; }
-.navbar-burger:hover { background: var(--color-background-tertiary); }
-.navbar-burger i { font-size: 18px; }
-
-/* Mobile / tablette : burger visible, greeting masqué */
-@media (max-width: 1023px) {
-  .navbar-burger { display: flex; }
-  .navbar-greeting { display: none; }
-}
-
-/* ─── DASHBOARD GRILLES ────────────────────────────────────────────────────── */
-.dash-row-top      { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.dash-agenda-grid  { display: grid; grid-template-columns: 1fr 1fr;     gap: 16px; }
-.dash-overview-grid{ display: grid; grid-template-columns: 1fr 1fr;     gap: 12px; margin-bottom: 12px; }
-.dash-lists-grid   { display: grid; grid-template-columns: 1fr 1fr;     gap: 12px; }
-.dash-row-bottom   { display: grid; grid-template-columns: 1fr 1fr;     gap: 16px; }
-
-/* Tablette 768–1023px */
-@media (max-width: 1023px) {
-  .dash              { padding: 20px 18px; }
-  .dash-row-top      { grid-template-columns: 1fr 1fr; }
-}
-
-/* Mobile < 768px */
-@media (max-width: 767px) {
-  .dash              { padding: 14px 12px; }
-  .dash-row-top      { grid-template-columns: 1fr; }
-  .dash-agenda-grid  { grid-template-columns: 1fr; }
-  .dash-overview-grid{ grid-template-columns: 1fr; }
-  .dash-lists-grid   { grid-template-columns: 1fr; }
-  .dash-row-bottom   { grid-template-columns: 1fr; }
-  .dash-head         { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .dash-title        { font-size: 18px; }
-}
 
 /* LOGIN */
 .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; }

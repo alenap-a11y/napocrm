@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
+import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -377,6 +378,8 @@ const inputStyle = {
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 
 export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidgets, onNavigate }) {
+  const { revenusCeMois } = useRealtimeDashboard()
+
   const { data: taches } = useRealtimeTable(
     'taches',
     () => supabase.from('taches').select('*, clients(nom, prenom)').eq('statut', 'todo').limit(5)
@@ -578,7 +581,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
             <div>
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Revenus ce mois</div>
-              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
             </div>
           </div>
         </div>
@@ -672,7 +675,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
               <div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.revenue.toFixed(0)} €</div>
+                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
               </div>
             </div>
           </div>

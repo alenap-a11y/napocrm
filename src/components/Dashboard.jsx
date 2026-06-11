@@ -121,7 +121,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div className="dash-agenda-grid">
 
       {/* Calendrier */}
       <div style={cardStyle}>
@@ -438,7 +438,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const showClockBot = widgets.fete || widgets.ferie
 
   return (
-    <div className="dash" style={{ padding: '28px 32px', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="dash" style={{ maxWidth: 1200, margin: '0 auto' }}>
 
       {/* Header */}
       <div className="dash-head" style={{ marginBottom: 24 }}>
@@ -450,7 +450,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       </div>
 
       {/* Ligne 1 : Horloge + Mantra + Métriques */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div className="dash-row-top">
 
         {widgets.clock && (
           <div style={cardStyle}>
@@ -565,7 +565,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>VUE D'ENSEMBLE</div>
 
         {/* Compteurs */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div className="dash-overview-grid">
           <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
             <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <i className="ti ti-users" style={{ fontSize: 18, color: accent }} aria-hidden="true" />
@@ -587,7 +587,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         </div>
 
         {/* Listes côte à côte */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="dash-lists-grid">
 
           {/* 5 derniers clients */}
           <div style={cardStyle}>
@@ -721,7 +721,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       </div>
 
       {/* Ligne 3 : Clients récents + Anniversaires */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="dash-row-bottom">
 
         <div style={cardStyle}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

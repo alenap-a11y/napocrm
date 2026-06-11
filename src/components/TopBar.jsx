@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import napopetit from '../assets/napopetitv1.png'
+import logo from '../assets/napopetitv1.png'
 
 export default function TopBar({
   tbItems, setTbItems,
@@ -46,7 +46,7 @@ export default function TopBar({
 
   return (
     <div className="topbar">
-      <img src={napopetit} alt="NapoCRM" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+      <img src={logo} alt="Naposolo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
 
       <nav className="tb-nav" aria-label="Navigation principale">
         {visibleItems.map((item, idx) => {
