@@ -71,10 +71,10 @@ export default function LoginPage() {
     <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh' }}>
 
       {/* ── HEADER ── */}
-      <header style={{
+      <header className="landing-header" style={{
         position: 'sticky', top: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 40px', height: 56,
+        height: 56,
         background: 'rgba(253,248,242,0.92)', backdropFilter: 'blur(8px)',
         borderBottom: '0.5px solid rgba(14,165,233,0.15)',
       }}>
@@ -86,7 +86,7 @@ export default function LoginPage() {
             fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20,
             background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em',
           }}>Alpha v0.2</span>
-          <span style={{
+          <span className="landing-tagline" style={{
             fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500,
           }}>Les petits font les grands !</span>
         </div>
@@ -94,6 +94,7 @@ export default function LoginPage() {
         {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <button
+            className="landing-nav-features"
             onClick={() => scrollTo('fonctionnalites')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500 }}
           >
@@ -112,11 +113,7 @@ export default function LoginPage() {
       </header>
 
       {/* ── HERO ── */}
-      <section style={{
-        display: 'grid', gridTemplateColumns: '1fr 420px', gap: 60,
-        alignItems: 'center', padding: '80px 40px 80px',
-        maxWidth: 1100, margin: '0 auto',
-      }}>
+      <section className="landing-hero">
         {/* Texte */}
         <div>
           <div style={{
@@ -242,6 +239,7 @@ export default function LoginPage() {
                 type="submit" disabled={loading}
                 style={{
                   width: '100%', padding: '11px', borderRadius: 9, border: 'none',
+                  minHeight: 44,
                   background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff',
                   fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
                   transition: 'background .15s',
@@ -261,7 +259,7 @@ export default function LoginPage() {
                 style={{
                   width: '100%', padding: '10px', borderRadius: 9,
                   border: '0.5px solid rgba(14,165,233,0.4)', background: '#f0f9ff',
-                  color: '#0369A1', fontSize: 14, fontWeight: 600,
+                  color: '#0369A1', fontSize: 14, fontWeight: 600, minHeight: 44,
                   cursor: loading ? 'not-allowed' : 'pointer', transition: 'background .15s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 }}
@@ -275,7 +273,7 @@ export default function LoginPage() {
       </section>
 
       {/* ── FONCTIONNALITÉS ── */}
-      <section id="fonctionnalites" style={{ background: '#fff', padding: '80px 40px' }}>
+      <section id="fonctionnalites" className="landing-features-section" style={{ background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <div style={{
@@ -292,9 +290,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20,
-          }}>
+          <div className="landing-features-grid">
             {FEATURES.map(f => (
               <div key={f.title} style={{
                 padding: '24px', borderRadius: 14,
@@ -343,7 +339,7 @@ export default function LoginPage() {
 }
 
 const inputStyle = {
-  width: '100%', padding: '9px 12px', borderRadius: 8,
+  width: '100%', padding: '9px 12px', borderRadius: 8, minHeight: 44,
   border: '0.5px solid #d1d5db', background: '#f9fafb',
   color: '#111827', fontSize: 14, outline: 'none', boxSizing: 'border-box',
   fontFamily: 'inherit', transition: 'border-color .15s',
