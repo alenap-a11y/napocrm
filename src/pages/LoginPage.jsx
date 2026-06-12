@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
+import MetiersCarousel from '../components/MetiersCarousel'
+import '../components/MetiersCarousel.css'
 
 const FEATURES = [
   {
@@ -310,6 +312,9 @@ export default function LoginPage() {
           )}
         </div>
       </section>
+
+      {/* ── CAROUSEL MÉTIERS ── */}
+      <MetiersCarousel />
 
       {/* ── FONCTIONNALITÉS ── */}
       <section id="fonctionnalites" className="landing-features-section" style={{ background: '#fff' }}>

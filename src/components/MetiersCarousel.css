@@ -1,0 +1,83 @@
+.metiers-section {
+  background: linear-gradient(180deg, #eaf4fb 0%, #ffffff 100%);
+  padding: 24px 0;
+}
+
+.metiers-carousel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.metiers-carousel::before,
+.metiers-carousel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.metiers-carousel::before {
+  left: 0;
+  background: linear-gradient(to right, #eaf4fb, transparent);
+}
+
+.metiers-carousel::after {
+  right: 0;
+  background: linear-gradient(to left, #ffffff, transparent);
+}
+
+.metiers-row {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+}
+
+.scroll-left {
+  animation: scrollLeft 40s linear infinite;
+}
+
+.scroll-right {
+  animation: scrollRight 40s linear infinite;
+}
+
+@keyframes scrollLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes scrollRight {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+.metier-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #e6f1fb;
+  border: 0.5px solid #85b7eb;
+  color: #0c447c;
+}
+
+.metier-chip i {
+  font-size: 24px;
+}
+
+.metier-chip span {
+  font-size: 11px;
+  text-align: center;
+}
