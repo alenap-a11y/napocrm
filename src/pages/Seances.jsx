@@ -93,6 +93,7 @@ export default function Seances() {
     prenom:'', nom:'', email:'', type_seance:'Sophrologie',
     date_seance: new Date().toISOString().slice(0,10),
     heure_seance:'10:00', duree_minutes:'60', prix_euros:'', tags:'', notes:'',
+    fleurs_bach: [],
   }
   const [form,    setForm]    = useState(EMPTY_FORM)
   const [formMsg, setFormMsg] = useState('')
@@ -387,6 +388,7 @@ export default function Seances() {
                   type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
                   duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
                   tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
+                  fleurs_bach: form.fleurs_bach?.length ? form.fleurs_bach : null,
                 })
                 if (error) { setFormMsg(`✗ Erreur : ${error.message||error}`); return }
                 insertNotif({ msg:`Nouvelle séance — ${form.prenom} ${form.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
