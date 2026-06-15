@@ -23,10 +23,10 @@ const SPEC_COLOR = {
   'Autre':          { bg: '#F5F5F5', color: '#6B7280' },
 }
 
-/* ─── CSV helpers ─────────────────────────────────────────────────────── */
+const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
 function toCSV(rows) {
-  const header = 'Prénom,Nom,Email,Téléphone,Naissance,Spécialité,Ville,Statut,Séances,Notes'
+  const header = 'Prénom,Nom,Email,Téléphone,Naissance,Spécialité,Ville,Statut,Notes'
   const lines  = rows.map(r =>
     `${r.prenom},${r.nom},"${r.email}","${r.tel}","${r.date_naissance}","${r.specialite}","${r.ville}","${r.statut}","${(r.notes||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
   )
@@ -34,7 +34,7 @@ function toCSV(rows) {
 }
 
 function downloadCSV(content, filename) {
-  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob(['' + content], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href = url; a.download = filename; a.click()
@@ -61,68 +61,57 @@ function parseCSV(text) {
   }).filter(r => r.prenom || r.nom)
 }
 
-/* ─── Utilitaires ─────────────────────────────────────────────────────── */
-
 function age(naissance) {
   if (!naissance) return '—'
-  const d = new Date(naissance)
-  return Math.floor((Date.now() - d) / 31557600000) + ' ans'
+  return Math.floor((Date.now() - new Date(naissance)) / 31557600000) + ' ans'
 }
 
 function clientName(c) { return `${c.prenom} ${c.nom}`.trim() }
 
-const isoToday = new Date().toISOString().slice(0, 10)
-
-/* ─── Composant principal ─────────────────────────────────────────────── */
+function fmtDate(d) {
+  if (!d) return '—'
+  const [y, m, j] = d.split('-')
+  return `${j} ${MOIS_COURT[parseInt(m)-1]} ${y}`
+}
 
 export default function Clients() {
   const importRef = useRef()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
-  const [activeTab,    setActiveTab]   = useState('liste')
-  const [search,       setSearch]      = useState('')
-  const [filterSpec,   setFilterSpec]  = useState('Toutes')
-  const [filterStatut, setFilterStatut]= useState('Tous')
-  const [detail,         setDetail]        = useState(null)
+  const [activeTab,      setActiveTab]      = useState('liste')
+  const [search,         setSearch]         = useState('')
+  const [filterSpec,     setFilterSpec]     = useState('Toutes')
+  const [filterStatut,   setFilterStatut]   = useState('Tous')
+  const [detail,         setDetail]         = useState(null)
+  const [detailTab,      setDetailTab]      = useState('infos')
+  const [clientSeances,  setClientSeances]  = useState([])
+  const [loadingSeances, setLoadingSeances] = useState(false)
   const [editingDetail,  setEditingDetail]  = useState(false)
   const [editForm,       setEditForm]       = useState(null)
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
-  const [detailTab,      setDetailTab]      = useState('infos')
-  const [clientSeances,  setClientSeances]  = useState([])
-  const [loadingSeances, setLoadingSeances] = useState(false)
 
-  /* Formulaire nouveau client */
-  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
+  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', notes: '' }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
   const ef = (k) => e => setEditForm(prev => ({ ...prev, [k]: e.target.value }))
 
-  /* Filtres */
   const filtered = clients.filter(c => {
     const q = search.toLowerCase()
-    const matchQ = !q || clientName(c).toLowerCase().includes(q) ||
-      (c.email||'').toLowerCase().includes(q) || (c.ville||'').toLowerCase().includes(q) ||
-      (c.specialite||'').toLowerCase().includes(q)
+    const matchQ  = !q || clientName(c).toLowerCase().includes(q) || (c.email||'').toLowerCase().includes(q) || (c.ville||'').toLowerCase().includes(q)
     const matchS  = filterSpec   === 'Toutes' || c.specialite === filterSpec
     const matchSt = filterStatut === 'Tous'   || c.statut     === filterStatut
     return matchQ && matchS && matchSt
   })
 
-  /* Stats */
-  const actifs   = clients.filter(c => c.statut === 'actif').length
+  const actifs       = clients.filter(c => c.statut === 'actif').length
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
-
-  /* Sauvegarde Supabase */
-  function handleSave() {
-    setSaveMsg('✓ Les données sont synchronisées automatiquement.')
-    setTimeout(() => setSaveMsg(''), 3000)
-  }
 
   async function fetchClientSeances(client) {
     setLoadingSeances(true)
+    setClientSeances([])
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -138,7 +127,18 @@ export default function Clients() {
     setLoadingSeances(false)
   }
 
-  /* Import CSV */
+  function openDetail(c) {
+    setDetail(c)
+    setDetailTab('infos')
+    setEditingDetail(false)
+    fetchClientSeances(c)
+  }
+
+  function handleSave() {
+    setSaveMsg('✓ Les données sont synchronisées automatiquement.')
+    setTimeout(() => setSaveMsg(''), 3000)
+  }
+
   function handleImport(e) {
     const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
@@ -157,25 +157,20 @@ export default function Clients() {
     e.target.value = ''
   }
 
-  /* Modifier client (modal) */
   function openEdit(c) {
-    setEditForm({ prenom: c.prenom||'', nom: c.nom||'', email: c.email||'', tel: c.tel||'', date_naissance: c.date_naissance||'', ville: c.ville||'', specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', nb_seances: c.nb_seances||0, notes: c.notes||'' })
+    setEditForm({ prenom: c.prenom||'', nom: c.nom||'', email: c.email||'', tel: c.tel||'', date_naissance: c.date_naissance||'', ville: c.ville||'', specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', notes: c.notes||'' })
     setEditingDetail(true)
   }
 
   async function saveEditDetail() {
-    const { nb_seances, ...rest } = editForm
-    const fields = { ...rest }
-    await updateClient(detail.id, fields)
-    setDetail(prev => ({ ...prev, ...fields }))
+    await updateClient(detail.id, { ...editForm })
+    setDetail(prev => ({ ...prev, ...editForm }))
     setEditingDetail(false)
   }
 
-  /* Enregistrer nouveau client */
   async function handleAddClient() {
     if (!form.prenom.trim() || !form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
-    const { nb_seances, ...clientFields } = form
-    await addClient(clientFields)
+    await addClient(form)
     insertNotif({ msg: `Nouveau client — ${form.prenom} ${form.nom}`, icon: 'ti-user-plus', iconColor: '#185FA5', bg: '#E6F1FB' })
     setForm(EMPTY)
     setFormMsg('✓ Client ajouté.')
@@ -183,15 +178,15 @@ export default function Clients() {
   }
 
   const TABS = [
-    { id: 'liste',    label: 'Liste clients',   icon: 'ti-users' },
-    { id: 'nouveau',  label: 'Nouveau client',  icon: 'ti-user-plus' },
-    { id: 'export',   label: 'Import / Export', icon: 'ti-arrows-transfer-down' },
+    { id: 'liste',   label: 'Liste clients',   icon: 'ti-users' },
+    { id: 'nouveau', label: 'Nouveau client',  icon: 'ti-user-plus' },
+    { id: 'export',  label: 'Import / Export', icon: 'ti-arrows-transfer-down' },
   ]
 
   return (
     <div style={{ padding: '1.6rem 2rem', fontFamily: 'inherit' }}>
 
-      {/* ── En-tête ── */}
+      {/* En-tête */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <i className="ti ti-users" style={{ fontSize: 24, color: 'var(--color-accent)' }} />
@@ -202,48 +197,38 @@ export default function Clients() {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input ref={importRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
-          <Btn icon="ti-upload"       label="Importer"       onClick={() => importRef.current.click()} secondary />
-          <Btn icon="ti-download"     label="Exporter"       onClick={() => downloadCSV(toCSV(clients), 'clients-napocrm.csv')} secondary />
-          <Btn icon="ti-device-floppy" label={saving ? 'Sauvegarde…' : 'Sauvegarder'} onClick={handleSave} secondary />
-          <Btn icon="ti-user-plus"    label="Nouveau client" onClick={() => setActiveTab('nouveau')} />
+          <Btn icon="ti-upload"        label="Importer"   onClick={() => importRef.current.click()} secondary />
+          <Btn icon="ti-download"      label="Exporter"   onClick={() => downloadCSV(toCSV(clients), 'clients-napocrm.csv')} secondary />
+          <Btn icon="ti-user-plus"     label="Nouveau"    onClick={() => setActiveTab('nouveau')} />
         </div>
       </div>
 
-      {/* Messages flash */}
       {(importMsg || saveMsg) && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, background: (importMsg || saveMsg).startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: (importMsg || saveMsg).startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
+        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, background: (importMsg||saveMsg).startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: (importMsg||saveMsg).startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
           {importMsg || saveMsg}
         </div>
       )}
 
-      {/* ── Stats ── */}
+      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
-        <StatCard icon="ti-users"        iconBg="#E6F1FB" iconColor="#185FA5" label="Total clients"    value={clients.length} />
-        <StatCard icon="ti-user-check"   iconBg="#E1F5EE" iconColor="#0F6E56" label="Clients actifs"   value={actifs} />
-        <StatCard icon="ti-calendar-stats" iconBg="#EEEDFE" iconColor="#534AB7" label="Total séances" value={totalSeances} />
-        <StatCard icon="ti-chart-line"   iconBg="#FAEEDA" iconColor="#854F0B" label="Moy. séances/client" value={clients.length ? (totalSeances / clients.length).toFixed(1) : '0'} />
+        <StatCard icon="ti-users"          iconBg="#E6F1FB" iconColor="#185FA5" label="Total clients"       value={clients.length} />
+        <StatCard icon="ti-user-check"     iconBg="#E1F5EE" iconColor="#0F6E56" label="Clients actifs"      value={actifs} />
+        <StatCard icon="ti-calendar-stats" iconBg="#EEEDFE" iconColor="#534AB7" label="Total séances"       value={totalSeances} />
+        <StatCard icon="ti-chart-line"     iconBg="#FAEEDA" iconColor="#854F0B" label="Moy. séances/client" value={clients.length ? (totalSeances/clients.length).toFixed(1) : '0'} />
       </div>
 
-      {/* ── Tabs ── */}
+      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 16 }}>
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
-            fontWeight: activeTab === tab.id ? 600 : 400,
-            color: activeTab === tab.id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-            borderBottom: activeTab === tab.id ? '2px solid var(--color-accent)' : '2px solid transparent',
-            marginBottom: -1,
-          }}>
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === tab.id ? 600 : 400, color: activeTab === tab.id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: activeTab === tab.id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
             <i className={`ti ${tab.icon}`} style={{ fontSize: 14 }} />{tab.label}
           </button>
         ))}
       </div>
 
-      {/* ═══════════ LISTE CLIENTS ═══════════ */}
+      {/* ══ LISTE ══ */}
       {activeTab === 'liste' && (
         <>
-          {/* Filtres */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
               <i className="ti ti-search" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--color-text-secondary)', pointerEvents: 'none' }} />
@@ -254,35 +239,24 @@ export default function Clients() {
             <Sel value={filterStatut} onChange={setFilterStatut} options={STATUTS.map(s => [s, s === 'Tous' ? 'Tous statuts' : STATUT_STYLE[s]?.label || s])} />
           </div>
 
-          {/* Tableau */}
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, overflow: 'hidden', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-              {['Client', 'Email', 'Spécialité', 'Âge', 'Séances', 'Statut', ''].map((h, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+              {['Client','Email','Spécialité','Âge','Statut',''].map((h,i) => (
                 <div key={i} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</div>
               ))}
             </div>
-
             {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-loader-2" style={{ fontSize: 28, display: 'block', marginBottom: 10, animation: 'spin 1s linear infinite' }} />Chargement…
-              </div>
-            ) : clients.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-users" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucun client pour le moment
-              </div>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>Chargement…</div>
             ) : filtered.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-users-off" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucun client trouvé
-              </div>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>Aucun client trouvé</div>
             ) : filtered.map((c, idx) => {
               const spec = SPEC_COLOR[c.specialite] || SPEC_COLOR['Autre']
               const stat = STATUT_STYLE[c.statut]   || STATUT_STYLE['inactif']
               return (
-                <div key={c.id} onClick={() => { setDetail(c); fetchClientSeances(c); setDetailTab('infos') }}
-                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
+                <div key={c.id} onClick={() => openDetail(c)}
+                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-primary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: spec.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: spec.color }}>{c.prenom[0]}{c.nom[0]}</span>
@@ -295,11 +269,10 @@ export default function Clients() {
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: spec.bg, color: spec.color, padding: '2px 8px', borderRadius: 20 }}>{c.specialite}</span></div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{age(c.date_naissance)}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{c.nb_seances}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: stat.bg, color: stat.color, padding: '2px 8px', borderRadius: 20 }}>{stat.label}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button onClick={ev => { ev.stopPropagation(); downloadCSV(toCSV([c]), `client-${c.nom}-${c.prenom}.csv`) }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: 4 }} title="Exporter">
+                    <button onClick={ev => { ev.stopPropagation(); downloadCSV(toCSV([c]), `client-${c.nom}.csv`) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: 4 }}>
                       <i className="ti ti-download" style={{ fontSize: 14 }} />
                     </button>
                   </div>
@@ -307,7 +280,6 @@ export default function Clients() {
               )
             })}
           </div>
-
           {filtered.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, fontSize: 13, color: 'var(--color-text-secondary)' }}>
               {filtered.length} client(s) affiché(s)
@@ -316,17 +288,12 @@ export default function Clients() {
         </>
       )}
 
-      {/* ═══════════ NOUVEAU CLIENT ═══════════ */}
+      {/* ══ NOUVEAU ══ */}
       {activeTab === 'nouveau' && (
         <div style={{ maxWidth: 600 }}>
-          {formMsg && (
-            <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: formMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: formMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
-              {formMsg}
-            </div>
-          )}
+          {formMsg && <div style={{ marginBottom: 14, padding: '10px 14px', borderRadius: 8, background: formMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: formMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>{formMsg}</div>}
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 14, border: '0.5px solid var(--color-border-tertiary)', padding: '28px' }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 22 }}>Informations du client</div>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <Field label="Prénom"><input value={form.prenom} onChange={f('prenom')} placeholder="Sophie" style={inp} /></Field>
               <Field label="Nom"><input value={form.nom} onChange={f('nom')} placeholder="Legrand" style={inp} /></Field>
@@ -334,7 +301,7 @@ export default function Clients() {
               <Field label="Téléphone"><input type="tel" value={form.tel} onChange={f('tel')} placeholder="06 00 00 00 00" style={inp} /></Field>
               <Field label="Date de naissance"><input type="date" value={form.date_naissance} onChange={f('date_naissance')} style={inp} /></Field>
               <Field label="Ville"><input value={form.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
-              <Field label="Spécialité suivie">
+              <Field label="Spécialité">
                 <select value={form.specialite} onChange={f('specialite')} style={inp}>
                   {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -347,28 +314,22 @@ export default function Clients() {
                 </select>
               </Field>
             </div>
-
             <Field label="Notes">
               <textarea value={form.notes} onChange={f('notes')} placeholder="Motif de consultation, antécédents…" rows={3} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
             </Field>
-
             <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setForm(EMPTY); setFormMsg('') }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
-                Réinitialiser
-              </button>
+              <button onClick={() => { setForm(EMPTY); setFormMsg('') }} style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>Réinitialiser</button>
               <button onClick={handleAddClient} style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                <i className="ti ti-user-plus" style={{ marginRight: 6 }} />Enregistrer le client
+                <i className="ti ti-user-plus" style={{ marginRight: 6 }} />Enregistrer
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══════════ IMPORT / EXPORT ═══════════ */}
+      {/* ══ EXPORT ══ */}
       {activeTab === 'export' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 800 }}>
-
-          {/* Export */}
           <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -379,20 +340,15 @@ export default function Clients() {
                 <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Format CSV compatible Excel</div>
               </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Colonnes : Prénom, Nom, Email, Téléphone, Naissance, Spécialité, Ville, Statut, Séances, Notes.
-            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => downloadCSV(toCSV(clients), 'clients-napocrm.csv')} style={xBtn('#0F6E56', '#E1F5EE')}>
-                <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({clients.length} clients)
+              <button onClick={() => downloadCSV(toCSV(clients), 'clients-napocrm.csv')} style={xBtn('#0F6E56','#E1F5EE')}>
+                <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({clients.length})
               </button>
-              <button onClick={() => downloadCSV(toCSV(clients.filter(c => c.statut === 'actif')), 'clients-actifs.csv')} style={xBtn('#185FA5', '#E6F1FB')}>
-                <i className="ti ti-user-check" style={{ fontSize: 15 }} /> Exporter actifs seulement ({actifs})
+              <button onClick={() => downloadCSV(toCSV(clients.filter(c => c.statut==='actif')), 'clients-actifs.csv')} style={xBtn('#185FA5','#E6F1FB')}>
+                <i className="ti ti-user-check" style={{ fontSize: 15 }} /> Exporter actifs ({actifs})
               </button>
             </div>
           </div>
-
-          {/* Import */}
           <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -400,56 +356,26 @@ export default function Clients() {
               </div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Importer des clients</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Fichier CSV (même format export)</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Fichier CSV</div>
               </div>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Format attendu : <code style={{ fontSize: 11, background: 'var(--color-background-primary)', padding: '1px 5px', borderRadius: 4 }}>Prénom, Nom, Email, Tél, Naissance, Spécialité, Ville, Statut, Séances, Notes</code>
-            </div>
-            <button onClick={() => importRef.current.click()} style={xBtn('#534AB7', '#EEEDFE')}>
+            <button onClick={() => importRef.current.click()} style={xBtn('#534AB7','#EEEDFE')}>
               <i className="ti ti-file-upload" style={{ fontSize: 15 }} /> Choisir un fichier CSV
             </button>
-          </div>
-
-          {/* Sauvegarde Supabase */}
-          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', gridColumn: '1 / -1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-device-floppy" style={{ fontSize: 20, color: '#854F0B' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Sauvegarde cloud</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Synchronisation avec votre base Supabase</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                Sauvegardez tous vos clients dans la base Supabase. Utile après un import CSV ou un ajout manuel.
-              </div>
-              <button onClick={handleSave} disabled={saving} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#854F0B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? .7 : 1 }}>
-                <i className="ti ti-cloud-upload" style={{ fontSize: 16 }} />
-                {saving ? 'Sauvegarde…' : 'Sauvegarder maintenant'}
-              </button>
-            </div>
-            {saveMsg && (
-              <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: saveMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: saveMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
-                {saveMsg}
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* ── Modal détail client ── */}
+      {/* ══ MODAL DÉTAIL CLIENT ══ */}
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={e => e.target === e.currentTarget && !editingDetail && setDetail(null)}>
           <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
 
-            {/* En-tête avec avatar */}
+            {/* Avatar + nom */}
             {(() => {
               const src = editingDetail ? editForm : detail
-              const sp = SPEC_COLOR[src.specialite] || SPEC_COLOR['Autre']
+              const sp  = SPEC_COLOR[src.specialite] || SPEC_COLOR['Autre']
               return (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                   <div style={{ width: 48, height: 48, borderRadius: '50%', background: sp.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -459,7 +385,7 @@ export default function Clients() {
                     {editingDetail ? (
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input value={editForm.prenom} onChange={ef('prenom')} placeholder="Prénom" style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
-                        <input value={editForm.nom} onChange={ef('nom')} placeholder="Nom" style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
+                        <input value={editForm.nom}    onChange={ef('nom')}    placeholder="Nom"    style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
                       </div>
                     ) : (
                       <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientName(detail)}</div>
@@ -467,10 +393,10 @@ export default function Clients() {
                     <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
                       {editingDetail ? (
                         <>
-                          <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px', width: 'auto' }}>
+                          <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
                             {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
-                          <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px', width: 'auto' }}>
+                          <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
                             <option value="actif">Actif</option>
                             <option value="inactif">Inactif</option>
                             <option value="archivé">Archivé</option>
@@ -478,8 +404,8 @@ export default function Clients() {
                         </>
                       ) : (
                         <>
-                          {(() => { const sp2 = SPEC_COLOR[detail.specialite] || SPEC_COLOR['Autre']; return <span style={{ fontSize: 11, fontWeight: 600, background: sp2.bg, color: sp2.color, padding: '2px 8px', borderRadius: 20 }}>{detail.specialite}</span> })()}
-                          {(() => { const st = STATUT_STYLE[detail.statut] || STATUT_STYLE['inactif']; return <span style={{ fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, padding: '2px 8px', borderRadius: 20 }}>{st.label}</span> })()}
+                          {(() => { const sp2 = SPEC_COLOR[detail.specialite]||SPEC_COLOR['Autre']; return <span style={{ fontSize: 11, fontWeight: 600, background: sp2.bg, color: sp2.color, padding: '2px 8px', borderRadius: 20 }}>{detail.specialite}</span> })()}
+                          {(() => { const st = STATUT_STYLE[detail.statut]||STATUT_STYLE['inactif']; return <span style={{ fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, padding: '2px 8px', borderRadius: 20 }}>{st.label}</span> })()}
                         </>
                       )}
                     </div>
@@ -489,36 +415,42 @@ export default function Clients() {
               )
             })()}
 
-            {/* Tabs */}
+            {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18 }}>
                 {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes']].map(([id, label, icon]) => (
-                  <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab === id ? 600 : 400, color: detailTab === id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab === id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
+                  <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
+                    {id==='seances' && clientSeances.length > 0 && (
+                      <span style={{ fontSize: 10, background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', padding: '1px 6px', borderRadius: 20, marginLeft: 4 }}>{clientSeances.length}</span>
+                    )}
                   </button>
                 ))}
               </div>
             )}
 
-            {/* Onglet INFOS */}
+            {/* ── Onglet INFOS ── */}
             {(detailTab === 'infos' || editingDetail) && (
               editingDetail ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                  <MField label="Email"><input type="email" value={editForm.email} onChange={ef('email')} style={mInp} /></MField>
-                  <MField label="Téléphone"><input type="tel" value={editForm.tel} onChange={ef('tel')} style={mInp} /></MField>
-                  <MField label="Naissance"><input type="date" value={editForm.date_naissance} onChange={ef('date_naissance')} style={mInp} /></MField>
-                  <MField label="Ville"><input value={editForm.ville} onChange={ef('ville')} style={mInp} /></MField>
+                  <MField label="Email">      <input type="email" value={editForm.email}          onChange={ef('email')}          style={mInp} /></MField>
+                  <MField label="Téléphone">  <input type="tel"   value={editForm.tel}            onChange={ef('tel')}            style={mInp} /></MField>
+                  <MField label="Naissance">  <input type="date"  value={editForm.date_naissance} onChange={ef('date_naissance')} style={mInp} /></MField>
+                  <MField label="Ville">      <input              value={editForm.ville}          onChange={ef('ville')}          style={mInp} /></MField>
+                  <MField label="Notes" style={{ gridColumn: '1/-1' }}>
+                    <textarea value={editForm.notes} onChange={ef('notes')} rows={3} style={{ ...mInp, resize: 'vertical', fontFamily: 'inherit' }} />
+                  </MField>
                 </div>
               ) : (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
                     {[
-                      ['ti-mail',           'Email',     detail.email || '—'],
-                      ['ti-phone',          'Téléphone', detail.tel || '—'],
-                      ['ti-map-pin',        'Ville',     detail.ville || '—'],
-                      ['ti-cake',           'Naissance', detail.date_naissance || '—'],
-                      ['ti-calendar-stats', 'Séances',   `${clientSeances.length} séance(s)`],
-                      ['ti-user-check',     'Statut',    STATUT_STYLE[detail.statut]?.label || detail.statut],
+                      ['ti-mail',           'Email',       detail.email || '—'],
+                      ['ti-phone',          'Téléphone',   detail.tel || '—'],
+                      ['ti-map-pin',        'Ville',       detail.ville || '—'],
+                      ['ti-cake',           'Âge',         age(detail.date_naissance)],
+                      ['ti-calendar-stats', 'Séances',     loadingSeances ? '…' : `${clientSeances.length} séance(s)`],
+                      ['ti-coin',           'CA total',    loadingSeances ? '…' : `${clientSeances.reduce((a,s)=>a+(parseFloat(s.prix_euros)||0),0).toFixed(0)} €`],
                     ].map(([icon, label, val]) => (
                       <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
                         <i className={`ti ${icon}`} style={{ fontSize: 14, color: 'var(--color-accent)', marginTop: 1 }} />
@@ -539,11 +471,13 @@ export default function Clients() {
               )
             )}
 
-            {/* Onglet SÉANCES */}
+            {/* ── Onglet SÉANCES ── */}
             {detailTab === 'seances' && !editingDetail && (
               <div>
                 {loadingSeances ? (
-                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>Chargement…</div>
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-loader-2" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />Chargement…
+                  </div>
                 ) : clientSeances.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                     <i className="ti ti-calendar-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
@@ -552,37 +486,35 @@ export default function Clients() {
                 ) : (
                   <>
                     {clientSeances.map((s, idx) => {
-                      const tc = { 'Sophrologie': { bg: '#E6F1FB', color: '#185FA5' }, 'Coaching': { bg: '#EEEDFE', color: '#534AB7' }, 'Naturopathie': { bg: '#E1F5EE', color: '#0F6E56' }, 'Énergie': { bg: '#FBEAF0', color: '#993556' }, 'Massage': { bg: '#FAEEDA', color: '#854F0B' }, 'Fleurs de Bach': { bg: '#F0EBF8', color: '#7F3FBF' }, 'Autre': { bg: '#F5F5F5', color: '#6B7280' } }[s.type_seance] || { bg: '#F5F5F5', color: '#6B7280' }
-                      const MOIS_S = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-                      const fmtDs = d => { if (!d) return '—'; const [y,m,j] = d.split('-'); return `${j} ${MOIS_S[parseInt(m)-1]} ${y}` }
+                      const tc = { 'Sophrologie':{'bg':'#E6F1FB','color':'#185FA5'},'Coaching':{'bg':'#EEEDFE','color':'#534AB7'},'Naturopathie':{'bg':'#E1F5EE','color':'#0F6E56'},'Énergie':{'bg':'#FBEAF0','color':'#993556'},'Massage':{'bg':'#FAEEDA','color':'#854F0B'},'Fleurs de Bach':{'bg':'#F0EBF8','color':'#7F3FBF'},'Autre':{'bg':'#F5F5F5','color':'#6B7280'} }[s.type_seance] || {'bg':'#F5F5F5','color':'#6B7280'}
                       return (
-                        <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                        <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDs(s.date_seance)}</span>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDate(s.date_seance)}</span>
                               {s.heure_seance && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.heure_seance}</span>}
                               <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
                             </div>
                             <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
                               {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
-                              {s.prix_euros && <span><i className="ti ti-coin" style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
+                              {s.prix_euros    && <span><i className="ti ti-coin"  style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
                             </div>
-                            {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
+                            {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
                           </div>
                         </div>
                       )
                     })}
                     <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-background-secondary)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
                       <span style={{ color: 'var(--color-text-secondary)' }}>{clientSeances.length} séance(s)</span>
-                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientSeances.reduce((acc, s) => acc + (parseFloat(s.prix_euros) || 0), 0).toFixed(0)} € total</span>
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientSeances.reduce((a,s)=>a+(parseFloat(s.prix_euros)||0),0).toFixed(0)} € total</span>
                     </div>
                   </>
                 )}
               </div>
             )}
 
-            {/* Onglet NOTES */}
+            {/* ── Onglet NOTES ── */}
             {detailTab === 'notes' && !editingDetail && (
               <div>
                 {detail.notes ? (
@@ -596,7 +528,7 @@ export default function Clients() {
               </div>
             )}
 
-            {/* Boutons d'action */}
+            {/* Actions */}
             <div style={{ display: 'flex', gap: 8, marginTop: 20, paddingTop: 16, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
               {editingDetail ? (
                 <>
@@ -617,6 +549,7 @@ export default function Clients() {
                 </>
               )}
             </div>
+
           </div>
         </div>
       )}
@@ -624,7 +557,7 @@ export default function Clients() {
   )
 }
 
-/* ─── Composants utilitaires ─────────────────────────────────────────── */
+/* ─── Utilitaires ─────────────────────────────────────────── */
 
 function Btn({ icon, label, onClick, secondary }) {
   return (
@@ -665,12 +598,6 @@ function Field({ label, children }) {
   )
 }
 
-const inp = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
-
-function xBtn(color, bg) {
-  return { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: `0.5px solid ${color}44`, background: bg, color, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
-}
-
 function MField({ label, children, style }) {
   return (
     <div style={style}>
@@ -680,4 +607,9 @@ function MField({ label, children, style }) {
   )
 }
 
+function xBtn(color, bg) {
+  return { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: `0.5px solid ${color}44`, background: bg, color, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+}
+
+const inp  = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
 const mInp = { width: '100%', padding: '6px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
