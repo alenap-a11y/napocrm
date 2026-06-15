@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -77,6 +78,8 @@ function fmtDate(d) {
 export default function Clients() {
   const importRef = useRef()
 
+  const location = useLocation()
+
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
@@ -86,6 +89,17 @@ export default function Clients() {
   const [detailTab,      setDetailTab]      = useState('infos')
   const [clientSeances,  setClientSeances]  = useState([])
   const [loadingSeances, setLoadingSeances] = useState(false)
+  const [showNewSeance,  setShowNewSeance]  = useState(false)
+  const [newSeanceForm,  setNewSeanceForm]  = useState({
+    type_seance: 'Sophrologie',
+    date_seance: new Date().toISOString().slice(0, 10),
+    heure_seance: '10:00',
+    duree_minutes: '60',
+    prix_euros: '',
+    notes: '',
+  })
+  const [savingSeance,   setSavingSeance]   = useState(false)
+  const [seanceMsg,      setSeanceMsg]      = useState('')
   const [editingDetail,  setEditingDetail]  = useState(false)
   const [editForm,       setEditForm]       = useState(null)
   const [saving,         setSaving]         = useState(false)
@@ -109,6 +123,21 @@ export default function Clients() {
   const actifs       = clients.filter(c => c.statut === 'actif').length
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
 
+  useEffect(() => {
+    if (location.state?.searchClient) {
+      setSearch(location.state.searchClient)
+      if (location.state.openSeance && clients.length > 0) {
+        const found = clients.find(c =>
+          `${c.prenom} ${c.nom}`.toLowerCase() === location.state.searchClient.toLowerCase()
+        )
+        if (found) {
+          openDetail(found)
+          setTimeout(() => setDetailTab('seances'), 100)
+        }
+      }
+    }
+  }, [location.state, clients])
+
   async function fetchClientSeances(client) {
     setLoadingSeances(true)
     setClientSeances([])
@@ -119,18 +148,51 @@ export default function Clients() {
         .from('seances')
         .select('*')
         .eq('user_id', user.id)
-        .ilike('prenom', client.prenom || '')
-        .ilike('nom', client.nom || '')
+        .eq('client_id', client.id)
         .order('date_seance', { ascending: false })
       setClientSeances(data || [])
     } catch {}
     setLoadingSeances(false)
   }
 
+  async function handleAddSeanceFromFiche() {
+    if (!detail) return
+    setSavingSeance(true)
+    setSeanceMsg('')
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Non connecté')
+      const { data, error } = await supabase.from('seances').insert({
+        user_id: user.id,
+        client_id: detail.id,
+        prenom: detail.prenom,
+        nom: detail.nom,
+        email: detail.email || null,
+        type_seance: newSeanceForm.type_seance,
+        date_seance: newSeanceForm.date_seance,
+        heure_seance: newSeanceForm.heure_seance,
+        duree_minutes: parseInt(newSeanceForm.duree_minutes) || 60,
+        prix_euros: parseFloat(newSeanceForm.prix_euros) || null,
+        notes: newSeanceForm.notes || null,
+      }).select().single()
+      if (error) throw error
+      setSeanceMsg('✓ Séance ajoutée')
+      setShowNewSeance(false)
+      setNewSeanceForm({ type_seance: 'Sophrologie', date_seance: new Date().toISOString().slice(0, 10), heure_seance: '10:00', duree_minutes: '60', prix_euros: '', notes: '' })
+      await fetchClientSeances(detail)
+      setTimeout(() => setSeanceMsg(''), 3000)
+    } catch (e) {
+      setSeanceMsg('✗ Erreur : ' + e.message)
+    }
+    setSavingSeance(false)
+  }
+
   function openDetail(c) {
     setDetail(c)
     setDetailTab('infos')
     setEditingDetail(false)
+    setShowNewSeance(false)
+    setSeanceMsg('')
     fetchClientSeances(c)
   }
 
@@ -474,6 +536,60 @@ export default function Clients() {
             {/* ── Onglet SÉANCES ── */}
             {detailTab === 'seances' && !editingDetail && (
               <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    {clientSeances.length} séance(s)
+                  </span>
+                  <button
+                    onClick={() => setShowNewSeance(p => !p)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', background: showNewSeance ? '#FBEAF0' : 'var(--color-accent)', color: showNewSeance ? '#993556' : '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    <i className={`ti ${showNewSeance ? 'ti-x' : 'ti-plus'}`} style={{ fontSize: 13 }} />
+                    {showNewSeance ? 'Annuler' : 'Nouvelle séance'}
+                  </button>
+                </div>
+
+                {seanceMsg && (
+                  <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: seanceMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: seanceMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 12 }}>
+                    {seanceMsg}
+                  </div>
+                )}
+
+                {showNewSeance && (
+                  <div style={{ background: 'var(--color-background-secondary)', borderRadius: 10, padding: 16, marginBottom: 16, border: '0.5px solid var(--color-border-secondary)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 12 }}>
+                      Nouvelle séance — {detail.prenom} {detail.nom}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                      <MField label="Type">
+                        <select value={newSeanceForm.type_seance} onChange={e => setNewSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
+                          {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </MField>
+                      <MField label="Date">
+                        <input type="date" value={newSeanceForm.date_seance} onChange={e => setNewSeanceForm(p => ({ ...p, date_seance: e.target.value }))} style={mInp} />
+                      </MField>
+                      <MField label="Heure">
+                        <input type="time" value={newSeanceForm.heure_seance} onChange={e => setNewSeanceForm(p => ({ ...p, heure_seance: e.target.value }))} style={mInp} />
+                      </MField>
+                      <MField label="Durée (min)">
+                        <input type="number" value={newSeanceForm.duree_minutes} min={15} step={15} onChange={e => setNewSeanceForm(p => ({ ...p, duree_minutes: e.target.value }))} style={mInp} />
+                      </MField>
+                      <MField label="Prix (€)" style={{ gridColumn: '1/-1' }}>
+                        <input type="number" value={newSeanceForm.prix_euros} min={0} step={0.01} placeholder="60" onChange={e => setNewSeanceForm(p => ({ ...p, prix_euros: e.target.value }))} style={mInp} />
+                      </MField>
+                    </div>
+                    <MField label="Notes">
+                      <textarea value={newSeanceForm.notes} rows={2} placeholder="Observations…" onChange={e => setNewSeanceForm(p => ({ ...p, notes: e.target.value }))} style={{ ...mInp, resize: 'vertical', fontFamily: 'inherit' }} />
+                    </MField>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                      <button onClick={handleAddSeanceFromFiche} disabled={savingSeance} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: savingSeance ? 'not-allowed' : 'pointer', opacity: savingSeance ? 0.7 : 1 }}>
+                        {savingSeance ? 'Enregistrement…' : 'Enregistrer'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {loadingSeances ? (
                   <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                     <i className="ti ti-loader-2" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />Chargement…

@@ -485,8 +485,7 @@ export default function Seances() {
             {detailTab==='historique' && !editingDetail && (() => {
               const autresSeances = seances.filter(s =>
                 s.id !== detail.id &&
-                s.prenom?.toLowerCase() === detail.prenom?.toLowerCase() &&
-                s.nom?.toLowerCase() === detail.nom?.toLowerCase()
+                s.client_id === detail.client_id
               ).slice(0, 10)
               return autresSeances.length === 0 ? (
                 <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
@@ -517,6 +516,17 @@ export default function Seances() {
                   <div style={{ marginTop:12, padding:'10px 14px', background:'var(--color-background-secondary)', borderRadius:8, display:'flex', justifyContent:'space-between', fontSize:13 }}>
                     <span style={{ color:'var(--color-text-secondary)' }}>{autresSeances.length} autre(s) séance(s)</span>
                     <span style={{ fontWeight:600, color:'var(--color-text-primary)' }}>{autresSeances.reduce((a,s)=>a+(parseFloat(s.prix_euros)||0),0).toFixed(0)} € total</span>
+                  </div>
+                  <div style={{ marginTop:14, display:'flex', justifyContent:'center' }}>
+                    <button
+                      onClick={() => {
+                        setDetail(null)
+                        navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}`, openSeance: true } })
+                      }}
+                      style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}
+                    >
+                      <i className="ti ti-calendar-plus" style={{ fontSize:14 }} />Ajouter une séance
+                    </button>
                   </div>
                 </>
               )
@@ -558,6 +568,15 @@ export default function Seances() {
                   </button>
                   <button onClick={() => downloadCSV(toCSV([detail]),`seance-${detail.prenom}-${detail.date_seance}.csv`)} style={{ padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}>
                     <i className="ti ti-download" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDetail(null)
+                      navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}` } })
+                    }}
+                    style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}
+                  >
+                    <i className="ti ti-user" style={{ fontSize:13 }} />Fiche client
                   </button>
                   <button onClick={() => setDetail(null)} style={{ padding:'8px 16px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>Fermer</button>
                 </>
