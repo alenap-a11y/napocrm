@@ -68,6 +68,18 @@ export default function FicheSeance({ userId }) {
   const [duree, setDuree] = useState('1h')
   const [prix, setPrix] = useState('')
 
+  const [fleursBach, setFleursBach] = useState([])
+
+  const FLEURS_OPTIONS = [
+    'Agrimony','Aspen','Beech','Centaury','Cerato','Cherry Plum',
+    'Chestnut Bud','Chicory','Clematis','Crab Apple','Elm','Gentian',
+    'Gorse','Heather','Holly','Honeysuckle','Hornbeam','Impatiens',
+    'Larch','Mimulus','Mustard','Oak','Olive','Pine','Red Chestnut',
+    'Rock Rose','Rock Water','Scleranthus','Star of Bethlehem','Sweet Chestnut',
+    'Vervain','Vine','Walnut','Water Violet','White Chestnut','Wild Oat',
+    'Wild Rose','Willow','Rescue Remedy',
+  ]
+
   /* Corps 3D — état contrôlé */
   const [annotations, setAnnotations] = useState([])
   const [selectedColor, setSelectedColor] = useState(PALETTE[0].color)
@@ -260,6 +272,39 @@ export default function FicheSeance({ userId }) {
           </div>
         </div>
 
+        {/* Fleurs de Bach */}
+        <div style={S.card}>
+          <span style={S.sectionTitle}>Fleurs de Bach</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+            {FLEURS_OPTIONS.map(f => {
+              const selected = fleursBach.includes(f)
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFleursBach(prev =>
+                    selected ? prev.filter(x => x !== f) : [...prev, f]
+                  )}
+                  style={{
+                    padding: '3px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                    border: selected ? '1.5px solid #c17a3a' : '0.5px solid rgba(193,122,58,0.3)',
+                    background: selected ? '#c17a3a' : '#fdfaf6',
+                    color: selected ? '#fff' : '#a07848',
+                    fontWeight: selected ? 600 : 400,
+                    transition: 'all .15s',
+                  }}
+                >
+                  {f}
+                </button>
+              )
+            })}
+          </div>
+          {fleursBach.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: 11, color: '#c17a3a', fontWeight: 500 }}>
+              {fleursBach.length} fleur{fleursBach.length > 1 ? 's' : ''} sélectionnée{fleursBach.length > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+
         {/* Historique client */}
         <div style={S.card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
@@ -289,8 +334,9 @@ export default function FicheSeance({ userId }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {history.map((s, idx) => {
                 const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-                const [, hm, hj] = (s.date_seance || '').split('-')
-                const dateLabel = s.date_seance ? `${hj} ${MOIS[parseInt(hm)-1]}` : '—'
+                const rawDate = (s.date_seance || '').slice(0, 10)
+                const [, hm, hj] = rawDate.split('-')
+                const dateLabel = rawDate ? `${parseInt(hj)} ${MOIS[parseInt(hm)-1]}` : '—'
                 return (
                   <div key={s.id} style={{ position: 'relative', paddingLeft: 14 }}>
                     {idx < history.length - 1 && (
