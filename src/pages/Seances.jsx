@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
+import { useSeancesSync } from '../hooks/useSeancesSync'
 
 function toCSV(seances) {
   const header = 'Prénom,Nom,Type,Date,Heure,Durée (min),Prix (€),Tags,Notes'
@@ -67,8 +68,9 @@ export default function Seances() {
   const navigate  = useNavigate()
   const importRef = useRef()
 
-  const [seances,       setSeances]       = useState([])
-  const [loading,       setLoading]       = useState(true)
+  const { seances: dbSeances, loading, userId, addSeance, updateSeance, deleteSeance: dbDeleteSeance } = useSeancesSync()
+  const [localSeances, setLocalSeances] = useState([])
+  const seances = [...dbSeances, ...localSeances]
   const [search,        setSearch]        = useState('')
   const [filterType,    setFilterType]    = useState('Tous')
   const [filterMois,    setFilterMois]    = useState('tous')
@@ -94,28 +96,6 @@ export default function Seances() {
   }
   const [form,    setForm]    = useState(EMPTY_FORM)
   const [formMsg, setFormMsg] = useState('')
-
-  useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase
-        .from('seances').select('*').order('date_seance', { ascending: false })
-      if (error) console.error(error.message)
-      else setSeances(data || [])
-      setLoading(false)
-    }
-    load()
-
-    const channel = supabase
-      .channel('seances-global')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'seances'
-      }, () => load())
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [])
 
   useEffect(() => {
     async function loadClients() {
@@ -149,12 +129,12 @@ export default function Seances() {
   async function handleSave() {
     setSaving(true); setSaveMsg('')
     try {
-      const { data:{user} } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const toUpsert = seances.filter(s => typeof s.id==='string').map(s => ({...s, user_id:user.id}))
+      if (!userId) throw new Error('Non connecté')
+      const toUpsert = localSeances.map(s => ({...s, user_id: userId}))
       if (!toUpsert.length) { setSaveMsg('Aucune séance à synchroniser.'); setSaving(false); return }
       const { error } = await supabase.from('seances').upsert(toUpsert, { onConflict:'id' })
       if (error) throw error
+      setLocalSeances([])
       setSaveMsg('✓ Synchronisation effectuée')
     } catch(e) { setSaveMsg(`✗ Erreur : ${e.message}`) }
     setSaving(false)
@@ -167,7 +147,7 @@ export default function Seances() {
     reader.onload = ev => {
       const imported = parseCSV(ev.target.result)
       if (!imported.length) { setImportMsg('Fichier invalide.'); return }
-      setSeances(prev => [...imported, ...prev])
+      setLocalSeances(prev => [...imported, ...prev])
       setImportMsg(`✓ ${imported.length} séance(s) importée(s).`)
       setTimeout(() => setImportMsg(''), 3000)
     }
@@ -176,8 +156,8 @@ export default function Seances() {
   }
 
   async function deleteSeance(id) {
-    if (typeof id === 'string') await supabase.from('seances').delete().eq('id', id)
-    setSeances(prev => prev.filter(s => s.id !== id))
+    await dbDeleteSeance(id)
+    setLocalSeances(prev => prev.filter(s => s.id !== id))
     setDetail(null)
   }
 
@@ -194,15 +174,12 @@ export default function Seances() {
   async function saveEditDetail() {
     const parsedTags = editForm.tags.split(',').map(t=>t.trim()).filter(Boolean)
     const updated = { ...detail, ...editForm, prix_euros: parseFloat(editForm.prix_euros)||0, duree_minutes: parseInt(editForm.duree_minutes)||60, tags: parsedTags }
-    if (typeof detail.id === 'string') {
-      await supabase.from('seances').update({
-        prenom: updated.prenom, nom: updated.nom, type_seance: updated.type_seance,
-        date_seance: updated.date_seance, heure_seance: updated.heure_seance,
-        duree_minutes: updated.duree_minutes, prix_euros: updated.prix_euros,
-        tags: parsedTags, notes: updated.notes,
-      }).eq('id', detail.id)
-    }
-    setSeances(prev => prev.map(s => s.id===detail.id ? updated : s))
+    await updateSeance(detail.id, {
+      prenom: updated.prenom, nom: updated.nom, type_seance: updated.type_seance,
+      date_seance: updated.date_seance, heure_seance: updated.heure_seance,
+      duree_minutes: updated.duree_minutes, prix_euros: updated.prix_euros,
+      tags: parsedTags, notes: updated.notes,
+    })
     setDetail(updated)
     setEditingDetail(false)
     insertNotif({ msg:`Séance modifiée — ${updated.prenom} ${updated.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
@@ -405,20 +382,13 @@ export default function Seances() {
                 if (!form.prenom.trim()||!form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
                 if (!form.date_seance) { setFormMsg('Date requise.'); return }
                 const parsedTags = form.tags.split(',').map(t=>t.trim()).filter(Boolean)
-                try {
-                  const { data:{user} } = await supabase.auth.getUser()
-                  if (!user) throw new Error('Non connecté')
-                  const { data, error } = await supabase.from('seances').insert({
-                    user_id: user.id, client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
-                    type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
-                    duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
-                    tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
-                  }).select().single()
-                  if (error) throw error
-                  setSeances(prev => [data,...prev])
-                } catch {
-                  setSeances(prev => [{...form, id:Date.now(), duree_minutes:parseInt(form.duree_minutes)||60, prix_euros:parseFloat(form.prix_euros)||0, tags:parsedTags},...prev])
-                }
+                const { error } = await addSeance({
+                  client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
+                  type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
+                  duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
+                  tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
+                })
+                if (error) { setFormMsg(`✗ Erreur : ${error.message||error}`); return }
                 insertNotif({ msg:`Nouvelle séance — ${form.prenom} ${form.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
                 setForm(EMPTY_FORM); setClientSelectionne(null); setClientSearch(''); setFormMsg('✓ Séance ajoutée.')
                 setTimeout(() => { setFormMsg(''); setActiveTab('historique') }, 1500)

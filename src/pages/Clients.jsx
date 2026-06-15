@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
+import { useSeancesSync } from '../hooks/useSeancesSync'
 
 
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
@@ -81,6 +82,7 @@ export default function Clients() {
   const location = useLocation()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
+  const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
   const [filterSpec,     setFilterSpec]     = useState('Toutes')
@@ -138,21 +140,9 @@ export default function Clients() {
     }
   }, [location.state, clients])
 
-  async function fetchClientSeances(client) {
-    setLoadingSeances(true)
-    setClientSeances([])
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('seances')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('client_id', client.id)
-        .order('date_seance', { ascending: false })
-      setClientSeances(data || [])
-    } catch {}
-    setLoadingSeances(false)
+  function fetchClientSeances(client) {
+    const data = getSeancesByClient(client.id)
+    setClientSeances(data)
   }
 
   async function handleAddSeanceFromFiche() {
@@ -160,21 +150,18 @@ export default function Clients() {
     setSavingSeance(true)
     setSeanceMsg('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const { data, error } = await supabase.from('seances').insert({
-        user_id: user.id,
-        client_id: detail.id,
+      const { error } = await addSeance({
         prenom: detail.prenom,
         nom: detail.nom,
         email: detail.email || null,
+        client_id: detail.id,
         type_seance: newSeanceForm.type_seance,
         date_seance: newSeanceForm.date_seance,
         heure_seance: newSeanceForm.heure_seance,
         duree_minutes: parseInt(newSeanceForm.duree_minutes) || 60,
         prix_euros: parseFloat(newSeanceForm.prix_euros) || null,
         notes: newSeanceForm.notes || null,
-      }).select().single()
+      })
       if (error) throw error
       setSeanceMsg('✓ Séance ajoutée')
       setShowNewSeance(false)
@@ -193,7 +180,7 @@ export default function Clients() {
     setEditingDetail(false)
     setShowNewSeance(false)
     setSeanceMsg('')
-    fetchClientSeances(c)
+    setClientSeances(getSeancesByClient(c.id))
   }
 
   function handleSave() {
@@ -228,6 +215,14 @@ export default function Clients() {
     await updateClient(detail.id, { ...editForm })
     setDetail(prev => ({ ...prev, ...editForm }))
     setEditingDetail(false)
+    const seancesClient = getSeancesByClient(detail.id)
+    for (const s of seancesClient) {
+      await updateSeance(s.id, {
+        prenom: editForm.prenom,
+        nom: editForm.nom,
+        email: editForm.email || null,
+      })
+    }
   }
 
   async function handleAddClient() {
@@ -661,7 +656,12 @@ export default function Clients() {
                 </>
               ) : (
                 <>
-                  <button onClick={async () => { await deleteClient(detail.id); setDetail(null) }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
+                  <button onClick={async () => {
+                    const seancesClient = getSeancesByClient(detail.id)
+                    for (const s of seancesClient) { await deleteSeance(s.id) }
+                    await deleteClient(detail.id)
+                    setDetail(null)
+                  }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
                   </button>
                   <button onClick={() => openEdit(detail)} style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
