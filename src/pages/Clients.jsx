@@ -89,6 +89,9 @@ export default function Clients() {
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
+  const [detailTab,      setDetailTab]      = useState('infos')
+  const [clientSeances,  setClientSeances]  = useState([])
+  const [loadingSeances, setLoadingSeances] = useState(false)
 
   /* Formulaire nouveau client */
   const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
@@ -116,6 +119,23 @@ export default function Clients() {
   function handleSave() {
     setSaveMsg('✓ Les données sont synchronisées automatiquement.')
     setTimeout(() => setSaveMsg(''), 3000)
+  }
+
+  async function fetchClientSeances(client) {
+    setLoadingSeances(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('seances')
+        .select('*')
+        .eq('user_id', user.id)
+        .ilike('prenom', client.prenom || '')
+        .ilike('nom', client.nom || '')
+        .order('date_seance', { ascending: false })
+      setClientSeances(data || [])
+    } catch {}
+    setLoadingSeances(false)
   }
 
   /* Import CSV */
@@ -258,7 +278,7 @@ export default function Clients() {
               const spec = SPEC_COLOR[c.specialite] || SPEC_COLOR['Autre']
               const stat = STATUT_STYLE[c.statut]   || STATUT_STYLE['inactif']
               return (
-                <div key={c.id} onClick={() => setDetail(c)}
+                <div key={c.id} onClick={() => { setDetail(c); fetchClientSeances(c); setDetailTab('infos') }}
                   style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-primary)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -424,124 +444,176 @@ export default function Clients() {
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={e => e.target === e.currentTarget && !editingDetail && setDetail(null)}>
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 520, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
 
-            {/* En-tête */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 }}>
-              {(() => { const src = editingDetail ? editForm : detail; const sp = SPEC_COLOR[src.specialite] || SPEC_COLOR['Autre']; return (
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: sp.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: sp.color }}>
-                    {(src.prenom||'?')[0]}{(src.nom||'?')[0]}
-                  </span>
-                </div>
-              )})()}
-              <div style={{ flex: 1 }}>
-                {editingDetail ? (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input value={editForm.prenom} onChange={ef('prenom')} placeholder="Prénom" style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
-                    <input value={editForm.nom}    onChange={ef('nom')}    placeholder="Nom"    style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
+            {/* En-tête avec avatar */}
+            {(() => {
+              const src = editingDetail ? editForm : detail
+              const sp = SPEC_COLOR[src.specialite] || SPEC_COLOR['Autre']
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: sp.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: sp.color }}>{(src.prenom||'?')[0]}{(src.nom||'?')[0]}</span>
                   </div>
-                ) : (
-                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientName(detail)}</div>
-                )}
-                <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-                  {editingDetail ? (
-                    <>
-                      <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px' }}>
-                        {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px' }}>
-                        <option value="actif">Actif</option>
-                        <option value="inactif">Inactif</option>
-                        <option value="archivé">Archivé</option>
-                      </select>
-                    </>
-                  ) : (
-                    <>
-                      {(() => { const sp = SPEC_COLOR[detail.specialite] || SPEC_COLOR['Autre']; return (
-                        <span style={{ fontSize: 11, fontWeight: 600, background: sp.bg, color: sp.color, padding: '2px 8px', borderRadius: 20 }}>{detail.specialite}</span>
-                      )})()}
-                      {(() => { const st = STATUT_STYLE[detail.statut] || STATUT_STYLE['inactif']; return (
-                        <span style={{ fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, padding: '2px 8px', borderRadius: 20 }}>{st.label}</span>
-                      )})()}
-                    </>
-                  )}
+                  <div style={{ flex: 1 }}>
+                    {editingDetail ? (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input value={editForm.prenom} onChange={ef('prenom')} placeholder="Prénom" style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
+                        <input value={editForm.nom} onChange={ef('nom')} placeholder="Nom" style={{ ...mInp, flex: 1, fontSize: 15, fontWeight: 600 }} />
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientName(detail)}</div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                      {editingDetail ? (
+                        <>
+                          <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px', width: 'auto' }}>
+                            {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, fontWeight: 600, padding: '2px 8px', width: 'auto' }}>
+                            <option value="actif">Actif</option>
+                            <option value="inactif">Inactif</option>
+                            <option value="archivé">Archivé</option>
+                          </select>
+                        </>
+                      ) : (
+                        <>
+                          {(() => { const sp2 = SPEC_COLOR[detail.specialite] || SPEC_COLOR['Autre']; return <span style={{ fontSize: 11, fontWeight: 600, background: sp2.bg, color: sp2.color, padding: '2px 8px', borderRadius: 20 }}>{detail.specialite}</span> })()}
+                          {(() => { const st = STATUT_STYLE[detail.statut] || STATUT_STYLE['inactif']; return <span style={{ fontSize: 11, fontWeight: 600, background: st.bg, color: st.color, padding: '2px 8px', borderRadius: 20 }}>{st.label}</span> })()}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={() => { setDetail(null); setEditingDetail(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--color-text-secondary)' }}>×</button>
                 </div>
-              </div>
-              <button onClick={() => { setDetail(null); setEditingDetail(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--color-text-secondary)' }}>×</button>
-            </div>
+              )
+            })()}
 
-            {/* Infos */}
-            {editingDetail ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-                <MField label="Email">      <input type="email" value={editForm.email}      onChange={ef('email')}      style={mInp} /></MField>
-                <MField label="Téléphone">  <input type="tel"   value={editForm.tel}        onChange={ef('tel')}        style={mInp} /></MField>
-                <MField label="Naissance">  <input type="date"  value={editForm.date_naissance}  onChange={ef('date_naissance')}  style={mInp} /></MField>
-                <MField label="Ville">      <input              value={editForm.ville}      onChange={ef('ville')}      style={mInp} /></MField>
-                <MField label="Nb séances"> <input type="number" value={editForm.nb_seances} onChange={ef('nb_seances')} style={mInp} min={0} /></MField>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-                {[
-                  ['Âge',       age(detail.date_naissance)],
-                  ['Séances',   `${detail.nb_seances} séance(s)`],
-                  ['Email',     detail.email || '—'],
-                  ['Téléphone', detail.tel   || '—'],
-                  ['Ville',     detail.ville || '—'],
-                  ['Naissance', detail.date_naissance || '—'],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{k}</div>
-                    <div style={{ fontSize: 13, color: 'var(--color-text-primary)' }}>{v}</div>
-                  </div>
+            {/* Tabs */}
+            {!editingDetail && (
+              <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18 }}>
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes']].map(([id, label, icon]) => (
+                  <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab === id ? 600 : 400, color: detailTab === id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab === id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
+                    <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
+                  </button>
                 ))}
               </div>
             )}
 
-            {/* Notes */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Notes</div>
-              {editingDetail ? (
-                <textarea value={editForm.notes} onChange={ef('notes')} placeholder="Observations, antécédents…" rows={3}
-                  style={{ width: '100%', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.7, border: '0.5px solid var(--color-border-secondary)', borderRadius: 8, padding: '10px 12px', background: 'var(--color-background-secondary)', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            {/* Onglet INFOS */}
+            {(detailTab === 'infos' || editingDetail) && (
+              editingDetail ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <MField label="Email"><input type="email" value={editForm.email} onChange={ef('email')} style={mInp} /></MField>
+                  <MField label="Téléphone"><input type="tel" value={editForm.tel} onChange={ef('tel')} style={mInp} /></MField>
+                  <MField label="Naissance"><input type="date" value={editForm.date_naissance} onChange={ef('date_naissance')} style={mInp} /></MField>
+                  <MField label="Ville"><input value={editForm.ville} onChange={ef('ville')} style={mInp} /></MField>
+                </div>
               ) : (
-                detail.notes
-                  ? <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.7, background: 'var(--color-background-secondary)', padding: '12px 14px', borderRadius: 8 }}>{detail.notes}</div>
-                  : <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>—</div>
-              )}
-            </div>
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                    {[
+                      ['ti-mail',           'Email',     detail.email || '—'],
+                      ['ti-phone',          'Téléphone', detail.tel || '—'],
+                      ['ti-map-pin',        'Ville',     detail.ville || '—'],
+                      ['ti-cake',           'Naissance', detail.date_naissance || '—'],
+                      ['ti-calendar-stats', 'Séances',   `${clientSeances.length} séance(s)`],
+                      ['ti-user-check',     'Statut',    STATUT_STYLE[detail.statut]?.label || detail.statut],
+                    ].map(([icon, label, val]) => (
+                      <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
+                        <i className={`ti ${icon}`} style={{ fontSize: 14, color: 'var(--color-accent)', marginTop: 1 }} />
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+                          <div style={{ fontSize: 13, color: 'var(--color-text-primary)', marginTop: 2 }}>{val}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {detail.notes && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Notes</div>
+                      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.7, background: 'var(--color-background-secondary)', padding: '12px 14px', borderRadius: 8 }}>{detail.notes}</div>
+                    </div>
+                  )}
+                </>
+              )
+            )}
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 8 }}>
+            {/* Onglet SÉANCES */}
+            {detailTab === 'seances' && !editingDetail && (
+              <div>
+                {loadingSeances ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>Chargement…</div>
+                ) : clientSeances.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-calendar-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                    Aucune séance enregistrée
+                  </div>
+                ) : (
+                  <>
+                    {clientSeances.map((s, idx) => {
+                      const tc = { 'Sophrologie': { bg: '#E6F1FB', color: '#185FA5' }, 'Coaching': { bg: '#EEEDFE', color: '#534AB7' }, 'Naturopathie': { bg: '#E1F5EE', color: '#0F6E56' }, 'Énergie': { bg: '#FBEAF0', color: '#993556' }, 'Massage': { bg: '#FAEEDA', color: '#854F0B' }, 'Fleurs de Bach': { bg: '#F0EBF8', color: '#7F3FBF' }, 'Autre': { bg: '#F5F5F5', color: '#6B7280' } }[s.type_seance] || { bg: '#F5F5F5', color: '#6B7280' }
+                      const MOIS_S = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+                      const fmtDs = d => { if (!d) return '—'; const [y,m,j] = d.split('-'); return `${j} ${MOIS_S[parseInt(m)-1]} ${y}` }
+                      return (
+                        <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDs(s.date_seance)}</span>
+                              {s.heure_seance && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.heure_seance}</span>}
+                              <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                              {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
+                              {s.prix_euros && <span><i className="ti ti-coin" style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
+                            </div>
+                            {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-background-secondary)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>{clientSeances.length} séance(s)</span>
+                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientSeances.reduce((acc, s) => acc + (parseFloat(s.prix_euros) || 0), 0).toFixed(0)} € total</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Onglet NOTES */}
+            {detailTab === 'notes' && !editingDetail && (
+              <div>
+                {detail.notes ? (
+                  <div style={{ fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.7, background: 'var(--color-background-secondary)', padding: '14px 16px', borderRadius: 8 }}>{detail.notes}</div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-notes-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                    Aucune note pour ce client
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Boutons d'action */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20, paddingTop: 16, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
               {editingDetail ? (
                 <>
-                  <button onClick={() => setEditingDetail(false)}
-                    style={{ padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>
-                    Annuler
-                  </button>
-                  <button onClick={saveEditDetail}
-                    style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                    <i className="ti ti-check" style={{ marginRight: 5 }} />Sauvegarder les modifications
+                  <button onClick={() => setEditingDetail(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>Annuler</button>
+                  <button onClick={saveEditDetail} style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                    <i className="ti ti-check" style={{ marginRight: 5 }} />Sauvegarder
                   </button>
                 </>
               ) : (
                 <>
-                  <button onClick={async () => { await deleteClient(detail.id); setDetail(null) }}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
+                  <button onClick={async () => { await deleteClient(detail.id); setDetail(null) }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
                   </button>
-                  <button onClick={() => openEdit(detail)}
-                    style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+                  <button onClick={() => openEdit(detail)} style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-pencil" style={{ marginRight: 5 }} />Modifier
                   </button>
-                  <button onClick={() => downloadCSV(toCSV([detail]), `client-${detail.nom}-${detail.prenom}.csv`)}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
-                    <i className="ti ti-download" />
-                  </button>
-                  <button onClick={() => setDetail(null)}
-                    style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                    Fermer
-                  </button>
+                  <button onClick={() => setDetail(null)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Fermer</button>
                 </>
               )}
             </div>
