@@ -169,16 +169,24 @@ function AgendaCalendrier({ accent, onNavigate }) {
           })}
         </div>
 
-        <div style={{ marginTop: 12, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-            {rdvDuMois.length} RDV ce mois
-          </span>
-          <button
-            onClick={() => onNavigate?.('/agenda')}
-            style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            Voir tout →
-          </button>
+        <div style={{ marginTop: 12, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+              {rdvDuMois.length} RDV ce mois
+            </span>
+            <button
+              onClick={() => onNavigate?.('/agenda')}
+              style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            >
+              Voir tout →
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <i className="ti ti-coin" style={{ fontSize: 13, color: '#1D9E75' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#1D9E75' }}>
+              {rdvDuMois.reduce((sum, r) => sum + (r.prix || 0), 0).toFixed(0)} € ce mois
+            </span>
+          </div>
         </div>
       </div>
 
@@ -214,11 +222,17 @@ function AgendaCalendrier({ accent, onNavigate }) {
               Aucun RDV ce jour
             </div>
           ) : rdvDuJour.map(r => (
-            <div key={r.id} style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-              borderRadius: 8, background: 'var(--color-background-secondary)',
-              borderLeft: `3px solid ${accent}`,
-            }}>
+            <div
+              key={r.id}
+              onClick={() => onNavigate?.('/seances')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                borderRadius: 8, background: 'var(--color-background-secondary)',
+                borderLeft: `3px solid ${accent}`, cursor: 'pointer', transition: 'background .1s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-border-tertiary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+            >
               <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 44 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: accent }}>{formatHour(r.date)}</div>
                 <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{r.duree}min</div>
@@ -242,8 +256,19 @@ function AgendaCalendrier({ accent, onNavigate }) {
               .sort((a, b) => b.date - a.date)
               .slice(0, 2)
               .map(r => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', color: 'var(--color-text-secondary)' }}>
-                  <span>{r.client}</span>
+                <div
+                  key={r.id}
+                  onClick={() => onNavigate?.('/clients')}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: 12, padding: '5px 6px', borderRadius: 6,
+                    color: 'var(--color-text-secondary)', cursor: 'pointer',
+                    transition: 'background .1s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span style={{ fontWeight: 500 }}>{r.client}</span>
                   <span>{r.date.getDate()} {MONTHS_SHORT[r.date.getMonth()]}</span>
                 </div>
               ))}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
+import AgendaWidget from './AgendaWidget'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -393,6 +394,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [monthStats,      setMonthStats]      = useState({ count: 0, revenue: 0, clientsCount: 0 })
   const [derniersClients, setDerniersClients] = useState([])
   const [dernieresSeances,setDernieresSeances]= useState([])
+  const [clientsActifs,   setClientsActifs]   = useState(0)
+  const [seancesAVenir,   setSeancesAVenir]   = useState(0)
 
   useEffect(() => {
     const getUser = async () => {
@@ -409,16 +412,35 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   }, [])
 
   useEffect(() => {
-    const monthStart = new Date()
-    monthStart.setDate(1)
-    const monthStartStr = monthStart.toISOString().slice(0, 10)
-    Promise.all([
-      supabase.from('seances').select('*').order('created_at',    { ascending: false }).limit(5),
-      supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
-      supabase.from('clients').select('*').order('date_creation', { ascending: false }).limit(5),
-      supabase.from('seances').select('*').order('date_seance',   { ascending: false }).limit(5),
-      supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
-    ]).then(([{ data: recent }, { data: monthly }, { data: clients }, { data: seances }, { data: newClients }]) => {
+    async function loadStats() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const uid = user?.id
+
+      const monthStart = new Date()
+      monthStart.setDate(1)
+      const monthStartStr = monthStart.toISOString().slice(0, 10)
+      const todayStr = new Date().toISOString().slice(0, 10)
+
+      const queries = [
+        supabase.from('seances').select('*').order('created_at',    { ascending: false }).limit(5),
+        supabase.from('seances').select('prix_euros').gte('date_seance', monthStartStr),
+        supabase.from('clients').select('*').order('date_creation', { ascending: false }).limit(5),
+        supabase.from('seances').select('*').order('date_seance',   { ascending: false }).limit(5),
+        supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
+        supabase.from('seances').select('*', { count: 'exact', head: true }).gte('date_seance', todayStr),
+      ]
+
+      const [
+        { data: recent },
+        { data: monthly },
+        { data: clients },
+        { data: seances },
+        { data: newClients },
+        { count: actifs },
+        { count: avenir },
+      ] = await Promise.all(queries)
+
       setRecentSeances(recent || [])
       setDerniersClients(clients || [])
       setDernieresSeances(seances || [])
@@ -429,7 +451,10 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         revenue:      m.reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0),
         clientsCount: cc.length,
       })
-    })
+      setClientsActifs(actifs ?? 0)
+      setSeancesAVenir(avenir ?? 0)
+    }
+    loadStats()
   }, [])
 
   const activeSbItem = sbItems.find(i => i.id === sbActif)
@@ -508,8 +533,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
-            { label: 'Clients actifs', val: 12, icon: 'ti-users', color: accent },
-            { label: 'Séances à venir', val: 5, icon: 'ti-calendar-event', color: '#1D9E75' },
+            { label: 'Clients actifs', val: clientsActifs, icon: 'ti-users', color: accent },
+            { label: 'Séances à venir', val: seancesAVenir, icon: 'ti-calendar-event', color: '#1D9E75' },
           ].map(m => (
             <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -559,6 +584,14 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           AGENDA
         </div>
         <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
+      </div>
+
+      {/* Rendez-vous à venir (7 jours) */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+          RENDEZ-VOUS À VENIR
+        </div>
+        <AgendaWidget accent={accent} onNavigate={onNavigate} />
       </div>
 
       {/* Vue d'ensemble */}
