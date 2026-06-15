@@ -86,6 +86,7 @@ const EMPTY_EDIT = { clientId: '', date: todayStr, heure: '10:00', typeSeance: '
 
 export default function Agenda() {
   const calRef = useRef(null)
+  const noteOpenRef = useRef(false)
 
   const [view,      setView]      = useState('mois')
   const [year,      setYear]      = useState(today.getFullYear())
@@ -563,6 +564,8 @@ export default function Agenda() {
                 info.jsEvent.stopPropagation()
               }}
               dateClick={info => {
+                if (noteOpenRef.current) return;
+                if (info.jsEvent.target.closest('.notes-panel')) return;
                 const ds = info.dateStr.split('T')[0]
                 setSelectedDate(ds)
                 setDetail(null)
@@ -572,7 +575,7 @@ export default function Agenda() {
               dayCellContent={info => (
                 <>
                   <span>{info.dayNumberText}</span>
-                  <NotesDuJour date={toYMD(info.date)} />
+                  <NotesDuJour date={toYMD(info.date)} onNoteOpen={v => noteOpenRef.current = v} />
                 </>
               )}
             />

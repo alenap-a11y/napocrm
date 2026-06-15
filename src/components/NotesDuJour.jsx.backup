@@ -2,31 +2,17 @@ import { useState } from 'react'
 import { useNotes } from '../hooks/useNotes'
 import NoteModal from './NoteModal'
 
-export default function NotesDuJour({ date, onNoteOpen }) {
+export default function NotesDuJour({ date }) {
   const { notes, loading, updateNote, deleteNote } = useNotes({ date })
   const [selectedNote, setSelectedNote] = useState(null)
 
   if (loading || notes.length === 0) return null
 
-  function openNote(e, n) {
-    e.stopPropagation()
-    e.preventDefault()
-    setSelectedNote(n)
-    onNoteOpen?.(true)
-  }
-
-  function closeNote() {
-    setSelectedNote(null)
-    onNoteOpen?.(false)
-  }
-
   return (
     <>
       <div className="notes-du-jour">
         {notes.map(n => (
-          <div key={n.id} className="note-chip"
-            onClick={(e) => openNote(e, n)}
-            style={{ cursor: 'pointer' }}>
+          <div key={n.id} className="note-chip" onClick={() => setSelectedNote(n)} style={{ cursor: 'pointer' }}>
             📝 {n.titre || n.contenu.slice(0, 40)}
           </div>
         ))}
@@ -36,7 +22,7 @@ export default function NotesDuJour({ date, onNoteOpen }) {
           note={selectedNote}
           onUpdate={updateNote}
           onDelete={deleteNote}
-          onClose={closeNote}
+          onClose={() => setSelectedNote(null)}
         />
       )}
     </>
