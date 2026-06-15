@@ -38,7 +38,7 @@ const ETATS = Object.keys(FLEUR_SUGGESTIONS)
 function toCSV(rows) {
   const header = 'Nom,Âge,Date,Motif,Score,Fleurs,Notes'
   const lines = rows.map(r =>
-    `"${r.nom}",${r.age},"${r.date}",` +
+    `"${r.nom}",${r.age},"${r.date_tirage}",` +
     `"${(r.motif||'').replace(/"/g,"'")}",${r.score||0},` +
     `"${(r.fleurs||[]).join('|')}","${(r.notes||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
   )
@@ -62,7 +62,7 @@ function parseCSV(text) {
       id: Date.now() + i,
       nom:    c[0] || '',
       age:    c[1] || '',
-      date:   c[2] || '',
+      date_tirage: c[2] || '',
       motif:  c[3] || '',
       score:  parseInt(c[4]) || 0,
       fleurs: c[5] ? c[5].split('|').filter(Boolean) : [],
@@ -114,10 +114,10 @@ export default function FicheClientBach({ client }) {
   useEffect(() => {
     async function fetchHist() {
       const { data, error } = await supabase
-        .from('bach_seances')
+        .from('fleurs_bach')
         .select('*')
-        .order('date', { ascending: false })
-      if (error) console.error('Erreur chargement bach_seances:', error.message)
+        .order('date_tirage', { ascending: false })
+      if (error) console.error('Erreur chargement fleurs_bach:', error.message)
       else setHist(data || [])
       setHistLoading(false)
     }
@@ -138,7 +138,7 @@ export default function FicheClientBach({ client }) {
 
   /* ─ Édition fiche historique ─ */
   function openEdit(r) {
-    setEditForm({ nom: r.nom||'', age: r.age||'', date: r.date||isoToday, motif: r.motif||'', score: r.score||0, fleurs: [...(r.fleurs||[])], notes: r.notes||'' })
+    setEditForm({ nom: r.nom||'', age: r.age||'', date_tirage: r.date_tirage||isoToday, motif: r.motif||'', score: r.score||0, fleurs: [...(r.fleurs||[])], notes: r.notes||'' })
     setEditingDetail(true)
   }
 
@@ -160,7 +160,7 @@ export default function FicheClientBach({ client }) {
 
   function terminer() {
     const record = {
-      id: Date.now(), nom, age, date: isoToday, motif, score, fleurs: fleursChoisies, notes,
+      id: Date.now(), nom, age, date_tirage: isoToday, motif, score, fleurs: fleursChoisies, notes,
     }
     setHist(prev => [record, ...prev])
     setNom(''); setAge(''); setMotif(''); setEtatsCoches([]); setScore(0); setNotes(''); setFleursChoisies([])
@@ -174,7 +174,7 @@ export default function FicheClientBach({ client }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
       const rows = hist.map(r => ({ ...r, user_id: user.id }))
-      const { error } = await supabase.from('bach_seances').upsert(rows, { onConflict: 'id' })
+      const { error } = await supabase.from('fleurs_bach').upsert(rows, { onConflict: 'id' })
       if (error) throw error
       setSaveMsg('✓ Sauvegarde effectuée')
       insertNotif({ msg: `Fleurs de Bach — ${hist.length} séance${hist.length > 1 ? 's' : ''} sauvegardée${hist.length > 1 ? 's' : ''}`, icon: 'ti-leaf', iconColor: '#534AB7', bg: '#EEEDFE' })
@@ -263,7 +263,7 @@ export default function FicheClientBach({ client }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 18 }}>
             {[
               { icon: 'ti-leaf',        bg: '#E1F5EE', col: '#0F6E56', label: 'Total séances',    val: hist.length },
-              { icon: 'ti-calendar',    bg: '#EEEDFE', col: '#534AB7', label: 'Ce mois',           val: hist.filter(r => r.date?.startsWith(isoToday.slice(0,7))).length },
+              { icon: 'ti-calendar',    bg: '#EEEDFE', col: '#534AB7', label: 'Ce mois',           val: hist.filter(r => r.date_tirage?.startsWith(isoToday.slice(0,7))).length },
               { icon: 'ti-heart',       bg: '#FBEAF0', col: '#993556', label: 'Score moyen',        val: hist.length ? `${(hist.reduce((s,r) => s+(r.score||0),0)/hist.length).toFixed(1)}/10` : '—' },
             ].map(s => (
               <div key={s.label} style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -314,7 +314,7 @@ export default function FicheClientBach({ client }) {
                   <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{r.nom}</div>
                   {r.motif && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{r.motif}</div>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(r.date)}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(r.date_tirage)}</div>
                 <div>
                   {r.score > 0 && (
                     <span style={{ fontSize: 12, fontWeight: 600, color: scoreColor(r.score) }}>{r.score}/10</span>
@@ -327,7 +327,7 @@ export default function FicheClientBach({ client }) {
                   {(r.fleurs||[]).length > 3 && <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>+{r.fleurs.length - 3}</span>}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
-                  <button onClick={e => { e.stopPropagation(); downloadCSV(toCSV([r]), `bach-${r.nom.replace(' ','-')}-${r.date}.csv`) }}
+                  <button onClick={e => { e.stopPropagation(); downloadCSV(toCSV([r]), `bach-${r.nom.replace(' ','-')}-${r.date_tirage}.csv`) }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: 4 }} title="Exporter">
                     <i className="ti ti-download" style={{ fontSize: 14 }} />
                   </button>
@@ -574,7 +574,7 @@ export default function FicheClientBach({ client }) {
               <button onClick={() => downloadCSV(toCSV(hist), 'bach-napocrm.csv')} style={xBtn('#0F6E56', '#E1F5EE')}>
                 <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({hist.length} séances)
               </button>
-              <button onClick={() => { const m = hist.filter(r => r.date?.startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `bach-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
+              <button onClick={() => { const m = hist.filter(r => r.date_tirage?.startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `bach-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
                 <i className="ti ti-calendar-down" style={{ fontSize: 15 }} /> Exporter ce mois
               </button>
             </div>
@@ -647,7 +647,7 @@ export default function FicheClientBach({ client }) {
               {editingDetail ? (
                 <>
                   <MField label="Date">
-                    <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={mInp} />
+                    <input type="date" value={editForm.date_tirage} onChange={e => setEditForm(f => ({ ...f, date_tirage: e.target.value }))} style={mInp} />
                   </MField>
                   <MField label="Âge">
                     <input type="number" value={editForm.age} onChange={e => setEditForm(f => ({ ...f, age: e.target.value }))} placeholder="38" style={mInp} />
@@ -665,7 +665,7 @@ export default function FicheClientBach({ client }) {
                   </MField>
                 </>
               ) : (
-                [['Date', fmtDate(detail.date)], ['Score', detail.score ? `${detail.score}/10` : '—'], ['Âge', detail.age || '—'], ['Motif', detail.motif || '—']].map(([k,v]) => (
+                [['Date', fmtDate(detail.date_tirage)], ['Score', detail.score ? `${detail.score}/10` : '—'], ['Âge', detail.age || '—'], ['Motif', detail.motif || '—']].map(([k,v]) => (
                   <div key={k}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{k}</div>
                     <div style={{ fontSize: 14, color: 'var(--color-text-primary)', fontWeight: k === 'Score' ? 600 : 400 }}>{v}</div>
@@ -756,7 +756,7 @@ export default function FicheClientBach({ client }) {
                     style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-pencil" style={{ marginRight: 5 }} />Modifier
                   </button>
-                  <button onClick={() => downloadCSV(toCSV([detail]), `bach-${detail.nom.replace(' ','-')}-${detail.date}.csv`)}
+                  <button onClick={() => downloadCSV(toCSV([detail]), `bach-${detail.nom.replace(' ','-')}-${detail.date_tirage}.csv`)}
                     style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-download" />
                   </button>

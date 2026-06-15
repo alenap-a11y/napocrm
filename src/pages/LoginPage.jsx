@@ -129,7 +129,7 @@ export default function LoginPage() {
           }}>Alpha v0.2</span>
           <span className="landing-tagline" style={{
             fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500,
-          }}>Les petits font les grands !</span>
+          }}>Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.</span>
         </div>
 
         {/* Nav */}
@@ -330,7 +330,7 @@ export default function LoginPage() {
               Tout ce dont vous avez besoin,<br />rien de superflu.
             </h2>
             <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 520, margin: '0 auto' }}>
-              Un outil pensé pour les indépendants du bien-être, pas pour les grandes entreprises.
+              Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.
             </p>
           </div>
 

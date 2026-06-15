@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
+import AgendaWidget from './AgendaWidget'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -583,6 +584,14 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           AGENDA
         </div>
         <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
+      </div>
+
+      {/* Rendez-vous à venir (7 jours) */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+          RENDEZ-VOUS À VENIR
+        </div>
+        <AgendaWidget accent={accent} onNavigate={onNavigate} />
       </div>
 
       {/* Vue d'ensemble */}

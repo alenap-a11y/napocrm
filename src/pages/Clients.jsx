@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
 
 
@@ -27,7 +28,7 @@ const SPEC_COLOR = {
 function toCSV(rows) {
   const header = 'Prénom,Nom,Email,Téléphone,Naissance,Spécialité,Ville,Statut,Séances,Notes'
   const lines  = rows.map(r =>
-    `${r.prenom},${r.nom},"${r.email}","${r.tel}","${r.naissance}","${r.specialite}","${r.ville}","${r.statut}",${r.nb_seances},"${(r.notes||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
+    `${r.prenom},${r.nom},"${r.email}","${r.tel}","${r.date_naissance}","${r.specialite}","${r.ville}","${r.statut}","${(r.notes||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
   )
   return [header, ...lines].join('\n')
 }
@@ -51,12 +52,11 @@ function parseCSV(text) {
       nom:        c[1] || '',
       email:      c[2] || '',
       tel:        c[3] || '',
-      naissance:  c[4] || '',
+      date_naissance: c[4] || '',
       specialite: c[5] || 'Autre',
       ville:      c[6] || '',
       statut:     c[7] || 'actif',
-      nb_seances: parseInt(c[8]) || 0,
-      notes:      c[9] || '',
+      notes:      c[8] || '',
     }
   }).filter(r => r.prenom || r.nom)
 }
@@ -78,9 +78,7 @@ const isoToday = new Date().toISOString().slice(0, 10)
 export default function Clients() {
   const importRef = useRef()
 
-  const [clients,      setClients]     = useState([])
-  const [loading,      setLoading]     = useState(true)
-  const [fetchError,   setFetchError]  = useState('')
+  const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const [activeTab,    setActiveTab]   = useState('liste')
   const [search,       setSearch]      = useState('')
   const [filterSpec,   setFilterSpec]  = useState('Toutes')
@@ -93,23 +91,11 @@ export default function Clients() {
   const [importMsg,      setImportMsg]      = useState('')
 
   /* Formulaire nouveau client */
-  const EMPTY = { prenom: '', nom: '', email: '', tel: '', naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
+  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', nb_seances: 0, notes: '' }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
   const ef = (k) => e => setEditForm(prev => ({ ...prev, [k]: e.target.value }))
-
-  useEffect(() => {
-    async function fetchClients() {
-      setLoading(true)
-      setFetchError('')
-      const { data, error } = await supabase.from('clients').select('*')
-      if (error) setFetchError(error.message)
-      else setClients(data || [])
-      setLoading(false)
-    }
-    fetchClients()
-  }, [])
 
   /* Filtres */
   const filtered = clients.filter(c => {
@@ -127,20 +113,8 @@ export default function Clients() {
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
 
   /* Sauvegarde Supabase */
-  async function handleSave() {
-    setSaving(true); setSaveMsg('')
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const rows = clients.map(c => ({ ...c, user_id: user.id }))
-      const { error } = await supabase.from('clients').upsert(rows, { onConflict: 'id' })
-      if (error) throw error
-      setSaveMsg('✓ Sauvegarde effectuée')
-      insertNotif({ msg: `Base clients synchronisée (${clients.length} client${clients.length > 1 ? 's' : ''})`, icon: 'ti-users', iconColor: '#3B6D11', bg: '#EAF3DE' })
-    } catch (e) {
-      setSaveMsg(`✗ Erreur : ${e.message}`)
-    }
-    setSaving(false)
+  function handleSave() {
+    setSaveMsg('✓ Les données sont synchronisées automatiquement.')
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
@@ -148,10 +122,14 @@ export default function Clients() {
   function handleImport(e) {
     const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const imported = parseCSV(ev.target.result)
       if (!imported.length) { setImportMsg('Fichier invalide.'); return }
-      setClients(prev => [...imported, ...prev])
+      const { data: { user } } = await supabase.auth.getUser()
+      const rows = imported.map(({ id, ...r }) => ({ ...r, user_id: user?.id || null }))
+      const { error } = await supabase.from('clients').insert(rows)
+      if (error) { setImportMsg(`✗ Erreur : ${error.message}`); return }
+      await refreshClients()
       setImportMsg(`✓ ${imported.length} client(s) importé(s).`)
       setTimeout(() => setImportMsg(''), 3000)
     }
@@ -161,21 +139,23 @@ export default function Clients() {
 
   /* Modifier client (modal) */
   function openEdit(c) {
-    setEditForm({ prenom: c.prenom||'', nom: c.nom||'', email: c.email||'', tel: c.tel||'', naissance: c.naissance||'', ville: c.ville||'', specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', nb_seances: c.nb_seances||0, notes: c.notes||'' })
+    setEditForm({ prenom: c.prenom||'', nom: c.nom||'', email: c.email||'', tel: c.tel||'', date_naissance: c.date_naissance||'', ville: c.ville||'', specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', nb_seances: c.nb_seances||0, notes: c.notes||'' })
     setEditingDetail(true)
   }
 
-  function saveEditDetail() {
-    const updated = { ...detail, ...editForm, nb_seances: parseInt(editForm.nb_seances) || 0 }
-    setClients(prev => prev.map(c => c.id === detail.id ? updated : c))
-    setDetail(updated)
+  async function saveEditDetail() {
+    const { nb_seances, ...rest } = editForm
+    const fields = { ...rest }
+    await updateClient(detail.id, fields)
+    setDetail(prev => ({ ...prev, ...fields }))
     setEditingDetail(false)
   }
 
   /* Enregistrer nouveau client */
-  function handleAddClient() {
+  async function handleAddClient() {
     if (!form.prenom.trim() || !form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
-    setClients(prev => [{ ...form, id: Date.now(), nb_seances: parseInt(form.nb_seances) || 0 }, ...prev])
+    const { nb_seances, ...clientFields } = form
+    await addClient(clientFields)
     insertNotif({ msg: `Nouveau client — ${form.prenom} ${form.nom}`, icon: 'ti-user-plus', iconColor: '#185FA5', bg: '#E6F1FB' })
     setForm(EMPTY)
     setFormMsg('✓ Client ajouté.')
@@ -266,10 +246,6 @@ export default function Clients() {
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                 <i className="ti ti-loader-2" style={{ fontSize: 28, display: 'block', marginBottom: 10, animation: 'spin 1s linear infinite' }} />Chargement…
               </div>
-            ) : fetchError ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#993556', fontSize: 13 }}>
-                <i className="ti ti-alert-circle" style={{ fontSize: 28, display: 'block', marginBottom: 10 }} />Erreur : {fetchError}
-              </div>
             ) : clients.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
                 <i className="ti ti-users" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucun client pour le moment
@@ -298,7 +274,7 @@ export default function Clients() {
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: spec.bg, color: spec.color, padding: '2px 8px', borderRadius: 20 }}>{c.specialite}</span></div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{age(c.naissance)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{age(c.date_naissance)}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{c.nb_seances}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: stat.bg, color: stat.color, padding: '2px 8px', borderRadius: 20 }}>{stat.label}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -336,7 +312,7 @@ export default function Clients() {
               <Field label="Nom"><input value={form.nom} onChange={f('nom')} placeholder="Legrand" style={inp} /></Field>
               <Field label="Email"><input type="email" value={form.email} onChange={f('email')} placeholder="email@exemple.com" style={inp} /></Field>
               <Field label="Téléphone"><input type="tel" value={form.tel} onChange={f('tel')} placeholder="06 00 00 00 00" style={inp} /></Field>
-              <Field label="Date de naissance"><input type="date" value={form.naissance} onChange={f('naissance')} style={inp} /></Field>
+              <Field label="Date de naissance"><input type="date" value={form.date_naissance} onChange={f('date_naissance')} style={inp} /></Field>
               <Field label="Ville"><input value={form.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
               <Field label="Spécialité suivie">
                 <select value={form.specialite} onChange={f('specialite')} style={inp}>
@@ -500,19 +476,19 @@ export default function Clients() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
                 <MField label="Email">      <input type="email" value={editForm.email}      onChange={ef('email')}      style={mInp} /></MField>
                 <MField label="Téléphone">  <input type="tel"   value={editForm.tel}        onChange={ef('tel')}        style={mInp} /></MField>
-                <MField label="Naissance">  <input type="date"  value={editForm.naissance}  onChange={ef('naissance')}  style={mInp} /></MField>
+                <MField label="Naissance">  <input type="date"  value={editForm.date_naissance}  onChange={ef('date_naissance')}  style={mInp} /></MField>
                 <MField label="Ville">      <input              value={editForm.ville}      onChange={ef('ville')}      style={mInp} /></MField>
                 <MField label="Nb séances"> <input type="number" value={editForm.nb_seances} onChange={ef('nb_seances')} style={mInp} min={0} /></MField>
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
                 {[
-                  ['Âge',       age(detail.naissance)],
+                  ['Âge',       age(detail.date_naissance)],
                   ['Séances',   `${detail.nb_seances} séance(s)`],
                   ['Email',     detail.email || '—'],
                   ['Téléphone', detail.tel   || '—'],
                   ['Ville',     detail.ville || '—'],
-                  ['Naissance', detail.naissance || '—'],
+                  ['Naissance', detail.date_naissance || '—'],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{k}</div>
@@ -550,7 +526,7 @@ export default function Clients() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => { setClients(prev => prev.filter(c => c.id !== detail.id)); setDetail(null) }}
+                  <button onClick={async () => { await deleteClient(detail.id); setDetail(null) }}
                     style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
                   </button>

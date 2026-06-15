@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import SeanceTimeline from './SeanceTimeline'
+import SeanceNotesPreview from './SeanceNotesPreview'
 
 /* ─── Helpers ─── */
 function getInitials(nom, prenom) {
@@ -70,6 +71,8 @@ export default function FicheClients({ userId }) {
   /* Panel détail */
   const [detail, setDetail]             = useState(null)   // null | clientObj | { isNew:true }
   const [detailSeances, setDetailSeances] = useState([])
+  const [histSeances,  setHistSeances]  = useState([])
+  const [histLoading,  setHistLoading]  = useState(false)
   const [confirmDel, setConfirmDel]     = useState(false)
   const [saving,  setSaving]  = useState(false)
   const [saveOk,  setSaveOk]  = useState(false)
@@ -106,6 +109,18 @@ export default function FicheClients({ userId }) {
     setLoading(false)
   }
 
+  /* ── Historique séances détaillé ── */
+  async function fetchClientSeances(clientId) {
+    setHistLoading(true)
+    const { data } = await supabase
+      .from('seances')
+      .select('id, date_seance, type_seance, notes, zones_corps, duree_minutes, prix_euros')
+      .eq('client_id', clientId)
+      .order('date_seance', { ascending: false })
+    setHistSeances(data || [])
+    setHistLoading(false)
+  }
+
   /* ── Ouverture panneau ── */
   function openDetail(client) {
     setDetail(client)
@@ -123,6 +138,7 @@ export default function FicheClients({ userId }) {
     setSaveOk(false)
     setSaveErr('')
     setDetailSeances(seancesAll.filter(s => s.client_id === client.id))
+    fetchClientSeances(client.id)
   }
 
   function openNew() {
@@ -131,6 +147,7 @@ export default function FicheClients({ userId }) {
     setFTel(''); setFEmail(''); setFNotes('')
     setFVille(''); setFSpecialite('Sophrologie'); setFStatut('actif'); setFDateNaissance('')
     setDetailSeances([])
+    setHistSeances([])
     setConfirmDel(false)
     setSaveOk(false)
     setSaveErr('')
@@ -416,29 +433,75 @@ export default function FicheClients({ userId }) {
             </div>
           </div>
 
-          {/* Historique séances */}
+          {/* Historique des séances */}
           {!detail.isNew && (
-            <div style={{ ...S.card, maxHeight: 220, overflowY: 'auto' }}>
-              <div style={S.title}>Séances ({detailSeances.length})</div>
-              {detailSeances.length === 0 ? (
+            <div style={{ ...S.card, maxHeight: 380, overflowY: 'auto' }}>
+              <div style={S.title}>
+                Historique des séances{histSeances.length > 0 ? ` (${histSeances.length})` : ''}
+              </div>
+
+              {histLoading ? (
+                <div style={{ fontSize: 11, color: '#a07848', padding: '6px 0' }}>Chargement…</div>
+              ) : histSeances.length === 0 ? (
                 <div style={{ fontSize: 11, color: '#b8a090' }}>Aucune séance enregistrée</div>
-              ) : detailSeances.map((s, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '6px 0',
-                  borderBottom: i < detailSeances.length - 1 ? '0.5px solid rgba(193,122,58,0.1)' : 'none',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: '#1a1208' }}>
-                      {s.date_seance ? new Date(s.date_seance + 'T00:00:00').toLocaleDateString('fr-FR') : '—'}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#a07848' }}>{s.duree_minutes ? `${s.duree_minutes} min` : '—'}</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#c17a3a' }}>
-                    {s.prix_euros != null ? `${s.prix_euros} €` : '—'}
-                  </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {histSeances.map((s, i) => {
+                    const dateLabel = s.date_seance
+                      ? new Date(s.date_seance + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : '—'
+                    const meta = [
+                      s.duree_minutes ? `${s.duree_minutes} min` : null,
+                      s.prix_euros != null ? `${s.prix_euros} €` : null,
+                    ].filter(Boolean).join(' · ')
+                    const notesText = typeof s.notes === 'string'
+                      ? s.notes
+                      : Array.isArray(s.notes) ? s.notes.map(n => n.text || n).join(' · ') : ''
+                    const zones = Array.isArray(s.zones_corps) ? s.zones_corps : []
+
+                    return (
+                      <div key={i} style={{ background: '#fdfaf6', borderRadius: 8, padding: '8px 10px', border: '0.5px solid rgba(193,122,58,0.2)' }}>
+
+                        {/* Date + type */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#1a1208' }}>{dateLabel}</span>
+                          {s.type_seance && (
+                            <span style={{ fontSize: 9, fontWeight: 600, background: '#faeeda', color: '#c17a3a', padding: '2px 7px', borderRadius: 10, border: '0.5px solid rgba(193,122,58,0.3)', whiteSpace: 'nowrap' }}>
+                              {s.type_seance}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Durée · prix */}
+                        {meta && (
+                          <div style={{ fontSize: 10, color: '#a07848', marginBottom: zones.length || notesText ? 5 : 0 }}>
+                            {meta}
+                          </div>
+                        )}
+
+                        {/* Zones corps */}
+                        {zones.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: notesText ? 5 : 0 }}>
+                            {zones.map(z => (
+                              <span key={z} style={{ fontSize: 9, background: '#e8f0fe', color: '#185FA5', padding: '1px 6px', borderRadius: 8, fontWeight: 500 }}>
+                                {z}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {notesText && (
+                          <div style={{ fontSize: 10, color: '#8a7060', lineHeight: 1.5, borderTop: '0.5px solid rgba(193,122,58,0.12)', paddingTop: 5 }}>
+                            {notesText.length > 140 ? notesText.slice(0, 140) + '…' : notesText}
+                          </div>
+                        )}
+                        <SeanceNotesPreview seanceId={s.id} />
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
+              )}
             </div>
           )}
 

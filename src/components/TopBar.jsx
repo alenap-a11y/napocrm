@@ -1,13 +1,12 @@
 import { useRef } from 'react'
 import napopetit from '../assets/napopetitv1.png'
+import NotificationBell from './NotificationBell'
 
 export default function TopBar({
   tbItems, setTbItems,
   tbActif, setTbActif,
   accent,
   username, initials,
-  notifOpen, setNotifOpen,
-  notifDot,
   searchOpen, setSearchOpen,
   decoOpen, setDecoOpen,
   onNavigate,
@@ -74,15 +73,11 @@ export default function TopBar({
 
       <div className="tb-right">
         <button className="tb-icon" aria-label="Rechercher"
-          onClick={e => { e.stopPropagation(); setSearchOpen(o => !o); setNotifOpen(false) }}>
+          onClick={e => { e.stopPropagation(); setSearchOpen(o => !o) }}>
           <i className="ti ti-search" aria-hidden="true" />
         </button>
 
-        <button className="tb-icon" aria-label="Notifications"
-          onClick={e => { e.stopPropagation(); setNotifOpen(o => !o); setSearchOpen(false) }}>
-          <i className="ti ti-bell" aria-hidden="true" />
-          {notifDot && <div className="tb-notif-dot" />}
-        </button>
+        <NotificationBell />
 
         <div className="tb-sep-v" />
 

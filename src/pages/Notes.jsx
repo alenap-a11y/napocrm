@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
+import { useNotes } from '../hooks/useNotes'
+import NoteForm from '../components/NoteForm'
+import { getLocalDate } from '../lib/dateUtils'
 
 
 const CATEGORIES = ['Toutes', 'Séance', 'Suivi', 'Bilan', 'Fleurs de Bach', 'Perso', 'Autre']
@@ -56,15 +59,14 @@ function fmtDatetime(iso) {
   return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-const isoToday = new Date().toISOString().slice(0, 10)
+const isoToday = getLocalDate()
 
 /* ─── Composant principal ─────────────────────────────────────────────── */
 
 export default function Notes() {
   const importRef = useRef()
 
-  const [notes,      setNotes]      = useState([])
-  const [loading,    setLoading]    = useState(true)
+  const { notes, loading, addNote, updateNote, deleteNote, refresh: refreshNotes } = useNotes()
   const [activeTab,  setActiveTab]  = useState('liste')
   const [search,     setSearch]     = useState('')
   const [filterCat,  setFilterCat]  = useState('Toutes')
@@ -81,20 +83,6 @@ export default function Notes() {
   const [formMsg, setFormMsg] = useState('')
   const f = k => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
 
-  /* Chargement initial depuis Supabase */
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('notes')
-        .select('id, titre, categorie, client_nom, date_note, contenu')
-        .order('date_note', { ascending: false })
-      if (error) console.error('Erreur chargement notes:', error.message)
-      else setNotes(data || [])
-      setLoading(false)
-    }
-    load()
-  }, [])
 
   /* Recherche full-text via Supabase (≥ 3 caractères) */
   const [ftsResults, setFtsResults] = useState(null)
@@ -136,21 +124,7 @@ export default function Notes() {
 
   /* Sauvegarde Supabase */
   async function handleSave() {
-    setSaving(true); setSaveMsg('')
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const rows = notes
-        .filter(n => typeof n.id === 'string')
-        .map(n => ({ ...n, user_id: user.id }))
-      if (!rows.length) { setSaveMsg('Aucune note à synchroniser.'); setSaving(false); return }
-      const { error } = await supabase.from('notes').upsert(rows, { onConflict: 'id' })
-      if (error) throw error
-      setSaveMsg('✓ Synchronisation effectuée')
-    } catch (e) {
-      setSaveMsg(`✗ Erreur : ${e.message}`)
-    }
-    setSaving(false)
+    setSaveMsg('✓ Toutes les notes sont déjà synchronisées.')
     setTimeout(() => setSaveMsg(''), 3000)
   }
 
@@ -158,10 +132,16 @@ export default function Notes() {
   function handleImport(e) {
     const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const imported = parseCSV(ev.target.result)
       if (!imported.length) { setImportMsg('Fichier invalide.'); return }
-      setNotes(prev => [...imported, ...prev])
+      const { error } = await supabase.from('notes').insert(
+        imported.map(({ titre, client_nom, categorie, date_note, contenu }) => ({
+          titre, client_nom, categorie, date_note, contenu,
+        }))
+      )
+      if (error) { setImportMsg(`✗ Erreur : ${error.message}`); return }
+      await refreshNotes()
       setImportMsg(`✓ ${imported.length} note(s) importée(s).`)
       setTimeout(() => setImportMsg(''), 3000)
     }
@@ -171,28 +151,21 @@ export default function Notes() {
 
   /* Édition d'une note */
   function startEdit(note) {
+    console.log('[startEdit] note reçue:', { id: note.id, titre: note.titre, contenu: note.contenu, contenu_type: typeof note.contenu })
     setEditForm({ titre: note.titre || '', client_nom: note.client_nom || '', categorie: note.categorie || 'Autre', date_note: note.date_note || isoToday, contenu: note.contenu || '' })
     setEditing(true)
   }
 
   async function saveEdit() {
     if (!editForm.titre.trim() && !editForm.contenu.trim()) return
-    const date_modification = new Date().toISOString()
-    if (typeof selected.id === 'string') {
-      await supabase.from('notes')
-        .update({
-          titre:             editForm.titre,
-          client_nom:        editForm.client_nom || null,
-          categorie:         editForm.categorie,
-          date_note:         editForm.date_note,
-          contenu:           editForm.contenu,
-          date_modification,
-        })
-        .eq('id', selected.id)
-    }
-    const updated = { ...selected, ...editForm, date_modification }
-    setNotes(prev => prev.map(n => n.id === selected.id ? updated : n))
-    setSelected(updated)
+    await updateNote(selected.id, {
+      titre:      editForm.titre,
+      client_nom: editForm.client_nom || null,
+      categorie:  editForm.categorie,
+      date_note:  editForm.date_note,
+      contenu:    editForm.contenu,
+    })
+    setSelected({ ...selected, ...editForm })
     setEditing(false)
     insertNotif({ msg: `Note modifiée — ${editForm.titre || 'Sans titre'}`, icon: 'ti-notebook', iconColor: '#854F0B', bg: '#FAEEDA' })
   }
@@ -205,23 +178,15 @@ export default function Notes() {
   /* Nouvelle note */
   async function handleAdd() {
     if (!form.titre.trim() && !form.contenu.trim()) { setFormMsg('Titre ou contenu requis.'); return }
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error()
-      const { data, error } = await supabase.from('notes').insert({
-        user_id:       user.id,
-        titre:         form.titre || null,
-        client_nom:    form.client_nom || null,
-        categorie:     form.categorie,
-        date_note:     form.date_note,
-        contenu:       form.contenu,
-        date_creation: new Date().toISOString(),
-      }).select('id, titre, categorie, client_nom, date_note, contenu, date_creation').single()
-      if (error) throw error
-      setNotes(prev => [data, ...prev])
-    } catch {
-      setNotes(prev => [{ ...form, id: Date.now() }, ...prev])
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setFormMsg('Session expirée, reconnecte-toi.'); return }
+    await addNote({
+      contenu:    form.contenu,
+      titre:      form.titre      || null,
+      categorie:  form.categorie,
+      client_nom: form.client_nom || null,
+      date_note:  form.date_note  || null,
+    })
     insertNotif({ msg: `Nouvelle note — ${form.titre || 'Sans titre'}`, icon: 'ti-notebook', iconColor: '#854F0B', bg: '#FAEEDA' })
     setForm(EMPTY)
     setFormMsg('✓ Note ajoutée.')
@@ -359,108 +324,63 @@ export default function Notes() {
           {/* Panneau droit — détail */}
           <div style={{ flex: 1, background: 'var(--color-background-secondary)', borderRadius: 12, border: '0.5px solid var(--color-border-tertiary)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {selected ? (
-              <>
-                {/* ── Header détail ── */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
-                  <div style={{ flex: 1 }}>
-                    {editing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <input value={editForm.titre} onChange={e => setEditForm(f => ({ ...f, titre: e.target.value }))}
-                          placeholder="Titre"
-                          style={{ fontSize: 15, fontWeight: 600, width: '100%', padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }} />
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <input value={editForm.client_nom} onChange={e => setEditForm(f => ({ ...f, client_nom: e.target.value }))}
-                            placeholder="Client"
-                            style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
-                          <select value={editForm.categorie} onChange={e => setEditForm(f => ({ ...f, categorie: e.target.value }))}
-                            style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, cursor: 'pointer' }}>
-                            {CATEGORIES.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
-                          <input type="date" value={editForm.date_note} onChange={e => setEditForm(f => ({ ...f, date_note: e.target.value }))}
-                            style={{ padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12 }} />
-                        </div>
+              editing ? (
+                <NoteForm
+                  value={editForm}
+                  onChange={setEditForm}
+                  onSave={saveEdit}
+                  onCancel={cancelEdit}
+                />
+              ) : (
+                <>
+                  {/* ── Header détail (affichage) ── */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '18px 22px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 6 }}>{selected.titre || '(sans titre)'}</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {(() => { const cat = CAT_COLOR[selected.categorie] || CAT_COLOR['Autre']; return (
+                          <span style={{ fontSize: 11, fontWeight: 600, background: cat.bg, color: cat.color, padding: '2px 8px', borderRadius: 20 }}>{selected.categorie}</span>
+                        )})()}
+                        {selected.client_nom && <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 500 }}>{selected.client_nom}</span>}
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(selected.date_note)}</span>
                       </div>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 6 }}>{selected.titre || '(sans titre)'}</div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                          {(() => { const cat = CAT_COLOR[selected.categorie] || CAT_COLOR['Autre']; return (
-                            <span style={{ fontSize: 11, fontWeight: 600, background: cat.bg, color: cat.color, padding: '2px 8px', borderRadius: 20 }}>{selected.categorie}</span>
-                          )})()}
-                          {selected.client_nom && <span style={{ fontSize: 12, color: 'var(--color-accent)', fontWeight: 500 }}>{selected.client_nom}</span>}
-                          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(selected.date_note)}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
-                    {editing ? (
-                      <>
-                        <button onClick={cancelEdit}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>
-                          Annuler
-                        </button>
-                        <button onClick={saveEdit}
-                          style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                          <i className="ti ti-check" style={{ marginRight: 4 }} />Sauvegarder
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => startEdit(selected)}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <i className="ti ti-pencil" style={{ fontSize: 13 }} />Modifier
-                        </button>
-                        <button onClick={() => downloadCSV(toCSV([selected]), `note-${selected.id}.csv`)}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
-                          <i className="ti ti-download" />
-                        </button>
-                        <button onClick={() => { setNotes(prev => prev.filter(n => n.id !== selected.id)); setSelected(null) }}
-                          style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 12 }}>
-                          <i className="ti ti-trash" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Corps de la note ── */}
-                {editing ? (
-                  <textarea value={editForm.contenu} onChange={e => setEditForm(f => ({ ...f, contenu: e.target.value }))}
-                    onKeyDown={e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveEdit() }}
-                    placeholder="Contenu de la note…"
-                    style={{ flex: 1, padding: '20px 22px', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, fontFamily: 'inherit', border: 'none', outline: 'none', resize: 'none', background: 'var(--color-background-primary)' }}
-                    autoFocus
-                  />
-                ) : (
-                  <>
-                    <div style={{ flex: 1, padding: '20px 22px', overflowY: 'auto', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
-                      {selected.contenu}
                     </div>
-                    {(selected.date_creation || selected.date_modification) && (
-                      <div style={{ padding: '8px 22px 12px', borderTop: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {selected.date_creation && (
-                          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
-                            Créé le {fmtDatetime(selected.date_creation)}
-                          </div>
-                        )}
-                        {selected.date_modification && (
-                          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
-                            Modifié le {fmtDatetime(selected.date_modification)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {editing && (
-                  <div style={{ padding: '4px 22px 10px', fontSize: 10, color: 'var(--color-text-secondary)', textAlign: 'right', flexShrink: 0 }}>
-                    Ctrl+Entrée pour sauvegarder
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+                      <button onClick={() => startEdit(selected)}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <i className="ti ti-pencil" style={{ fontSize: 13 }} />Modifier
+                      </button>
+                      <button onClick={() => downloadCSV(toCSV([selected]), `note-${selected.id}.csv`)}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
+                        <i className="ti ti-download" />
+                      </button>
+                      <button onClick={() => { deleteNote(selected.id); setSelected(null) }}
+                        style={{ padding: '6px 12px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 12 }}>
+                        <i className="ti ti-trash" />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </>
+
+                  {/* ── Corps de la note (affichage) ── */}
+                  <div style={{ flex: 1, padding: '20px 22px', overflowY: 'auto', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
+                    {selected.contenu}
+                  </div>
+                  {(selected.date_creation || selected.date_modification) && (
+                    <div style={{ padding: '8px 22px 12px', borderTop: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {selected.date_creation && (
+                        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                          Créé le {fmtDatetime(selected.date_creation)}
+                        </div>
+                      )}
+                      {selected.date_modification && (
+                        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>
+                          Modifié le {fmtDatetime(selected.date_modification)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--color-text-secondary)' }}>
                 <i className="ti ti-notebook" style={{ fontSize: 40, color: 'var(--color-border-secondary)' }} />

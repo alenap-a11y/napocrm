@@ -227,6 +227,17 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .nd-dot { width: 6px; height: 6px; border-radius: 50%; background: #378ADD; flex-shrink: 0; margin-top: 4px; }
 .nd-empty { padding: 20px 12px; font-size: 11px; color: var(--color-text-secondary); text-align: center; }
 
+/* NotificationBell component */
+.notification-bell { position: relative; display: inline-flex; }
+.notification-bell > button { background: none; border: none; cursor: pointer; padding: 5px 7px; border-radius: 6px; font-size: 16px; display: flex; align-items: center; gap: 3px; color: var(--color-text-secondary); }
+.notification-bell > button:hover { background: var(--color-background-secondary); }
+.notification-bell .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #E24B4A; color: #fff; font-size: 10px; font-weight: 600; }
+.notification-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 270px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); box-shadow: 0 4px 16px rgba(0,0,0,.08); z-index: 1500; overflow: hidden; }
+.notification-dropdown > div { display: flex; align-items: flex-start; gap: 7px; padding: 9px 12px; border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; font-size: 11px; color: var(--color-text-primary); }
+.notification-dropdown > div:last-child { border-bottom: none; }
+.notification-dropdown > div:hover { background: var(--color-background-secondary); }
+.notification-dropdown > div.unread { background: var(--color-background-secondary); font-weight: 500; }
+
 /* Search overlay */
 .search-overlay { position: absolute; top: 42px; left: 0; right: 0; background: var(--color-background-primary); border-bottom: 0.5px solid var(--color-border-tertiary); padding: 8px 12px; display: none; align-items: center; gap: 8px; z-index: 150; }
 .search-overlay.open { display: flex; }
