@@ -608,8 +608,14 @@ export default function Clients() {
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDate(s.date_seance)}</span>
-                              {s.heure_seance && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.heure_seance}</span>}
+                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                                {fmtDate(s.date_seance)}
+                              </span>
+                              {s.heure_seance && (
+                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
+                                  à {s.heure_seance}
+                                </span>
+                              )}
                               <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
                             </div>
                             <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>

@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -77,6 +78,8 @@ function fmtDate(d) {
 export default function Clients() {
   const importRef = useRef()
 
+  const location = useLocation()
+
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
@@ -120,6 +123,21 @@ export default function Clients() {
   const actifs       = clients.filter(c => c.statut === 'actif').length
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
 
+  useEffect(() => {
+    if (location.state?.searchClient) {
+      setSearch(location.state.searchClient)
+      if (location.state.openSeance && clients.length > 0) {
+        const found = clients.find(c =>
+          `${c.prenom} ${c.nom}`.toLowerCase() === location.state.searchClient.toLowerCase()
+        )
+        if (found) {
+          openDetail(found)
+          setTimeout(() => setDetailTab('seances'), 100)
+        }
+      }
+    }
+  }, [location.state, clients])
+
   async function fetchClientSeances(client) {
     setLoadingSeances(true)
     setClientSeances([])
@@ -130,8 +148,7 @@ export default function Clients() {
         .from('seances')
         .select('*')
         .eq('user_id', user.id)
-        .ilike('prenom', client.prenom || '')
-        .ilike('nom', client.nom || '')
+        .eq('client_id', client.id)
         .order('date_seance', { ascending: false })
       setClientSeances(data || [])
     } catch {}
@@ -147,6 +164,7 @@ export default function Clients() {
       if (!user) throw new Error('Non connecté')
       const { data, error } = await supabase.from('seances').insert({
         user_id: user.id,
+        client_id: detail.id,
         prenom: detail.prenom,
         nom: detail.nom,
         email: detail.email || null,

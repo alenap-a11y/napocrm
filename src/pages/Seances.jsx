@@ -82,6 +82,10 @@ export default function Seances() {
   const [saveMsg,       setSaveMsg]       = useState('')
   const [btnHover,      setBtnHover]      = useState(false)
   const [btnActive,     setBtnActive]     = useState(false)
+  const [clients,            setClients]            = useState([])
+  const [clientSelectionne,  setClientSelectionne]  = useState(null)
+  const [clientSearch,       setClientSearch]       = useState('')
+  const [showClientDropdown, setShowClientDropdown] = useState(false)
 
   const EMPTY_FORM = {
     prenom:'', nom:'', email:'', type_seance:'Sophrologie',
@@ -100,6 +104,31 @@ export default function Seances() {
       setLoading(false)
     }
     load()
+
+    const channel = supabase
+      .channel('seances-global')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'seances'
+      }, () => load())
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [])
+
+  useEffect(() => {
+    async function loadClients() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('clients')
+        .select('id, prenom, nom, email, specialite')
+        .eq('user_id', user.id)
+        .order('nom', { ascending: true })
+      setClients(data || [])
+    }
+    loadClients()
   }, [])
 
   const moisDispos = [...new Set(seances.map(s => s.date_seance?.slice(0,7)).filter(Boolean))].sort().reverse()
@@ -311,8 +340,52 @@ export default function Seances() {
           <div style={{ background:'var(--color-background-secondary)', borderRadius:14, border:'0.5px solid var(--color-border-tertiary)', padding:'28px' }}>
             <div style={{ fontSize:15, fontWeight:600, color:'var(--color-text-primary)', marginBottom:22 }}>Informations de la séance</div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-              <Field label="Prénom du client"><input value={form.prenom} onChange={e=>setForm(f=>({...f,prenom:e.target.value}))} placeholder="Marie" style={inputStyle} /></Field>
-              <Field label="Nom du client"><input value={form.nom} onChange={e=>setForm(f=>({...f,nom:e.target.value}))} placeholder="Joubert" style={inputStyle} /></Field>
+              <Field label="Client *" style={{ gridColumn: '1/-1' }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={clientSearch}
+                    onChange={e => {
+                      setClientSearch(e.target.value)
+                      setClientSelectionne(null)
+                      setShowClientDropdown(true)
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    placeholder="Rechercher un client…"
+                    style={inputStyle}
+                  />
+                  {clientSelectionne && (
+                    <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#0F6E56', fontWeight: 600 }}>
+                      ✓ {clientSelectionne.prenom} {clientSelectionne.nom}
+                    </div>
+                  )}
+                  {showClientDropdown && clientSearch.length > 0 && !clientSelectionne && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-secondary)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
+                      {clients
+                        .filter(c => `${c.prenom} ${c.nom}`.toLowerCase().includes(clientSearch.toLowerCase()))
+                        .map(c => (
+                          <div key={c.id}
+                            onClick={() => {
+                              setClientSelectionne(c)
+                              setClientSearch(`${c.prenom} ${c.nom}`)
+                              setShowClientDropdown(false)
+                              setForm(f => ({ ...f, prenom: c.prenom, nom: c.nom, email: c.email || '' }))
+                            }}
+                            style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, borderBottom: '0.5px solid var(--color-border-tertiary)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <span style={{ fontWeight: 500 }}>{c.prenom} {c.nom}</span>
+                            {c.specialite && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginLeft: 8 }}>{c.specialite}</span>}
+                          </div>
+                        ))
+                      }
+                      {clients.filter(c => `${c.prenom} ${c.nom}`.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-secondary)' }}>Aucun client trouvé</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Field>
               <Field label="Date"><input type="date" value={form.date_seance} onChange={e=>setForm(f=>({...f,date_seance:e.target.value}))} style={inputStyle} /></Field>
               <Field label="Heure"><input type="time" value={form.heure_seance} onChange={e=>setForm(f=>({...f,heure_seance:e.target.value}))} style={inputStyle} /></Field>
               <Field label="Type de séance">
@@ -336,7 +409,7 @@ export default function Seances() {
                   const { data:{user} } = await supabase.auth.getUser()
                   if (!user) throw new Error('Non connecté')
                   const { data, error } = await supabase.from('seances').insert({
-                    user_id: user.id, prenom: form.prenom, nom: form.nom, email: form.email||null,
+                    user_id: user.id, client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
                     type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
                     duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
                     tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
@@ -347,7 +420,7 @@ export default function Seances() {
                   setSeances(prev => [{...form, id:Date.now(), duree_minutes:parseInt(form.duree_minutes)||60, prix_euros:parseFloat(form.prix_euros)||0, tags:parsedTags},...prev])
                 }
                 insertNotif({ msg:`Nouvelle séance — ${form.prenom} ${form.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
-                setForm(EMPTY_FORM); setFormMsg('✓ Séance ajoutée.')
+                setForm(EMPTY_FORM); setClientSelectionne(null); setClientSearch(''); setFormMsg('✓ Séance ajoutée.')
                 setTimeout(() => { setFormMsg(''); setActiveTab('historique') }, 1500)
               }} style={{ padding:'9px 22px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
                 <i className="ti ti-check" style={{ marginRight:6 }} />Enregistrer la séance

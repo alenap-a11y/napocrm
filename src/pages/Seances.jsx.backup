@@ -485,8 +485,7 @@ export default function Seances() {
             {detailTab==='historique' && !editingDetail && (() => {
               const autresSeances = seances.filter(s =>
                 s.id !== detail.id &&
-                s.prenom?.toLowerCase() === detail.prenom?.toLowerCase() &&
-                s.nom?.toLowerCase() === detail.nom?.toLowerCase()
+                s.client_id === detail.client_id
               ).slice(0, 10)
               return autresSeances.length === 0 ? (
                 <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
