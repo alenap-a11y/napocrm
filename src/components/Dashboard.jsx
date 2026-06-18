@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
 import AgendaWidget from './AgendaWidget'
+import { getProchainAnniversaire } from '../utils/anniversaires'
 
 const MANTRAS = [
   { t: '"Ce que l\'esprit conçoit et croit, il l\'accomplit."', s: '— Napoleon Hill' },
@@ -324,53 +325,65 @@ function AgendaCalendrier({ accent, onNavigate }) {
 // ─── Composant Anniversaires ──────────────────────────────────────────────────
 
 function Anniversaires({ accent }) {
-  const today = new Date()
-  const [raw, setRaw] = useState([])
+  const [clients, setClients] = useState([])
 
   useEffect(() => {
     supabase
       .from('clients')
-      .select('id, prenom, nom, naissance')
-      .not('naissance', 'is', null)
-      .then(({ data }) => setRaw(data || []))
+      .select('id, prenom, nom, date_naissance')
+      .not('date_naissance', 'is', null)
+      .then(({ data }) => setClients(data || []))
   }, [])
 
-  const prochains = raw
+  const prochains = clients
     .map(c => {
-      const bday = new Date(c.naissance)
-      const d = new Date(today.getFullYear(), bday.getMonth(), bday.getDate())
-      if (d < today) d.setFullYear(today.getFullYear() + 1)
-      return { id: c.id, client: `${c.prenom || ''} ${c.nom || ''}`.trim(), next: d, jours: daysUntil(d) }
+      const anniv = getProchainAnniversaire(c)
+      if (!anniv || anniv.joursRestants > 30) return null
+      return { ...c, ...anniv }
     })
-    .sort((a, b) => a.jours - b.jours)
-    .slice(0, 4)
+    .filter(Boolean)
+    .sort((a, b) => a.joursRestants - b.joursRestants)
+    .slice(0, 3)
 
   return (
     <div style={cardStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <i className="ti ti-cake" style={{ fontSize: 16, color: accent }} aria-hidden="true" />
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Anniversaires clients</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Prochains anniversaires</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {prochains.map(a => (
-          <div key={a.id} style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8,
-            background: a.jours === 0 ? `${accent}18` : 'var(--color-background-secondary)',
-            border: a.jours === 0 ? `1px solid ${accent}44` : 'none',
-          }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-              {a.client.split(' ').map(w => w[0]).join('')}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{a.client}</div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{a.next.getDate()} {MONTHS[a.next.getMonth()]}</div>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: 500, color: a.jours === 0 ? accent : 'var(--color-text-secondary)', background: a.jours === 0 ? `${accent}22` : 'transparent', padding: a.jours === 0 ? '2px 8px' : 0, borderRadius: 20 }}>
-              {a.jours === 0 ? "🎂 Aujourd'hui" : `dans ${a.jours}j`}
-            </div>
-          </div>
-        ))}
-      </div>
+      {prochains.length === 0 ? (
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '16px 0' }}>
+          Aucun anniversaire à venir
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {prochains.map(c => {
+            const name = `${c.prenom || ''} ${c.nom || ''}`.trim()
+            const initials = `${(c.prenom || '')[0] || ''}${(c.nom || '')[0] || ''}`.toUpperCase()
+            const isToday = c.joursRestants === 0
+            return (
+              <div key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8,
+                background: isToday ? `${accent}18` : 'var(--color-background-secondary)',
+                border: isToday ? `1px solid ${accent}44` : 'none',
+              }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                  {initials}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {isToday ? "🎂 Aujourd'hui !" : `dans ${c.joursRestants} jour${c.joursRestants > 1 ? 's' : ''}`}
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', flexShrink: 0 }}>
+                  {c.age} ans
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

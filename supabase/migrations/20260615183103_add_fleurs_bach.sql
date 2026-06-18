@@ -1,0 +1,1 @@
+ALTER TABLE seances ADD COLUMN IF NOT EXISTS fleurs_bach text[] DEFAULT NULL;

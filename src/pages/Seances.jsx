@@ -51,14 +51,16 @@ const TYPE_COLOR = {
 
 function fmtDate(d) {
   if (!d) return '—'
-  const [y,m,j] = d.split('-')
-  return `${j} ${MOIS[parseInt(m)-1]} ${y}`
+  const clean = d.slice(0, 10)
+  const [y,m,j] = clean.split('-')
+  return `${parseInt(j)} ${MOIS[parseInt(m)-1]} ${y}`
 }
 
 function fmtDateCourt(d) {
   if (!d) return '—'
-  const [y,m,j] = d.split('-')
-  return `${j} ${MOIS_COURT[parseInt(m)-1]} ${y}`
+  const clean = d.slice(0, 10)
+  const [y,m,j] = clean.split('-')
+  return `${parseInt(j)} ${MOIS_COURT[parseInt(m)-1]} ${y}`
 }
 
 function clientName(s) { return `${s.prenom} ${s.nom}`.trim() }

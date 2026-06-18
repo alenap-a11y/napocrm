@@ -9,6 +9,7 @@ import frLocale from '@fullcalendar/core/locales/fr'
 import NouveauRdv from '../components/NouveauRdv'
 import SeanceNotesPreview from '../components/SeanceNotesPreview'
 import NotesDuJour from '../components/NotesDuJour'
+import { getAnniversairesClients } from '../utils/anniversaires'
 
 /* ─── Constantes ─────────────────────────────────────────── */
 
@@ -129,7 +130,7 @@ export default function Agenda() {
       if (!user) return
       const { data } = await supabase
         .from('clients')
-        .select('id, nom, prenom')
+        .select('id, nom, prenom, date_naissance')
         .eq('user_id', user.id)
         .order('nom')
       setClientsAll(data || [])
@@ -159,6 +160,8 @@ export default function Agenda() {
       extendedProps: { rdv },
     }
   })
+
+  const anniversaireEvents = getAnniversairesClients(clientsAll, today.getFullYear(), today.getFullYear() + 1)
 
   /* ── Navigation ── */
   function switchView(newView) {
@@ -552,12 +555,18 @@ export default function Agenda() {
               firstDay={1}
               headerToolbar={false}
               height="100%"
-              events={fcEvents}
+              events={fcEvents.concat(anniversaireEvents)}
               slotMinTime="08:00:00"
               slotMaxTime="20:00:00"
               allDaySlot={false}
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
               eventClick={info => {
+                if (info.event.extendedProps?.type === 'anniversaire') {
+                  const { age } = info.event.extendedProps
+                  const name = info.event.title.replace('🎂 Anniversaire de ', '')
+                  alert(`🎂 ${name} fête ses ${age} ans !`)
+                  return
+                }
                 const rdv = info.event.extendedProps.rdv
                 setDetail(rdv)
                 setSelectedDate(rdv.date_rdv.slice(0, 10))
