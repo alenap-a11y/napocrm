@@ -53,18 +53,16 @@ function AgendaCalendrier({ accent, onNavigate }) {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [selectedDay, setSelectedDay] = useState(today)
-  const [showModal, setShowModal] = useState(false)
-  const [newRdv, setNewRdv] = useState({ client: '', type: 'Sophrologie', heure: '09:00', duree: 60 })
   const [rdvList, setRdvList] = useState([])
 
   useEffect(() => {
     async function fetchRdv() {
-      const { data } = await supabase.from('seances').select('id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes').order('date_seance', { ascending: true })
+      const { data } = await supabase.from('seances').select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros').order('date_seance', { ascending: true })
       setRdvList((data || []).map(s => {
         const [h, m] = (s.heure_seance || '09:00').split(':').map(Number)
         const d = new Date(s.date_seance)
         d.setHours(h, m, 0, 0)
-        return { id: s.id, client: `${s.prenom || ''} ${s.nom || ''}`.trim(), type: s.type_seance, date: d, duree: s.duree_minutes }
+        return { id: s.id, clientId: s.client_id, client: `${s.prenom || ''} ${s.nom || ''}`.trim(), type: s.type_seance, date: d, duree: s.duree_minutes, prix: s.prix_euros }
       }))
     }
     fetchRdv()
@@ -95,21 +93,6 @@ function AgendaCalendrier({ accent, onNavigate }) {
   const nextMonth = () => {
     if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(y => y + 1) }
     else setCurrentMonth(m => m + 1)
-  }
-
-  const addRdv = () => {
-    const [h, m] = newRdv.heure.split(':').map(Number)
-    const date = new Date(selectedDay)
-    date.setHours(h, m, 0, 0)
-    setRdvList(prev => [...prev, {
-      id: Date.now(),
-      client: newRdv.client,
-      type: newRdv.type,
-      date,
-      duree: Number(newRdv.duree),
-    }])
-    setShowModal(false)
-    setNewRdv({ client: '', type: 'Sophrologie', heure: '09:00', duree: 60 })
   }
 
   return (
@@ -202,18 +185,6 @@ function AgendaCalendrier({ accent, onNavigate }) {
               {rdvDuJour.length} rendez-vous
             </div>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              background: accent, color: '#fff', border: 'none',
-              borderRadius: 8, padding: '6px 12px', fontSize: 12,
-              cursor: 'pointer', fontWeight: 500,
-            }}
-          >
-            <i className="ti ti-plus" style={{ fontSize: 13 }} aria-hidden="true" />
-            Ajouter RDV
-          </button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
@@ -259,7 +230,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
               .map(r => (
                 <div
                   key={r.id}
-                  onClick={() => onNavigate?.('/clients')}
+                  onClick={() => onNavigate?.('/clients', { state: { searchClient: r.client } })}
                   style={{
                     display: 'flex', justifyContent: 'space-between',
                     fontSize: 12, padding: '5px 6px', borderRadius: 6,
@@ -277,47 +248,6 @@ function AgendaCalendrier({ accent, onNavigate }) {
         )}
       </div>
 
-      {/* Modal ajout RDV */}
-      {showModal && (
-        <div
-          role="dialog" aria-modal="true" aria-label="Ajouter un rendez-vous"
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-          onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-        >
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 12, padding: 24, width: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 500, color: 'var(--color-text-primary)' }}>Nouveau RDV</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--color-text-secondary)' }} aria-label="Fermer">×</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Client</label>
-                <input style={inputStyle} placeholder="Nom du client" value={newRdv.client} onChange={e => setNewRdv(p => ({ ...p, client: e.target.value }))} />
-              </div>
-              <div>
-                <label style={labelStyle}>Type de séance</label>
-                <select style={inputStyle} value={newRdv.type} onChange={e => setNewRdv(p => ({ ...p, type: e.target.value }))}>
-                  {['Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Autre'].map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div>
-                  <label style={labelStyle}>Heure</label>
-                  <input type="time" style={inputStyle} value={newRdv.heure} onChange={e => setNewRdv(p => ({ ...p, heure: e.target.value }))} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Durée (min)</label>
-                  <input type="number" style={inputStyle} value={newRdv.duree} min={15} step={15} onChange={e => setNewRdv(p => ({ ...p, duree: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--color-text-primary)' }}>Annuler</button>
-              <button onClick={addRdv} disabled={!newRdv.client} style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: newRdv.client ? accent : 'var(--color-background-secondary)', color: newRdv.client ? '#fff' : 'var(--color-text-secondary)', cursor: newRdv.client ? 'pointer' : 'default', fontSize: 13, fontWeight: 500 }}>Ajouter</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -701,7 +631,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             {dernieresSeances.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucune séance</div>
             ) : dernieresSeances.map(s => {
-              const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` })() : '—'
+              const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance.slice(0,10) + 'T00:00:00'); const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); const heureStr = s.heure_seance ? s.heure_seance.slice(0,5) : '—'; return `${dateStr}, ${heureStr}` })() : '—'
               return (
                 <div key={s.id}
                   onClick={() => onNavigate?.('/seances')}
@@ -759,7 +689,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {recentSeances.map(s => {
-                const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` })() : '—'
+                const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance.slice(0,10) + 'T00:00:00'); const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); const heureStr = s.heure_seance ? s.heure_seance.slice(0,5) : '—'; return `${dateStr}, ${heureStr}` })() : '—'
                 return (
                   <div
                     key={s.id}

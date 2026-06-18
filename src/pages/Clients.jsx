@@ -72,8 +72,8 @@ function clientName(c) { return `${c.prenom} ${c.nom}`.trim() }
 
 function fmtDate(d) {
   if (!d) return '—'
-  const [y, m, j] = d.split('-')
-  return `${j} ${MOIS_COURT[parseInt(m)-1]} ${y}`
+  const [y, m, j] = d.slice(0, 10).split('-')
+  return `${parseInt(j)} ${MOIS_COURT[parseInt(m)-1]} ${y}`
 }
 
 export default function Clients() {
@@ -89,7 +89,7 @@ export default function Clients() {
   const [filterStatut,   setFilterStatut]   = useState('Tous')
   const [detail,         setDetail]         = useState(null)
   const [detailTab,      setDetailTab]      = useState('infos')
-  const [clientSeances,  setClientSeances]  = useState([])
+  const clientSeances = detail ? getSeancesByClient(detail.id) : []
   const [loadingSeances, setLoadingSeances] = useState(false)
   const [showNewSeance,  setShowNewSeance]  = useState(false)
   const [newSeanceForm,  setNewSeanceForm]  = useState({
@@ -102,6 +102,8 @@ export default function Clients() {
   })
   const [savingSeance,   setSavingSeance]   = useState(false)
   const [seanceMsg,      setSeanceMsg]      = useState('')
+  const [editingSeanceId, setEditingSeanceId] = useState(null)
+  const [editSeanceForm,  setEditSeanceForm]  = useState(null)
   const [editingDetail,  setEditingDetail]  = useState(false)
   const [editForm,       setEditForm]       = useState(null)
   const [saving,         setSaving]         = useState(false)
@@ -140,11 +142,6 @@ export default function Clients() {
     }
   }, [location.state, clients])
 
-  function fetchClientSeances(client) {
-    const data = getSeancesByClient(client.id)
-    setClientSeances(data)
-  }
-
   async function handleAddSeanceFromFiche() {
     if (!detail) return
     setSavingSeance(true)
@@ -174,13 +171,37 @@ export default function Clients() {
     setSavingSeance(false)
   }
 
+  function openEditSeance(s) {
+    setEditSeanceForm({
+      type_seance: s.type_seance || 'Sophrologie',
+      date_seance: s.date_seance || '',
+      heure_seance: s.heure_seance || '',
+      duree_minutes: s.duree_minutes || '60',
+      prix_euros: s.prix_euros || '',
+      notes: s.notes || '',
+    })
+    setEditingSeanceId(s.id)
+  }
+
+  async function saveEditSeance() {
+    await updateSeance(editingSeanceId, {
+      type_seance: editSeanceForm.type_seance,
+      date_seance: editSeanceForm.date_seance,
+      heure_seance: editSeanceForm.heure_seance,
+      duree_minutes: parseInt(editSeanceForm.duree_minutes) || 60,
+      prix_euros: parseFloat(editSeanceForm.prix_euros) || 0,
+      notes: editSeanceForm.notes || null,
+    })
+    setEditingSeanceId(null)
+    setEditSeanceForm(null)
+  }
+
   function openDetail(c) {
     setDetail(c)
     setDetailTab('infos')
     setEditingDetail(false)
     setShowNewSeance(false)
     setSeanceMsg('')
-    setClientSeances(getSeancesByClient(c.id))
   }
 
   function handleSave() {
@@ -599,27 +620,67 @@ export default function Clients() {
                     {clientSeances.map((s, idx) => {
                       const tc = { 'Sophrologie':{'bg':'#E6F1FB','color':'#185FA5'},'Coaching':{'bg':'#EEEDFE','color':'#534AB7'},'Naturopathie':{'bg':'#E1F5EE','color':'#0F6E56'},'Énergie':{'bg':'#FBEAF0','color':'#993556'},'Massage':{'bg':'#FAEEDA','color':'#854F0B'},'Fleurs de Bach':{'bg':'#F0EBF8','color':'#7F3FBF'},'Autre':{'bg':'#F5F5F5','color':'#6B7280'} }[s.type_seance] || {'bg':'#F5F5F5','color':'#6B7280'}
                       return (
-                        <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                {fmtDate(s.date_seance)}
-                              </span>
-                              {s.heure_seance && (
-                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
-                                  à {s.heure_seance}
-                                </span>
-                              )}
-                              <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                              {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
-                              {s.prix_euros    && <span><i className="ti ti-coin"  style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
-                            </div>
-                            {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
-                          </div>
-                        </div>
+  <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+    <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
+    <div style={{ flex: 1 }}>
+      {editingSeanceId === s.id ? (
+        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 10, padding: 14, border: '0.5px solid var(--color-border-secondary)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <MField label="Type">
+              <select value={editSeanceForm.type_seance} onChange={e => setEditSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
+                {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </MField>
+            <MField label="Date">
+              <input type="date" value={editSeanceForm.date_seance} onChange={e => setEditSeanceForm(p => ({ ...p, date_seance: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Heure">
+              <input type="time" value={editSeanceForm.heure_seance} onChange={e => setEditSeanceForm(p => ({ ...p, heure_seance: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Durée (min)">
+              <input type="number" value={editSeanceForm.duree_minutes} min={15} step={15} onChange={e => setEditSeanceForm(p => ({ ...p, duree_minutes: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Prix (€)" style={{ gridColumn: '1/-1' }}>
+              <input type="number" value={editSeanceForm.prix_euros} min={0} step={0.01} onChange={e => setEditSeanceForm(p => ({ ...p, prix_euros: e.target.value }))} style={mInp} />
+            </MField>
+          </div>
+          <MField label="Notes de cette séance">
+            <textarea value={editSeanceForm.notes} rows={2} onChange={e => setEditSeanceForm(p => ({ ...p, notes: e.target.value }))} style={{ ...mInp, resize: 'vertical', fontFamily: 'inherit' }} />
+          </MField>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+            <button onClick={() => { setEditingSeanceId(null); setEditSeanceForm(null) }} style={{ padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>Annuler</button>
+            <button onClick={saveEditSeance} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+              <i className="ti ti-check" style={{ marginRight: 5 }} />Sauvegarder
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+              {fmtDate(s.date_seance)}
+            </span>
+            {s.heure_seance && (
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
+                à {s.heure_seance}
+              </span>
+            )}
+            <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
+            {s.prix_euros    && <span><i className="ti ti-coin"  style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
+          </div>
+          {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <button onClick={() => openEditSeance(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-pencil" style={{ fontSize: 11 }} />Modifier
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
                       )
                     })}
                     <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-background-secondary)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>

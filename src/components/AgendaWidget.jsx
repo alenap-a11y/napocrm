@@ -152,6 +152,12 @@ export default function AgendaWidget({ accent, onNavigate }) {
                             {rdv.type_seance}
                           </div>
                         )}
+                        {rdv.notes && (
+                          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                            <i className="ti ti-note" style={{ fontSize: 10, marginRight: 4 }} aria-hidden="true" />
+                            {rdv.notes}
+                          </div>
+                        )}
                       </div>
 
                       {/* Badge statut */}

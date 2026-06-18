@@ -57,7 +57,7 @@ const SECTIONS = [
       },
       {
         q: 'Comment ajouter un RDV depuis le dashboard ?',
-        a: 'Sur le dashboard, le bloc Agenda affiche un calendrier interactif. Sélectionnez un jour puis cliquez sur "Ajouter RDV". Renseignez le client, le type de séance, l\'heure et la durée. Le RDV apparaît immédiatement dans le calendrier.',
+        a: 'Pour ajouter un rendez-vous, rendez-vous dans la page Agenda (menu de navigation) et cliquez sur le bouton d\'ajout. Renseignez le client, le type de séance, l\'heure et la durée. Le RDV apparaît immédiatement dans le calendrier.',
       },
       {
         q: 'Peut-on synchroniser avec Google Calendar ?',

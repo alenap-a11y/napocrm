@@ -12,13 +12,12 @@ export function useRealtimeDashboard() {
 
       const { data, error } = await supabase
         .from('seances')
-        .select('montant')
-        .gte('date', debut)
-        .lte('date', fin)
-        .eq('statut', 'payée')
+        .select('prix_euros')
+        .gte('date_seance', debut)
+        .lte('date_seance', fin)
 
       if (!error && data) {
-        const total = data.reduce((sum, s) => sum + (parseFloat(s.montant) || 0), 0)
+        const total = data.reduce((sum, s) => sum + (parseFloat(s.prix_euros) || 0), 0)
         setRevenusCeMois(total)
       }
     }
