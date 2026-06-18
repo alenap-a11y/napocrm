@@ -701,9 +701,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             {dernieresSeances.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucune séance</div>
             ) : dernieresSeances.map(s => {
-              const MOIS_V = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-              const [, vm, vj] = (s.date_seance || '').split('-')
-              const dateLabel = s.date_seance ? `${vj} ${MOIS_V[parseInt(vm)-1]}` : '—'
+              const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` })() : '—'
               return (
                 <div key={s.id}
                   onClick={() => onNavigate?.('/seances')}
@@ -761,9 +759,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {recentSeances.map(s => {
-                const MOIS_D = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-                const [, dm, dj] = (s.date_seance || '').split('-')
-                const dateLabel = s.date_seance ? `${dj} ${MOIS_D[parseInt(dm)-1]}` : '—'
+                const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance); return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` })() : '—'
                 return (
                   <div
                     key={s.id}
