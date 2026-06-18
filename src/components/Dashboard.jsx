@@ -338,7 +338,7 @@ function Anniversaires({ accent }) {
   const prochains = clients
     .map(c => {
       const anniv = getProchainAnniversaire(c)
-      if (!anniv || anniv.joursRestants > 30) return null
+      if (!anniv) return null
       return { ...c, ...anniv }
     })
     .filter(Boolean)
