@@ -82,21 +82,18 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
 
-      const client = clients.find(c => c.id === clientId)
+      const date_rdv = new Date(`${date}T${heure}:00`).toISOString()
+      const client   = clients.find(c => c.id === clientId)
 
       const { data: rdv, error } = await supabase
-        .from('seances')
+        .from('rendez_vous')
         .insert({
-          user_id:       user.id,
-          client_id:     clientId || null,
-          date_seance:   date,
-          heure_seance:  heure,
-          type_seance:   typeSeance || null,
+          user_id:     user.id,
+          client_id:   clientId || null,
+          date_rdv,
+          type_seance: typeSeance || null,
           statut,
-          notes:         notes.trim() || null,
-          prenom:        client?.prenom || 'Client',
-          nom:           client?.nom || 'non renseigné',
-          duree_minutes: 60,
+          notes:       notes.trim() || null,
         })
         .select()
         .single()
