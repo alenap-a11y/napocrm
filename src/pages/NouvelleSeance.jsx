@@ -978,10 +978,11 @@ export default function NouvelleSeance() {
               ) : (
                 <div style={{ position: 'relative' }}>
                   {history.map((s, idx) => {
-                    const MOIS_H = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-                    const [hy, hm, hj] = (s.date_seance || '').split('-')
-                    const dateLabel = s.date_seance ? `${hj} ${MOIS_H[parseInt(hm)-1]} ${hy}` : '—'
-                    const isToday = s.date_seance === date
+                    const MOIS_H = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.']
+                    const datePart = (s.date_seance || '').split('T')[0]
+                    const [hy, hm, hj] = datePart.split('-')
+                    const dateLabel = s.date_seance ? `${+hj} ${MOIS_H[+hm-1]} ${hy}` : '—'
+                    const isToday = datePart === date
                     return (
                       <div
                         key={s.id}
