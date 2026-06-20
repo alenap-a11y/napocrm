@@ -131,7 +131,7 @@ export default function Agenda() {
   }, [view])
 
   /* ── Événements FullCalendar ── */
-  const fcEvents = rdvs.map(rdv => {
+  const fcEvents = rdvs.filter(rdv => rdv.date_rdv && !isNaN(new Date(rdv.date_rdv).getTime())).map(rdv => {
     const start = new Date(rdv.date_rdv)
     const end   = new Date(start.getTime() + 60 * 60 * 1000)
     const color = eventColor(rdv)
@@ -197,7 +197,7 @@ export default function Agenda() {
 
   /* ── Modal edit ── */
   function openEdit(rdv) {
-    const dt = new Date(rdv.date_rdv)
+    const dt = rdv.date_rdv ? new Date(rdv.date_rdv) : new Date()
     setEditingId(rdv.id)
     setEditForm({
       clientId:  rdv.client_id || '',
@@ -310,7 +310,7 @@ export default function Agenda() {
                 {JOURS.map(j => <div key={j} style={{ fontSize: 7, color: 'var(--color-text-secondary)', textAlign: 'center' }}>{j[0]}</div>)}
                 {cells.map((d, i) => {
                   const ds  = d ? `${year}-${String(mi+1).padStart(2,'0')}-${String(d).padStart(2,'0')}` : null
-                  const evs = ds ? rdvs.filter(r => r.date_rdv.slice(0,10) === ds) : []
+                  const evs = ds ? rdvs.filter(r => r.date_rdv?.slice(0,10) === ds) : []
                   const isT = ds === todayStr
                   return (
                     <div key={i} style={{ textAlign: 'center', position: 'relative' }}
@@ -599,7 +599,7 @@ export default function Agenda() {
                 }
                 const rdv = info.event.extendedProps.rdv
                 setDetail(rdv)
-                setSelectedDate(rdv.date_rdv.slice(0, 10))
+                setSelectedDate(rdv.date_rdv?.slice(0, 10) ?? todayStr)
                 info.jsEvent.stopPropagation()
               }}
               dateClick={info => {

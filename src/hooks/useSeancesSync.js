@@ -5,7 +5,8 @@ import { supabase } from '../lib/supabase'
 
 function toDateRdv(date_seance, heure_seance) {
   if (!date_seance) return null
-  return `${date_seance}T${heure_seance || '00:00:00'}`
+  const iso = `${date_seance.slice(0, 10)}T${heure_seance || '00:00:00'}`
+  return isNaN(new Date(iso).getTime()) ? null : iso
 }
 
 export function useRendezVousSync() {
