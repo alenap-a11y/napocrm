@@ -217,13 +217,13 @@ export default function Agenda() {
     if (!editForm.date || !editForm.heure) { setEditMsg('Date et heure requises.'); return }
     setEditSaving(true); setEditMsg('')
     try {
-      const date_rdv = new Date(`${editForm.date}T${editForm.heure}:00`).toISOString()
-      const { error } = await supabase.from('rendez_vous').update({
-        client_id:   editForm.clientId  || null,
-        date_rdv,
-        type_seance: editForm.typeSeance || null,
-        statut:      editForm.statut,
-        notes:       editForm.notes.trim() || null,
+      const { error } = await supabase.from('seances').update({
+        client_id:    editForm.clientId  || null,
+        date_seance:  editForm.date,
+        heure_seance: editForm.heure,
+        type_seance:  editForm.typeSeance || null,
+        statut:       editForm.statut,
+        notes:        editForm.notes.trim() || null,
       }).eq('id', editingId)
       if (error) throw error
       const client = clientsAll.find(c => c.id === editForm.clientId)
@@ -239,7 +239,7 @@ export default function Agenda() {
 
   /* ── Suppression ── */
   async function deleteRdv(id) {
-    const { error } = await supabase.from('rendez_vous').delete().eq('id', id)
+    const { error } = await supabase.from('seances').delete().eq('id', id)
     if (!error) setDetail(null)
   }
 
@@ -248,9 +248,13 @@ export default function Agenda() {
     if (event.extendedProps?.type === 'anniversaire') { revert(); return }
     const ok = window.confirm(`Déplacer ce RDV au ${event.start.toLocaleString('fr-FR')} ?`)
     if (!ok) { revert(); return }
+    const s = event.start
     const { error } = await supabase
-      .from('rendez_vous')
-      .update({ date_rdv: event.start.toISOString() })
+      .from('seances')
+      .update({
+        date_seance:  toYMD(s),
+        heure_seance: `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`,
+      })
       .eq('id', event.id)
     if (error) {
       revert()
@@ -262,9 +266,13 @@ export default function Agenda() {
 
   async function handleEventResize({ event, revert }) {
     if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const s = event.start
     const { error } = await supabase
-      .from('rendez_vous')
-      .update({ date_rdv: event.start.toISOString() })
+      .from('seances')
+      .update({
+        date_seance:  toYMD(s),
+        heure_seance: `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`,
+      })
       .eq('id', event.id)
     if (error) {
       revert()
