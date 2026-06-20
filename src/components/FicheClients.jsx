@@ -127,7 +127,7 @@ export default function FicheClients({ userId }) {
     setFNom(client.nom || '')
     setFPrenom(client.prenom || '')
     setFGenre(client.genre || 'Femme')
-    setFTel(client.tel || client.telephone || '')
+    setFTel(client.tel || '')
     setFEmail(client.email || '')
     setFNotes(client.notes || '')
     setFVille(client.ville || '')
@@ -172,7 +172,7 @@ export default function FicheClients({ userId }) {
       nom:               fNom.trim(),
       prenom:            fPrenom.trim(),
       genre:             fGenre             || null,
-      telephone:         fTel.trim()        || null,   // colonne DB = telephone
+      tel:               fTel.trim()        || null,
       email:             fEmail.trim()      || null,
       notes:             fNotes.trim()      || null,
       ville:             fVille.trim()      || null,
@@ -227,7 +227,7 @@ export default function FicheClients({ userId }) {
       nom:       r.nom       || r['Nom']       || '',
       prenom:    r.prenom    || r['Prénom']     || r['Prenom']    || '',
       genre:     r.genre     || r['Genre']      || 'Autre',
-      telephone: r.telephone || r.tel || r['Téléphone'] || r['Telephone'] || '',
+      tel:       r.telephone || r.tel || r['Téléphone'] || r['Telephone'] || '',
       email:     r.email     || r['Email']      || '',
     }))
     if (payload.length) {

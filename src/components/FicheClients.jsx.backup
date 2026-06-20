@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import SeanceTimeline from './SeanceTimeline'
+import SeanceNotesPreview from './SeanceNotesPreview'
 
 /* ─── Helpers ─── */
 function getInitials(nom, prenom) {
@@ -11,7 +12,7 @@ function computeStatut(clientId, seancesData) {
   const cs = seancesData.filter(s => s.client_id === clientId)
   if (!cs.length) return 'Nouveau'
   const latest = cs.reduce((max, s) => {
-    const d = new Date(s.date || s.created_at)
+    const d = new Date(s.date_seance || s.created_at)
     return d > max ? d : max
   }, new Date(0))
   return (Date.now() - latest) / 86400000 < 90 ? 'Actif' : 'Inactif'
@@ -24,9 +25,9 @@ function statutStyle(st) {
 }
 
 function exportCSV(clients) {
-  const header = 'nom,prenom,genre,telephone,email'
+  const header = 'nom,prenom,genre,tel,email'
   const rows = clients.map(c =>
-    ['nom', 'prenom', 'genre', 'telephone', 'email']
+    ['nom', 'prenom', 'genre', 'tel', 'email']
       .map(k => `"${(c[k] || '').replace(/"/g, '""')}"`)
       .join(',')
   )
@@ -70,17 +71,24 @@ export default function FicheClients({ userId }) {
   /* Panel détail */
   const [detail, setDetail]             = useState(null)   // null | clientObj | { isNew:true }
   const [detailSeances, setDetailSeances] = useState([])
+  const [histSeances,  setHistSeances]  = useState([])
+  const [histLoading,  setHistLoading]  = useState(false)
   const [confirmDel, setConfirmDel]     = useState(false)
-  const [saving, setSaving]             = useState(false)
-  const [saveOk, setSaveOk]             = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [saveOk,  setSaveOk]  = useState(false)
+  const [saveErr, setSaveErr] = useState('')
 
   /* Champs formulaire */
-  const [fNom, setFNom]       = useState('')
-  const [fPrenom, setFPrenom] = useState('')
-  const [fGenre, setFGenre]   = useState('Femme')
-  const [fTel, setFTel]       = useState('')
-  const [fEmail, setFEmail]   = useState('')
-  const [fNotes, setFNotes]   = useState('')
+  const [fNom,          setFNom]          = useState('')
+  const [fPrenom,       setFPrenom]       = useState('')
+  const [fGenre,        setFGenre]        = useState('Femme')
+  const [fTel,          setFTel]          = useState('')
+  const [fEmail,        setFEmail]        = useState('')
+  const [fNotes,        setFNotes]        = useState('')
+  const [fVille,        setFVille]        = useState('')
+  const [fSpecialite,   setFSpecialite]   = useState('Sophrologie')
+  const [fStatut,       setFStatut]       = useState('actif')
+  const [fDateNaissance,setFDateNaissance]= useState('')
 
   const importRef = useRef(null)
 
@@ -88,14 +96,29 @@ export default function FicheClients({ userId }) {
   useEffect(() => { fetchAll() }, [userId])
 
   async function fetchAll() {
+    if (!userId) return   // ne pas lancer de requête sans user_id
     setLoading(true)
-    const [{ data: c }, { data: s }] = await Promise.all([
+    const [resClients, resSeances] = await Promise.all([
       supabase.from('clients').select('*').eq('user_id', userId).order('nom'),
-      supabase.from('seances').select('client_id,date,duree,prix,created_at').eq('user_id', userId).order('date', { ascending: false }),
+      supabase.from('seances').select('client_id,date_seance,duree_minutes,prix_euros,created_at').eq('user_id', userId).order('date_seance', { ascending: false }),
     ])
-    setClients(c || [])
-    setSeancesAll(s || [])
+    if (resClients.error) console.log('Erreur clients:', JSON.stringify(resClients.error))
+    if (resSeances.error) console.log('Erreur clients (seances):', JSON.stringify(resSeances.error))
+    setClients(resClients.data || [])
+    setSeancesAll(resSeances.data || [])
     setLoading(false)
+  }
+
+  /* ── Historique séances détaillé ── */
+  async function fetchClientSeances(clientId) {
+    setHistLoading(true)
+    const { data } = await supabase
+      .from('seances')
+      .select('id, date_seance, type_seance, notes, zones_corps, duree_minutes, prix_euros')
+      .eq('client_id', clientId)
+      .order('date_seance', { ascending: false })
+    setHistSeances(data || [])
+    setHistLoading(false)
   }
 
   /* ── Ouverture panneau ── */
@@ -104,45 +127,86 @@ export default function FicheClients({ userId }) {
     setFNom(client.nom || '')
     setFPrenom(client.prenom || '')
     setFGenre(client.genre || 'Femme')
-    setFTel(client.telephone || '')
+    setFTel(client.tel || client.telephone || '')
     setFEmail(client.email || '')
     setFNotes(client.notes || '')
+    setFVille(client.ville || '')
+    setFSpecialite(client.specialite || 'Sophrologie')
+    setFStatut(client.statut || 'actif')
+    setFDateNaissance(client.date_naissance || '')
     setConfirmDel(false)
     setSaveOk(false)
+    setSaveErr('')
     setDetailSeances(seancesAll.filter(s => s.client_id === client.id))
+    fetchClientSeances(client.id)
   }
 
   function openNew() {
     setDetail({ isNew: true })
     setFNom(''); setFPrenom(''); setFGenre('Femme')
     setFTel(''); setFEmail(''); setFNotes('')
+    setFVille(''); setFSpecialite('Sophrologie'); setFStatut('actif'); setFDateNaissance('')
     setDetailSeances([])
+    setHistSeances([])
     setConfirmDel(false)
     setSaveOk(false)
+    setSaveErr('')
   }
 
   /* ── Sauvegarde ── */
   async function saveDetail() {
+    if (!fNom.trim() && !fPrenom.trim()) return
     setSaving(true)
-    const payload = { user_id: userId, nom: fNom.trim(), prenom: fPrenom.trim(), genre: fGenre, telephone: fTel.trim(), email: fEmail.trim(), notes: fNotes.trim() }
+    setSaveErr('')
+
+    /* Récupérer user_id depuis la session si le prop est absent */
+    let uid = userId
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser()
+      uid = user?.id
+    }
+
+    const now = new Date().toISOString()
+    const base = {
+      user_id:           uid,
+      nom:               fNom.trim(),
+      prenom:            fPrenom.trim(),
+      genre:             fGenre             || null,
+      telephone:         fTel.trim()        || null,   // colonne DB = telephone
+      email:             fEmail.trim()      || null,
+      notes:             fNotes.trim()      || null,
+      ville:             fVille.trim()      || null,
+      specialite:        fSpecialite        || null,
+      statut:            fStatut            || 'actif',
+      date_naissance:    fDateNaissance     || null,
+      date_modification: now,
+    }
 
     if (detail.isNew) {
+      const payload = { ...base, date_creation: now }
       const { data, error } = await supabase.from('clients').insert(payload).select().single()
-      if (!error && data) {
+      if (error) {
+        console.log('INSERT erreur complète:', JSON.stringify(error, null, 2))
+        setSaveErr(`Erreur : ${error.message}`)
+      } else if (data) {
         setClients(prev => [...prev, data].sort((a, b) => (a.nom || '').localeCompare(b.nom || '')))
         setDetail(data)
         setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2500)
       }
     } else {
-      const { data, error } = await supabase.from('clients').update(payload).eq('id', detail.id).select().single()
-      if (!error && data) {
+      const { data, error } = await supabase.from('clients').update(base).eq('id', detail.id).select().single()
+      if (error) {
+        console.log('Erreur clients:', JSON.stringify(error))
+        setSaveErr(`Erreur : ${error.message}`)
+      } else if (data) {
         setClients(prev => prev.map(c => c.id === data.id ? data : c))
         setDetail(data)
         setSaveOk(true)
+        setTimeout(() => setSaveOk(false), 2500)
       }
     }
     setSaving(false)
-    setTimeout(() => setSaveOk(false), 2500)
   }
 
   /* ── Suppression ── */
@@ -159,15 +223,16 @@ export default function FicheClients({ userId }) {
     if (!file) return
     const rows = parseCSV(await file.text())
     const payload = rows.map(r => ({
-      user_id: userId,
+      user_id:   userId,
       nom:       r.nom       || r['Nom']       || '',
       prenom:    r.prenom    || r['Prénom']     || r['Prenom']    || '',
       genre:     r.genre     || r['Genre']      || 'Autre',
-      telephone: r.telephone || r['Téléphone']  || r['Telephone'] || '',
+      telephone: r.telephone || r.tel || r['Téléphone'] || r['Telephone'] || '',
       email:     r.email     || r['Email']      || '',
     }))
     if (payload.length) {
-      await supabase.from('clients').insert(payload)
+      const { error } = await supabase.from('clients').insert(payload)
+      if (error) console.log('Erreur:', JSON.stringify(error))
       fetchAll()
     }
     e.target.value = ''
@@ -259,7 +324,7 @@ export default function FicheClients({ userId }) {
                   <Cell bold>{c.nom}</Cell>
                   <Cell>{c.prenom}</Cell>
                   <Cell small>{c.genre}</Cell>
-                  <Cell small>{c.telephone}</Cell>
+                  <Cell small>{c.tel}</Cell>
                   <Cell small>{c.email}</Cell>
                   <div style={{ fontSize: 12, color: '#1a1208', textAlign: 'center', fontWeight: 600 }}>{nb}</div>
                   <span style={{ ...ss, fontSize: 10, padding: '2px 8px', borderRadius: 20, fontWeight: 600, textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -329,6 +394,34 @@ export default function FicheClients({ userId }) {
             ))}
 
             <div>
+              <span style={S.lbl}>Date de naissance</span>
+              <input style={S.inp} type="date" value={fDateNaissance} onChange={e => setFDateNaissance(e.target.value)} />
+            </div>
+
+            <div>
+              <span style={S.lbl}>Ville</span>
+              <input style={S.inp} value={fVille} onChange={e => setFVille(e.target.value)} placeholder="Paris" />
+            </div>
+
+            <div>
+              <span style={S.lbl}>Spécialité</span>
+              <select style={S.inp} value={fSpecialite} onChange={e => setFSpecialite(e.target.value)}>
+                {['Sophrologie','Coaching','Fleurs de Bach','Naturopathie','Énergie','Massage','Autre'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <span style={S.lbl}>Statut</span>
+              <select style={S.inp} value={fStatut} onChange={e => setFStatut(e.target.value)}>
+                <option value="actif">Actif</option>
+                <option value="inactif">Inactif</option>
+                <option value="en_attente">En attente</option>
+              </select>
+            </div>
+
+            <div>
               <span style={S.lbl}>Notes internes</span>
               <textarea
                 rows={3}
@@ -340,29 +433,75 @@ export default function FicheClients({ userId }) {
             </div>
           </div>
 
-          {/* Historique séances */}
+          {/* Historique des séances */}
           {!detail.isNew && (
-            <div style={{ ...S.card, maxHeight: 220, overflowY: 'auto' }}>
-              <div style={S.title}>Séances ({detailSeances.length})</div>
-              {detailSeances.length === 0 ? (
+            <div style={{ ...S.card, maxHeight: 380, overflowY: 'auto' }}>
+              <div style={S.title}>
+                Historique des séances{histSeances.length > 0 ? ` (${histSeances.length})` : ''}
+              </div>
+
+              {histLoading ? (
+                <div style={{ fontSize: 11, color: '#a07848', padding: '6px 0' }}>Chargement…</div>
+              ) : histSeances.length === 0 ? (
                 <div style={{ fontSize: 11, color: '#b8a090' }}>Aucune séance enregistrée</div>
-              ) : detailSeances.map((s, i) => (
-                <div key={i} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '6px 0',
-                  borderBottom: i < detailSeances.length - 1 ? '0.5px solid rgba(193,122,58,0.1)' : 'none',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: '#1a1208' }}>
-                      {s.date ? new Date(s.date + 'T00:00:00').toLocaleDateString('fr-FR') : '—'}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#a07848' }}>{s.duree || '—'}</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#c17a3a' }}>
-                    {s.prix != null ? `${s.prix} €` : '—'}
-                  </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {histSeances.map((s, i) => {
+                    const dateLabel = s.date_seance
+                      ? new Date(s.date_seance + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                      : '—'
+                    const meta = [
+                      s.duree_minutes ? `${s.duree_minutes} min` : null,
+                      s.prix_euros != null ? `${s.prix_euros} €` : null,
+                    ].filter(Boolean).join(' · ')
+                    const notesText = typeof s.notes === 'string'
+                      ? s.notes
+                      : Array.isArray(s.notes) ? s.notes.map(n => n.text || n).join(' · ') : ''
+                    const zones = Array.isArray(s.zones_corps) ? s.zones_corps : []
+
+                    return (
+                      <div key={i} style={{ background: '#fdfaf6', borderRadius: 8, padding: '8px 10px', border: '0.5px solid rgba(193,122,58,0.2)' }}>
+
+                        {/* Date + type */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: '#1a1208' }}>{dateLabel}</span>
+                          {s.type_seance && (
+                            <span style={{ fontSize: 9, fontWeight: 600, background: '#faeeda', color: '#c17a3a', padding: '2px 7px', borderRadius: 10, border: '0.5px solid rgba(193,122,58,0.3)', whiteSpace: 'nowrap' }}>
+                              {s.type_seance}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Durée · prix */}
+                        {meta && (
+                          <div style={{ fontSize: 10, color: '#a07848', marginBottom: zones.length || notesText ? 5 : 0 }}>
+                            {meta}
+                          </div>
+                        )}
+
+                        {/* Zones corps */}
+                        {zones.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginBottom: notesText ? 5 : 0 }}>
+                            {zones.map(z => (
+                              <span key={z} style={{ fontSize: 9, background: '#e8f0fe', color: '#185FA5', padding: '1px 6px', borderRadius: 8, fontWeight: 500 }}>
+                                {z}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {notesText && (
+                          <div style={{ fontSize: 10, color: '#8a7060', lineHeight: 1.5, borderTop: '0.5px solid rgba(193,122,58,0.12)', paddingTop: 5 }}>
+                            {notesText.length > 140 ? notesText.slice(0, 140) + '…' : notesText}
+                          </div>
+                        )}
+                        <SeanceNotesPreview seanceId={s.id} />
+                      </div>
+                    )
+                  })}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
@@ -383,14 +522,20 @@ export default function FicheClients({ userId }) {
             style={{
               width: '100%', padding: '10px', borderRadius: 10,
               border: 'none',
-              background: saveOk ? '#48BB78' : '#c17a3a',
+              background: saveOk ? '#48BB78' : saveErr ? '#E53E3E' : '#c17a3a',
               color: '#fff', fontSize: 13, fontWeight: 600,
               cursor: saving ? 'not-allowed' : 'pointer',
               opacity: saving ? 0.7 : 1, transition: 'background .25s',
             }}
           >
-            {saving ? 'Sauvegarde…' : saveOk ? '✓ Sauvegardé' : detail.isNew ? 'Créer le client' : 'Sauvegarder'}
+            {saving ? 'Sauvegarde…' : saveOk ? '✓ Client enregistré ✅' : saveErr ? '✗ Échec' : detail.isNew ? 'Créer le client' : 'Sauvegarder'}
           </button>
+
+          {saveErr && (
+            <div style={{ fontSize: 11, color: '#A32D2D', background: '#FCEBEB', border: '0.5px solid #F09595', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
+              {saveErr}
+            </div>
+          )}
 
           {/* Suppression */}
           {!detail.isNew && (

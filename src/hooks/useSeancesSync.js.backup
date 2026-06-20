@@ -1,12 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
-/* ─── Rendez-vous (lit depuis seances) ───────────────────── */
-
-function toDateRdv(date_seance, heure_seance) {
-  if (!date_seance) return null
-  return `${date_seance}T${heure_seance || '00:00:00'}`
-}
+/* ─── Rendez-vous ─────────────────────────────────────────── */
 
 export function useRendezVousSync() {
   const [rdvs,    setRdvs]    = useState([])
@@ -18,16 +13,11 @@ export function useRendezVousSync() {
     if (!id) return
     setLoading(true)
     const { data } = await supabase
-      .from('seances')
-      .select('id, date_seance, heure_seance, type_seance, statut, notes, client_id, clients(nom, prenom)')
+      .from('rendez_vous')
+      .select('id, date_rdv, type_seance, statut, notes, client_id, clients(nom, prenom)')
       .eq('user_id', id)
-      .order('date_seance', { ascending: true })
-    // Reconstruit date_rdv pour compat avec Agenda.jsx
-    const mapped = (data || []).map(r => ({
-      ...r,
-      date_rdv: toDateRdv(r.date_seance, r.heure_seance),
-    }))
-    setRdvs(mapped)
+      .order('date_rdv', { ascending: true })
+    setRdvs(data || [])
     setLoading(false)
   }, [userId])
 
@@ -44,7 +34,7 @@ export function useRendezVousSync() {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'seances',
+          table: 'rendez_vous',
           filter: `user_id=eq.${user.id}`,
         }, () => fetchRdvs(user.id))
         .subscribe()
@@ -77,14 +67,13 @@ export function useSeancesSync() {
   }, [userId])
 
   useEffect(() => {
-    let channel
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
       await fetchSeances(user.id)
 
-      channel = supabase
+      const channel = supabase
         .channel('seances-sync-global')
         .on('postgres_changes', {
           event: '*',
@@ -93,9 +82,10 @@ export function useSeancesSync() {
           filter: `user_id=eq.${user.id}`
         }, () => fetchSeances(user.id))
         .subscribe()
+
+      return () => supabase.removeChannel(channel)
     }
     init()
-    return () => { if (channel) supabase.removeChannel(channel) }
   }, [])
 
   async function addSeance(data) {

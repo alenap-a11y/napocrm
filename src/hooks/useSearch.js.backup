@@ -15,27 +15,27 @@ export const MODULES = [
 ]
 
 export function useSearch(query) {
-  const [results, setResults] = useState({ clients: [], seances: [], modules: [] })
+  const [results, setResults] = useState({ clients: [], taches: [], modules: [] })
   const [loading, setLoading] = useState(false)
 
   const search = useCallback(async (q) => {
     if (!q || q.trim().length < 2) {
-      setResults({ clients: [], seances: [], modules: [] })
+      setResults({ clients: [], taches: [], modules: [] })
       return
     }
     setLoading(true)
     const term = q.trim()
 
-    const [{ data: clients }, { data: seances }] = await Promise.all([
+    const [{ data: clients }, { data: taches }] = await Promise.all([
       supabase
         .from('clients')
         .select('id, prenom, nom, email, telephone')
         .or(`prenom.ilike.%${term}%,nom.ilike.%${term}%,email.ilike.%${term}%`)
         .limit(5),
       supabase
-        .from('seances')
-        .select('id, titre, date_seance, type_soin')
-        .or(`titre.ilike.%${term}%,type_soin.ilike.%${term}%`)
+        .from('taches')
+        .select('id, titre, statut, priorite')
+        .ilike('titre', `%${term}%`)
         .limit(5),
     ])
 
@@ -51,15 +51,15 @@ export function useSearch(query) {
         sub: c.email || c.telephone || '',
         icon: 'ti-user',
         tag: 'Client',
-        nav: `clients`,
+        nav: 'clients',
       })),
-      seances: (seances || []).map(s => ({
-        id: s.id,
-        name: s.titre || s.type_soin || 'Séance',
-        sub: s.date_seance ? new Date(s.date_seance).toLocaleDateString('fr-FR') : '',
-        icon: 'ti-clipboard-list',
-        tag: 'Séance',
-        nav: 'seances',
+      taches: (taches || []).map(t => ({
+        id: t.id,
+        name: t.titre,
+        sub: t.statut || '',
+        icon: 'ti-checkbox',
+        tag: 'Tâche',
+        nav: 'taches',
       })),
       modules: filteredModules,
     })
@@ -67,7 +67,7 @@ export function useSearch(query) {
   }, [])
 
   useEffect(() => {
-    const timer = setTimeout(() => search(query), 250)
+    const timer = setTimeout(() => search(query), 300)
     return () => clearTimeout(timer)
   }, [query, search])
 

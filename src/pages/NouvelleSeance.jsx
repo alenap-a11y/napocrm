@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, Suspense, Component } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense, Component } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Html, useGLTF } from '@react-three/drei'
@@ -11,6 +12,12 @@ console.warn = (...args) => {
   if (typeof args[0] === 'string' && args[0].includes('THREE.Clock')) return
   _warn(...args)
 }
+
+/* ─── Calibration ───────────────────────────────────────── */
+// Passe à true pour enregistrer les coordonnées exactes de chaque clic.
+// Remet à false une fois les ancres copiées depuis la console.
+const CALIBRATION_MODE = false
+const _calibPts = []   // accumulateur de session (module-level, survit aux re-renders)
 
 /* ─── Constants ─────────────────────────────────────────── */
 
@@ -27,11 +34,14 @@ const PALETTE = [
 
 const PRESET_TAGS = ['Stress', 'Lombaires', 'Sommeil', 'Douleur', 'Fatigue', 'Anxiété']
 
-const CAM_POS = {
-  front: [0, 0,  50],
-  back:  [0, 0, -50],
-  left:  [-50, 0, 0],
+// Directions unitaires par vue — la distance est calculée dynamiquement
+// au chargement du modèle via "fit camera to bounding sphere"
+const CAM_DIR = {
+  front: [0, 0,  1],
+  back:  [0, 0, -1],
+  left:  [-1, 0, 0],
 }
+const CAM_FOV = 20 // doit correspondre au fov du Canvas
 
 const COLOR_LABELS = {
   '#c0392b': 'Douleur',
@@ -44,15 +54,125 @@ const COLOR_LABELS = {
   '#5d4037': 'Neutre',
 }
 
-function getZone(y, totalHeight) {
-  const ratio = y / totalHeight
-  if (ratio > 0.75)  return 'Tête'
-  if (ratio > 0.55)  return 'Cou / épaules'
-  if (ratio > 0.30)  return 'Thorax / abdomen'
-  if (ratio > 0.10)  return 'Hanches / bassin'
-  if (ratio > -0.20) return 'Cuisses / genoux'
-  if (ratio > -0.55) return 'Jambes'
-  return 'Pieds / chevilles'
+// ─── Ancres anatomiques ──────────────────────────────────────────────────────
+// Coordonnées normalisées [0-1] dans la bounding box du corps scalé :
+//   up  : 0 = pieds, 1 = tête  (axe "haut" détecté dynamiquement)
+//   lat : 0 = droite patient, 1 = gauche patient
+//   dep : 0 = dos, 1 = face avant
+// Si gauche/droite est inversé sur ton modèle, échange lat 0.xx <-> (1 - 0.xx)
+const ANCHORS = [
+  // Tête
+  { name: 'Sommet du crâne',         up: 0.97, lat: 0.50, dep: 0.52 },
+  { name: 'Front',                    up: 0.93, lat: 0.50, dep: 0.65 },
+  { name: 'Œil droit',               up: 0.91, lat: 0.37, dep: 0.64 },
+  { name: 'Œil gauche',              up: 0.91, lat: 0.63, dep: 0.64 },
+  { name: 'Nez',                      up: 0.89, lat: 0.50, dep: 0.70 },
+  { name: 'Joue droite',              up: 0.88, lat: 0.33, dep: 0.63 },
+  { name: 'Joue gauche',             up: 0.88, lat: 0.67, dep: 0.63 },
+  { name: 'Bouche',                   up: 0.87, lat: 0.50, dep: 0.68 },
+  { name: 'Mâchoire droite',          up: 0.85, lat: 0.35, dep: 0.62 },
+  { name: 'Mâchoire gauche',         up: 0.85, lat: 0.65, dep: 0.62 },
+  { name: 'Oreille droite',           up: 0.90, lat: 0.23, dep: 0.50 },
+  { name: 'Oreille gauche',          up: 0.90, lat: 0.77, dep: 0.50 },
+  { name: 'Nuque',                    up: 0.91, lat: 0.50, dep: 0.34 },
+  // Cou
+  { name: 'Cou',                      up: 0.82, lat: 0.50, dep: 0.55 },
+  // Épaules
+  { name: 'Épaule droite',            up: 0.76, lat: 0.20, dep: 0.52 },
+  { name: 'Épaule gauche',           up: 0.76, lat: 0.80, dep: 0.52 },
+  { name: 'Clavicule droite',         up: 0.78, lat: 0.34, dep: 0.60 },
+  { name: 'Clavicule gauche',        up: 0.78, lat: 0.66, dep: 0.60 },
+  // Torse avant
+  { name: 'Poitrine',                 up: 0.70, lat: 0.50, dep: 0.64 },
+  { name: 'Côtes droites',            up: 0.62, lat: 0.29, dep: 0.62 },
+  { name: 'Côtes gauches',           up: 0.62, lat: 0.71, dep: 0.62 },
+  { name: 'Abdomen',                  up: 0.54, lat: 0.50, dep: 0.63 },
+  { name: 'Pubis',                    up: 0.37, lat: 0.50, dep: 0.64 },
+  // Torse arrière
+  { name: 'Dos haut',                 up: 0.71, lat: 0.50, dep: 0.34 },
+  { name: 'Omoplate droite',          up: 0.72, lat: 0.29, dep: 0.34 },
+  { name: 'Omoplate gauche',         up: 0.72, lat: 0.71, dep: 0.34 },
+  { name: 'Dos milieu',               up: 0.58, lat: 0.50, dep: 0.34 },
+  { name: 'Bas du dos',               up: 0.46, lat: 0.50, dep: 0.33 },
+  // Bras droit
+  { name: 'Bras droit',              up: 0.67, lat: 0.10, dep: 0.52 },
+  { name: 'Coude droit',             up: 0.55, lat: 0.08, dep: 0.52 },
+  { name: 'Avant-bras droit',        up: 0.46, lat: 0.09, dep: 0.52 },
+  { name: 'Poignet droit',           up: 0.37, lat: 0.09, dep: 0.52 },
+  { name: 'Main droite',             up: 0.28, lat: 0.09, dep: 0.52 },
+  // Bras gauche
+  { name: 'Bras gauche',             up: 0.67, lat: 0.90, dep: 0.52 },
+  { name: 'Coude gauche',            up: 0.55, lat: 0.92, dep: 0.52 },
+  { name: 'Avant-bras gauche',       up: 0.46, lat: 0.91, dep: 0.52 },
+  { name: 'Poignet gauche',          up: 0.37, lat: 0.91, dep: 0.52 },
+  { name: 'Main gauche',             up: 0.28, lat: 0.91, dep: 0.52 },
+  // Bassin
+  { name: 'Hanche droite',           up: 0.41, lat: 0.26, dep: 0.54 },
+  { name: 'Hanche gauche',           up: 0.41, lat: 0.74, dep: 0.54 },
+  { name: 'Fessier droit',           up: 0.40, lat: 0.32, dep: 0.33 },
+  { name: 'Fessier gauche',          up: 0.40, lat: 0.68, dep: 0.33 },
+  // Jambe droite
+  { name: 'Cuisse droite',           up: 0.28, lat: 0.35, dep: 0.52 },
+  { name: 'Genou droit',             up: 0.16, lat: 0.35, dep: 0.56 },
+  { name: 'Creux du genou droit',    up: 0.16, lat: 0.35, dep: 0.42 },
+  { name: 'Tibia droit',             up: 0.09, lat: 0.35, dep: 0.58 },
+  { name: 'Mollet droit',            up: 0.09, lat: 0.35, dep: 0.41 },
+  { name: 'Cheville droite',         up: 0.03, lat: 0.35, dep: 0.52 },
+  { name: 'Pied droit',              up: 0.01, lat: 0.35, dep: 0.64 },
+  { name: 'Talon droit',             up: 0.01, lat: 0.35, dep: 0.36 },
+  // Jambe gauche
+  { name: 'Cuisse gauche',           up: 0.28, lat: 0.65, dep: 0.52 },
+  { name: 'Genou gauche',            up: 0.16, lat: 0.65, dep: 0.56 },
+  { name: 'Creux du genou gauche',   up: 0.16, lat: 0.65, dep: 0.42 },
+  { name: 'Tibia gauche',            up: 0.09, lat: 0.65, dep: 0.58 },
+  { name: 'Mollet gauche',           up: 0.09, lat: 0.65, dep: 0.41 },
+  { name: 'Cheville gauche',         up: 0.03, lat: 0.65, dep: 0.52 },
+  { name: 'Pied gauche',             up: 0.01, lat: 0.65, dep: 0.64 },
+  { name: 'Talon gauche',            up: 0.01, lat: 0.65, dep: 0.36 },
+]
+
+// Détecte l'axe "haut" du modèle : la dimension la plus longue après scale.
+// En cas d'égalité X≈Y (T-pose), préfère Y (convention Three.js/GLTF).
+function detectUpAxis(size) {
+  if (size.z > size.y * 1.15 && size.z > size.x * 1.15) return 'z'  // Z-up (Blender)
+  if (size.x > size.y * 1.15 && size.x > size.z * 1.15) return 'x'  // X-up (rare)
+  return 'y'                                                           // Y-up (standard)
+}
+
+// Trouve l'ancre la plus proche du point cliqué dans l'espace normalisé [0-1]³.
+// Poids : up × 2.5 >> lat × 1.5 >> dep × 0.6 (la hauteur est le signal le plus fort)
+function getNearestAnchor(pos, bbox) {
+  if (!bbox) return 'Zone inconnue'
+
+  const nx = (pos[0] - bbox.min.x) / bbox.size.x  // 0=world-left, 1=world-right
+  const ny = (pos[1] - bbox.min.y) / bbox.size.y
+  const nz = (pos[2] - bbox.min.z) / bbox.size.z
+
+  let up, lat, dep
+  switch (bbox.upAxis) {
+    case 'z': up = nz; lat = nx; dep = ny; break
+    case 'x': up = nx; lat = nz; dep = ny; break
+    default:  up = ny; lat = nx; dep = nz; break  // y-up
+  }
+
+  // ── Diagnostic (étape 1) ────────────────────────────────
+  console.log('[Zone] pos brut:', pos.map(v => +v.toFixed(4)))
+  console.log('[Zone] bbox min:', [+bbox.min.x.toFixed(4), +bbox.min.y.toFixed(4), +bbox.min.z.toFixed(4)])
+  console.log('[Zone] bbox size:', [+bbox.size.x.toFixed(4), +bbox.size.y.toFixed(4), +bbox.size.z.toFixed(4)])
+  console.log('[Zone] upAxis:', bbox.upAxis, '| up:', +up.toFixed(3), 'lat:', +lat.toFixed(3), 'dep:', +dep.toFixed(3))
+
+  let best = ANCHORS[0].name, bestDist = Infinity
+  for (const a of ANCHORS) {
+    const d = Math.sqrt(
+      (up  - a.up)  ** 2 * 6.25 +   // 2.5²
+      (lat - a.lat) ** 2 * 2.25 +   // 1.5²
+      (dep - a.dep) ** 2 * 0.36,    // 0.6²
+    )
+    if (d < bestDist) { bestDist = d; best = a.name }
+  }
+
+  console.log('[Zone] →', best, '(dist:', +bestDist.toFixed(3), ')')
+  return best
 }
 
 function hexToRgba(hex, alpha) {
@@ -70,9 +190,55 @@ class CanvasEB extends Component {
   render() { return this.state.err ? this.props.fallback : this.props.children }
 }
 
+/* ─── Annotation flèche (outil Point) ───────────────────── */
+
+function ArrowAnnotation({ id, position, labelPos, color, zone, tool, onRemove }) {
+  const lineGeom = useMemo(() => {
+    const g = new THREE.BufferGeometry()
+    g.setFromPoints([new THREE.Vector3(...position), new THREE.Vector3(...labelPos)])
+    return g
+  }, [position, labelPos])
+
+  const handleEraseClick = e => {
+    if (tool === 'effacer') { e.stopPropagation(); onRemove(id) }
+  }
+
+  return (
+    <group onClick={handleEraseClick}>
+      {/* Point de contact sur le corps */}
+      <mesh position={position}>
+        <sphereGeometry args={[0.004, 8, 8]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {/* Trait de liaison */}
+      <line geometry={lineGeom}>
+        <lineBasicMaterial color={color} linewidth={1} />
+      </line>
+      {/* Label HTML (toujours lisible, rendu par-dessus le canvas) */}
+      <Html position={labelPos} center style={{ pointerEvents: 'none' }}>
+        <div style={{
+          background: color,
+          color: '#fff',
+          fontSize: 9,
+          fontWeight: 700,
+          padding: '2px 7px',
+          borderRadius: 3,
+          whiteSpace: 'nowrap',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+          fontFamily: 'inherit',
+          userSelect: 'none',
+          letterSpacing: '.02em',
+        }}>
+          {zone}
+        </div>
+      </Html>
+    </group>
+  )
+}
+
 /* ─── 3D : mesh GLTF + points d'annotation ─────────────── */
 
-function BodyMesh({ annots, onAdd, onRemove, tool, color, dotSize, modelHeightRef }) {
+function BodyMesh({ annots, onAdd, onRemove, tool, color, dotSize, modelHeightRef, onFitDist, onBbox }) {
   const { scene } = useGLTF('/models/corps/scene.gltf')
 
   useEffect(() => {
@@ -89,37 +255,113 @@ function BodyMesh({ annots, onAdd, onRemove, tool, color, dotSize, modelHeightRe
         -center.z * scale,
       )
       if (modelHeightRef) modelHeightRef.current = size.y * scale
+
+      // Log hiérarchie de meshes — utile pour vérifier les noms anatomiques du GLTF
+      const meshNames = []
+      scene.traverse(obj => { if (obj.isMesh) meshNames.push(obj.name || '(sans nom)') })
+      console.log('[BodyMesh] Meshes dans la hiérarchie GLTF:', meshNames)
+
+      // Bounding box du modèle après scale (coordonnées world réelles)
+      const scaledBox = new THREE.Box3().setFromObject(scene)
+      const scaledSize = new THREE.Vector3()
+      scaledBox.getSize(scaledSize)
+      const upAxis = detectUpAxis(scaledSize)
+
+      console.log('[BodyMesh] Bounding box scalée:', {
+        x: +scaledSize.x.toFixed(4),
+        y: +scaledSize.y.toFixed(4),
+        z: +scaledSize.z.toFixed(4),
+        upAxis,
+      })
+
+      onBbox?.({
+        min:    scaledBox.min.clone(),
+        max:    scaledBox.max.clone(),
+        size:   scaledSize.clone(),
+        upAxis,
+      })
+
+      const sphere = new THREE.Sphere()
+      scaledBox.getBoundingSphere(sphere)
+      console.log('[BodyMesh] Rayon sphère englobante:', +sphere.radius.toFixed(4))
+
+      const fovRad = CAM_FOV * Math.PI / 180
+      const fitDist = (sphere.radius / Math.sin(fovRad / 2)) * 1.5
+      console.log('[BodyMesh] Distance caméra calculée (marge 50%):', +fitDist.toFixed(3))
+
+      onFitDist?.(fitDist)
     }
   }, [scene])
 
   function handleClick(e) {
     e.stopPropagation()
     if (tool === 'effacer') return
+
     const nw = e.face?.normal.clone().transformDirection(e.object.matrixWorld)
     const p = e.point
-    const pos = nw
-      ? [p.x + nw.x * 0.012, p.y + nw.y * 0.012, p.z + nw.z * 0.012]
-      : [p.x, p.y, p.z]
-    const r = tool === 'zone' ? dotSize * 2.2 : dotSize
-    onAdd({
-      id: Date.now(), position: pos, color, radius: r,
-      label: PALETTE.find(pl => pl.color === color)?.label ?? '',
-    })
+
+    if (CALIBRATION_MODE) {
+      const name = window.prompt('Nom de la zone ?', '')
+      if (!name) return
+      _calibPts.push({ name, x: +p.x.toFixed(5), y: +p.y.toFixed(5), z: +p.z.toFixed(5) })
+      console.log('// ── Ancres calibrées (' + _calibPts.length + ' pts) ──')
+      console.log(JSON.stringify(_calibPts, null, 2))
+      return
+    }
+
+    if (tool === 'point') {
+      // Point de contact légèrement en surface
+      const pos = nw
+        ? [p.x + nw.x * 0.006, p.y + nw.y * 0.006, p.z + nw.z * 0.006]
+        : [p.x, p.y, p.z]
+
+      // Label poussé latéralement vers le bord du corps + légèrement en avant
+      const lateralDir = Math.sign(p.x) || 1
+      const labelPos = [
+        lateralDir * Math.max(Math.abs(p.x) + 0.07, 0.09),
+        p.y,
+        p.z + 0.04,
+      ]
+
+      onAdd({
+        id: Date.now(), type: 'arrow',
+        position: pos, labelPos,
+        color,
+        label: PALETTE.find(pl => pl.color === color)?.label ?? '',
+      })
+    } else {
+      // Zone : sphère existante
+      const pos = nw
+        ? [p.x + nw.x * 0.012, p.y + nw.y * 0.012, p.z + nw.z * 0.012]
+        : [p.x, p.y, p.z]
+      onAdd({
+        id: Date.now(), type: 'zone',
+        position: pos, color,
+        radius: dotSize * 2.2,
+        label: PALETTE.find(pl => pl.color === color)?.label ?? '',
+      })
+    }
   }
 
   return (
     <>
       <primitive object={scene} onClick={handleClick} />
-      {annots.map(a => (
-        <mesh
-          key={a.id}
-          position={a.position}
-          onClick={e => { if (tool === 'effacer') { e.stopPropagation(); onRemove(a.id) } }}
-        >
-          <sphereGeometry args={[a.radius, 20, 20]} />
-          <meshStandardMaterial color={a.color} transparent opacity={0.82} />
-        </mesh>
-      ))}
+      {annots.map(a => a.type === 'arrow'
+        ? <ArrowAnnotation
+            key={a.id}
+            id={a.id} position={a.position} labelPos={a.labelPos}
+            color={a.color} zone={a.zone}
+            tool={tool} onRemove={onRemove}
+          />
+        : <mesh
+            key={a.id}
+            position={a.position}
+            onClick={e => { if (tool === 'effacer') { e.stopPropagation(); onRemove(a.id) } }}
+          >
+            <sphereGeometry args={[a.radius, 20, 20]} />
+            <meshStandardMaterial color={a.color} transparent opacity={0.82} />
+          </mesh>
+      )}
     </>
   )
 }
@@ -132,14 +374,27 @@ export default function NouvelleSeance() {
   const orbitRef       = useRef()
   const cameraRef      = useRef(null)
   const modelHeightRef = useRef(0.3)
+  const fitDistRef     = useRef(null)
+  const bboxRef        = useRef(null)
+  const [orbitBounds,  setOrbitBounds]  = useState({ min: 0.5, max: 20 })
 
   /* Client */
-  const [prenom,        setPrenom]        = useState('')
-  const [nom,           setNom]           = useState('')
-  const [genre,         setGenre]         = useState('')
-  const [tel,           setTel]           = useState('')
-  const [email,         setEmail]         = useState('')
-  const [dateNaissance, setDateNaissance] = useState('')
+  const [clientSearch,      setClientSearch]      = useState('')       // champ de recherche combiné
+  const [prenom,            setPrenom]            = useState('')       // payload only
+  const [nom,               setNom]               = useState('')       // payload only
+  const [genre,             setGenre]             = useState('')
+  const [tel,               setTel]               = useState('')
+  const [email,             setEmail]             = useState('')
+  const [dateNaissance,     setDateNaissance]     = useState('')
+  const [selectedClientId,  setSelectedClientId]  = useState(null)
+  const [clientSuggestions, setClientSuggestions] = useState([])
+  const [showSuggestions,   setShowSuggestions]   = useState(false)
+  const clientInputRef  = useRef(null)
+  const [dropdownRect,  setDropdownRect]  = useState(null)
+
+  /* Fleurs de Bach */
+  const [etatsCoches, setEtatsCoches] = useState([])
+  const [fleurs,      setFleurs]      = useState([])
 
   /* Séance */
   const today = new Date().toISOString().slice(0, 10)
@@ -149,22 +404,83 @@ export default function NouvelleSeance() {
   const [prix,  setPrix]  = useState('')
   const [type,  setType]  = useState('Sophrologie')
 
-  /* Historique client */
+  /* Position fixe du dropdown (échappe overflow:auto du scroll container) */
+  useLayoutEffect(() => {
+    if (showSuggestions && clientInputRef.current) {
+      setDropdownRect(clientInputRef.current.getBoundingClientRect())
+    } else {
+      setDropdownRect(null)
+    }
+  }, [showSuggestions, clientSuggestions.length])
+
+  /* Autocomplete client — deux ilike parallèles (évite .or() + encodage %) */
+  useEffect(() => {
+    if (selectedClientId) return
+    const term = clientSearch.trim()
+    if (term.length < 2) { setClientSuggestions([]); setShowSuggestions(false); return }
+    const t = setTimeout(async () => {
+      // Colonnes de base garanties dans le schéma initial
+      const BASE_SELECT = 'id, prenom, nom, tel, email, ville'
+      // Colonnes ajoutées par migration 20260620130000 — incluses si disponibles
+      const FULL_SELECT = `${BASE_SELECT}, date_naissance, genre`
+
+      const [resPrenom, resNom] = await Promise.all([
+        supabase.from('clients').select(FULL_SELECT).ilike('prenom', `%${term}%`).limit(5),
+        supabase.from('clients').select(FULL_SELECT).ilike('nom',    `%${term}%`).limit(5),
+      ])
+
+      // Debug — à retirer une fois le bug confirmé corrigé
+      console.log('résultats recherche client:', {
+        term,
+        byPrenom: resPrenom.data,
+        byNom:    resNom.data,
+        errPrenom: resPrenom.error,
+        errNom:    resNom.error,
+      })
+
+      // Si colonnes manquantes → fallback sans date_naissance / genre
+      const byPrenom = resPrenom.data ?? (resPrenom.error
+        ? (await supabase.from('clients').select(BASE_SELECT).ilike('prenom', `%${term}%`).limit(5)).data
+        : [])
+      const byNom = resNom.data ?? (resNom.error
+        ? (await supabase.from('clients').select(BASE_SELECT).ilike('nom', `%${term}%`).limit(5)).data
+        : [])
+
+      const seen = new Set()
+      const merged = [...(byPrenom || []), ...(byNom || [])].filter(c => {
+        if (seen.has(c.id)) return false
+        seen.add(c.id); return true
+      }).slice(0, 8)
+      setClientSuggestions(merged)
+      setShowSuggestions(merged.length > 0)
+    }, 250)
+    return () => clearTimeout(t)
+  }, [clientSearch, selectedClientId])
+
+  /* Historique client — priorité client_id, fallback prenom+nom */
   const [history, setHistory] = useState([])
   useEffect(() => {
-    if (!prenom.trim() || !nom.trim()) { setHistory([]); return }
     const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from('seances')
-        .select('*')
-        .ilike('prenom', prenom.trim())
-        .ilike('nom', nom.trim())
-        .order('date_seance', { ascending: false })
-        .limit(10)
-      setHistory(data || [])
-    }, 500)
+      if (selectedClientId) {
+        const { data } = await supabase
+          .from('seances')
+          .select('*')
+          .eq('client_id', selectedClientId)
+          .order('date_seance', { ascending: false })
+          .limit(10)
+        setHistory(data || [])
+      } else if (prenom.trim() || nom.trim()) {
+        let q = supabase.from('seances').select('*').order('date_seance', { ascending: false }).limit(10)
+        if (prenom.trim()) q = q.ilike('prenom', `%${prenom.trim()}%`)
+        if (nom.trim())    q = q.ilike('nom',    `%${nom.trim()}%`)
+        const { data } = await q
+        setHistory(data || [])
+      } else {
+        setHistory([])
+      }
+    }, 400)
     return () => clearTimeout(t)
-  }, [prenom, nom])
+  }, [selectedClientId, prenom, nom])
 
   /* 3D */
   const [activeView, setActiveView] = useState('front')
@@ -191,20 +507,35 @@ export default function NouvelleSeance() {
 
   /* ─ Handlers ─ */
 
+  function handleBbox(bbox) {
+    bboxRef.current = bbox
+  }
+
+  function handleFitDist(dist) {
+    fitDistRef.current = dist
+    const [dx, dy, dz] = CAM_DIR['front']
+    if (cameraRef.current) {
+      cameraRef.current.position.set(dx * dist, dy * dist, dz * dist)
+    }
+    if (orbitRef.current) orbitRef.current.update()
+    setOrbitBounds({ min: dist * 0.3, max: dist * 5 })
+  }
+
   function changeView(v) {
     setActiveView(v)
-    if (orbitRef.current) {
-      const [x, y, z] = CAM_POS[v]
-      orbitRef.current.object.position.set(x, y, z)
+    const dist = fitDistRef.current
+    if (orbitRef.current && dist) {
+      const [dx, dy, dz] = CAM_DIR[v]
+      orbitRef.current.object.position.set(dx * dist, dy * dist, dz * dist)
       orbitRef.current.target.set(0, 0, 0)
       orbitRef.current.update()
     }
   }
 
   function addAnnot(a) {
-    setAnnots(prev => [...prev, a])
-    const zone       = getZone(a.position[1], modelHeightRef.current)
+    const zone       = getNearestAnchor(a.position, bboxRef.current)
     const colorLabel = COLOR_LABELS[a.color] ?? a.label
+    setAnnots(prev => [...prev, { ...a, zone }])
     setNotes(prev => [{
       id:      a.id,
       color:   a.color,
@@ -257,32 +588,65 @@ export default function NouvelleSeance() {
     setHeure('')
   }
 
-  async function syncClient(userId) {
+  const GENRE_REVERSE = { Homme: 'H', Femme: 'F', Autre: 'A' }
+  const GENRE_MAP     = { H: 'Homme', F: 'Femme', A: 'Autre' }
+
+  function selectClient(c) {
+    const fullName = `${c.prenom || ''} ${c.nom || ''}`.trim()
+    setClientSearch(fullName)
+    setPrenom(c.prenom || '')
+    setNom(c.nom || '')
+    setTel(c.tel || '')
+    setEmail(c.email || '')
+    setDateNaissance(c.date_naissance || '')
+    setGenre(GENRE_REVERSE[c.genre] || '')
+    setSelectedClientId(c.id)
+    setShowSuggestions(false)
+    setClientSuggestions([])
+  }
+
+  function clearClientSelection() {
+    setClientSearch('')
+    setPrenom('')
+    setNom('')
+    setTel('')
+    setEmail('')
+    setDateNaissance('')
+    setGenre('')
+    setSelectedClientId(null)
+  }
+
+  /* Trouve ou crée le client, retourne son id (non-bloquant en cas d'erreur) */
+  async function resolveClientId(userId) {
     try {
-      const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
-      let query = supabase.from('clients').select('id').limit(1)
+      if (selectedClientId) {
+        await supabase.from('clients').update({ derniere_seance: date }).eq('id', selectedClientId)
+        return selectedClientId
+      }
+      if (!prenom.trim() && !nom.trim()) return null
+      let query = supabase.from('clients').select('id').eq('user_id', userId).limit(1)
       if (email?.trim()) {
         query = query.ilike('email', email.trim())
       } else {
         query = query.ilike('prenom', prenom.trim()).ilike('nom', nom.trim())
       }
       const { data: existing } = await query
-      if (!existing || existing.length === 0) {
-        await supabase.from('clients').insert({
-          user_id:        userId,
-          prenom,
-          nom,
-          email:          email || null,
-          telephone:      tel || null,
-          date_naissance: dateNaissance || null,
-          genre:          GENRE_MAP[genre] || null,
-          date_creation:  new Date().toISOString(),
-        })
-      } else {
+      if (existing && existing.length > 0) {
         await supabase.from('clients').update({ derniere_seance: date }).eq('id', existing[0].id)
+        return existing[0].id
       }
+      const { data: created } = await supabase.from('clients').insert({
+        user_id:        userId,
+        prenom:         prenom.trim(),
+        nom:            nom.trim(),
+        email:          email || null,
+        tel:            tel || null,
+        date_naissance: dateNaissance || null,
+        genre:          GENRE_MAP[genre] || null,
+      }).select('id').single()
+      return created?.id || null
     } catch {
-      // sync CRM non bloquant
+      return null
     }
   }
 
@@ -294,14 +658,24 @@ export default function NouvelleSeance() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
 
-      const GENRE_MAP = { H: 'Homme', F: 'Femme', A: 'Autre' }
-      const validTags = tags.filter(t => PRESET_TAGS.includes(t))
+      // Si champ combiné renseigné sans client lié, split "Prénom Nom"
+      let savePrenom = prenom
+      let saveNom    = nom
+      if (!selectedClientId && !prenom && !nom && clientSearch.trim()) {
+        const parts = clientSearch.trim().split(/\s+/)
+        savePrenom  = parts[0] || ''
+        saveNom     = parts.slice(1).join(' ') || ''
+      }
+
+      const clientId       = await resolveClientId(user.id)
       const premiereSeance = history.length === 0
+      const zonesCorps     = [...new Set(notes.filter(n => n.auto && n.zone).map(n => n.zone))]
 
       const payload = {
         user_id:            user.id,
-        prenom,
-        nom,
+        client_id:          clientId || null,
+        prenom:             savePrenom,
+        nom:                saveNom,
         genre:              GENRE_MAP[genre] || null,
         tel:                tel || null,
         email:              email || null,
@@ -312,9 +686,11 @@ export default function NouvelleSeance() {
         prix_euros:         parseFloat(prix) || null,
         type_seance:        type,
         schema_annotations: annots.length ? annots : null,
-        zones_corps:        (() => { const z = [...new Set(notes.filter(n => n.auto && n.zone).map(n => n.zone))]; return z.length ? z : null })(),
+        zones_corps:        zonesCorps.length ? zonesCorps : null,
         notes:              notes.map(n => n.text).join('\n') || null,
-        tags:               validTags.length ? validTags : null,
+        tags:               tags.length ? tags : null,
+        // etats_coches: colonne existante mais non utilisée ici
+        fleurs_bach:        fleurs.length ? fleurs : null,
         date_creation:      new Date().toISOString(),
         premiere_seance:    premiereSeance,
       }
@@ -322,12 +698,11 @@ export default function NouvelleSeance() {
       const { error } = await supabase.from('seances').insert(payload)
 
       if (error) {
-        console.error('Erreur Supabase:', error)
+        console.error('Erreur Supabase:', error.message, '| code:', error.code, '| details:', error.details, '| hint:', error.hint)
         setSaveError(error.message)
         setSaveStatus('err')
         setSaving(false)
       } else {
-        await syncClient(user.id)
         setSaveStatus('ok')
         setTimeout(() => navigate('/seances'), 1400)
       }
@@ -388,15 +763,95 @@ export default function NouvelleSeance() {
               {/* ── Section 1 : Informations du client ── */}
               <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>Informations du client</div>
 
-              <div style={{ display: 'flex', gap: 6, ...gap }}>
-                <div style={{ flex: 1 }}>
-                  <label style={lbl}>Prénom</label>
-                  <input style={inp} value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Prénom" />
+              {/* ── Champ de recherche client combiné ── */}
+              <div style={{ ...gap, position: 'relative' }}>
+                <label style={lbl}>
+                  Client
+                  {selectedClientId && (
+                    <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, background: '#dcfce7', color: '#16a34a', padding: '1px 6px', borderRadius: 8 }}>
+                      ✓ Client lié
+                    </span>
+                  )}
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    ref={clientInputRef}
+                    style={{ ...inp, paddingRight: selectedClientId ? 28 : inp.padding }}
+                    value={clientSearch}
+                    onChange={e => {
+                      setClientSearch(e.target.value)
+                      setSelectedClientId(null)
+                      setPrenom('')
+                      setNom('')
+                    }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                    onFocus={() => clientSuggestions.length > 0 && setShowSuggestions(true)}
+                    placeholder="Prénom Nom (ex: Marie Dupont)"
+                    autoComplete="off"
+                  />
+                  {selectedClientId && (
+                    <button
+                      onMouseDown={clearClientSelection}
+                      style={{
+                        position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer',
+                        fontSize: 14, lineHeight: 1, padding: 0,
+                      }}
+                      title="Délier le client"
+                    >×</button>
+                  )}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={lbl}>Nom</label>
-                  <input style={inp} value={nom} onChange={e => setNom(e.target.value)} placeholder="Nom" />
-                </div>
+                {/* Dropdown rendu via Portal pour échapper au overflow:auto parent */}
+                {showSuggestions && clientSuggestions.length > 0 && dropdownRect && createPortal(
+                  <div style={{
+                    position: 'fixed',
+                    top:   dropdownRect.bottom + 2,
+                    left:  dropdownRect.left,
+                    width: dropdownRect.width,
+                    zIndex: 9999,
+                    background: '#fff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 4,
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                    overflow: 'hidden',
+                  }}>
+                    {clientSuggestions.map(c => (
+                      <div
+                        key={c.id}
+                        onMouseDown={() => selectClient(c)}
+                        style={{ padding: '7px 10px', cursor: 'pointer', fontSize: 12, color: '#111827', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 6 }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                        onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                      >
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#e8f4fd', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <i className="ti ti-user" style={{ fontSize: 13, color: '#1a2744' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div>
+                            <span style={{ fontWeight: 600 }}>{c.prenom}</span>{' '}
+                            <span>{c.nom}</span>
+                            {c.ville && <span style={{ marginLeft: 6, fontSize: 10, color: '#6b7280' }}>{c.ville}</span>}
+                          </div>
+                          {c.email && <div style={{ fontSize: 10, color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>,
+                  document.body
+                )}
+                {/* Prénom / Nom séparés pour nouveau client */}
+                {!selectedClientId && clientSearch.trim().length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...lbl, color: '#9ca3af' }}>Prénom</label>
+                      <input style={inp} value={prenom} onChange={e => setPrenom(e.target.value)} placeholder="Prénom" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ ...lbl, color: '#9ca3af' }}>Nom</label>
+                      <input style={inp} value={nom} onChange={e => setNom(e.target.value)} placeholder="Nom" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={gap}>
@@ -462,7 +917,7 @@ export default function NouvelleSeance() {
               <div style={{ ...gap, marginBottom: 16 }}>
                 <label style={lbl}>Type de séance</label>
                 <select style={sel} value={type} onChange={e => setType(e.target.value)}>
-                  {['Sophrologie','Naturopathie','Coaching','Énergie','Massage','Autre'].map(t => (
+                  {['Sophrologie','Naturopathie','Coaching','Énergie','Fleurs de Bach','Massage','Autre'].map(t => (
                     <option key={t} value={t} style={{ background: '#fff' }}>{t}</option>
                   ))}
                 </select>
@@ -615,7 +1070,7 @@ export default function NouvelleSeance() {
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0 }}>
             <Canvas
               key={canvasKey}
-              camera={{ position: CAM_POS['front'], fov: 20 }}
+              camera={{ position: [0, 0, 3], fov: CAM_FOV }}
               onCreated={({ gl, camera }) => {
                 cameraRef.current = camera
                 gl.domElement.addEventListener('webglcontextlost', e => {
@@ -633,8 +1088,8 @@ export default function NouvelleSeance() {
                 ref={orbitRef}
                 enableZoom={true}
                 enablePan={false}
-                minDistance={1}
-                maxDistance={100}
+                minDistance={orbitBounds.min}
+                maxDistance={orbitBounds.max}
                 target={[0, 0, 0]}
               />
               <CanvasEB fallback={
@@ -658,6 +1113,8 @@ export default function NouvelleSeance() {
                     annots={annots} onAdd={addAnnot} onRemove={removeAnnot}
                     tool={tool} color={color} dotSize={dotSize}
                     modelHeightRef={modelHeightRef}
+                    onFitDist={handleFitDist}
+                    onBbox={handleBbox}
                   />
                 </Suspense>
               </CanvasEB>
@@ -682,8 +1139,11 @@ export default function NouvelleSeance() {
                 }
               }} style={{ width: 34, height: 34, background: 'rgba(26,39,68,0.9)', color: '#c9a84c', border: 'none', borderRadius: 4, fontSize: 20, cursor: 'pointer', fontWeight: 'bold' }}>−</button>
               <button onClick={() => {
-                if (cameraRef.current) {
-                  cameraRef.current.position.set(...CAM_POS[activeView])
+                const dist = fitDistRef.current
+                if (cameraRef.current && dist) {
+                  const [dx, dy, dz] = CAM_DIR[activeView]
+                  cameraRef.current.position.set(dx * dist, dy * dist, dz * dist)
+                  orbitRef.current?.update()
                 }
               }} style={{ width: 34, height: 34, background: 'rgba(26,39,68,0.9)', color: '#c9a84c', border: 'none', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>⟳</button>
             </div>

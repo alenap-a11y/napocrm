@@ -246,6 +246,8 @@ export default function Agenda() {
   /* ── Drag-and-drop ── */
   async function handleEventDrop({ event, revert }) {
     if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const ok = window.confirm(`Déplacer ce RDV au ${event.start.toLocaleString('fr-FR')} ?`)
+    if (!ok) { revert(); return }
     const { error } = await supabase
       .from('rendez_vous')
       .update({ date_rdv: event.start.toISOString() })
@@ -256,6 +258,20 @@ export default function Agenda() {
       return
     }
     insertNotif({ msg: 'RDV déplacé', icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
+  }
+
+  async function handleEventResize({ event, revert }) {
+    if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ date_rdv: event.start.toISOString() })
+      .eq('id', event.id)
+    if (error) {
+      revert()
+      insertNotif({ msg: 'Erreur lors du redimensionnement du RDV', icon: 'ti-alert-circle', iconColor: '#993556', bg: '#FBEAF0' })
+      return
+    }
+    insertNotif({ msg: 'RDV redimensionné', icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
   }
 
   /* ── Styles ── */
@@ -561,8 +577,11 @@ export default function Agenda() {
               slotMaxTime="20:00:00"
               allDaySlot={false}
               editable={true}
+              droppable={true}
+              snapDuration="00:15:00"
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
               eventDrop={handleEventDrop}
+              eventResize={handleEventResize}
               eventClick={info => {
                 if (info.event.extendedProps?.type === 'anniversaire') {
                   const { age } = info.event.extendedProps

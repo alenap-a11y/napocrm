@@ -29,7 +29,7 @@ export function useSearch(query) {
     const [{ data: clients }, { data: taches }] = await Promise.all([
       supabase
         .from('clients')
-        .select('id, prenom, nom, email, telephone')
+        .select('id, prenom, nom, email, tel')
         .or(`prenom.ilike.%${term}%,nom.ilike.%${term}%,email.ilike.%${term}%`)
         .limit(5),
       supabase
@@ -48,7 +48,7 @@ export function useSearch(query) {
       clients: (clients || []).map(c => ({
         id: c.id,
         name: `${c.prenom} ${c.nom}`,
-        sub: c.email || c.telephone || '',
+        sub: c.email || c.tel || '',
         icon: 'ti-user',
         tag: 'Client',
         nav: 'clients',
