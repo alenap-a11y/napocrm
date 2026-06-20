@@ -101,6 +101,18 @@ export function useSeancesSync() {
 
   async function addSeance(data) {
     if (!userId) return { error: 'Non connecté' }
+    if (data.date_seance && data.heure_seance) {
+      const { data: conflicts } = await supabase
+        .from('seances')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('date_seance', data.date_seance)
+        .eq('heure_seance', data.heure_seance)
+      if (conflicts && conflicts.length > 0) {
+        const confirmer = window.confirm('Un rendez-vous existe deja a ce creneau. Continuer quand meme ?')
+        if (!confirmer) return { error: null, cancelled: true }
+      }
+    }
     const { data: inserted, error } = await supabase
       .from('seances')
       .insert([{ ...data, user_id: userId }])
