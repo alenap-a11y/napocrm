@@ -695,6 +695,16 @@ export default function NouvelleSeance() {
         premiere_seance:    premiereSeance,
       }
 
+      const { data: conflicts } = await supabase
+        .from('seances')
+        .select('id')
+        .eq('user_id', payload.user_id)
+        .eq('date_seance', payload.date_seance)
+        .eq('heure_seance', payload.heure_seance)
+      if (conflicts && conflicts.length > 0) {
+        const confirmer = window.confirm('Un rendez-vous existe deja a ce creneau. Continuer quand meme ?')
+        if (!confirmer) { setSaving(false); return }
+      }
       const { error } = await supabase.from('seances').insert(payload)
 
       if (error) {

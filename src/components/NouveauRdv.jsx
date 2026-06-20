@@ -84,6 +84,16 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
 
       const client = clients.find(c => c.id === clientId)
 
+      const { data: conflicts } = await supabase
+        .from('seances')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('date_seance', date)
+        .eq('heure_seance', heure)
+      if (conflicts && conflicts.length > 0) {
+        const confirmer = window.confirm('Un rendez-vous existe deja a ce creneau. Continuer quand meme ?')
+        if (!confirmer) { setSaving(false); return }
+      }
       const { data: rdv, error } = await supabase
         .from('seances')
         .insert({
