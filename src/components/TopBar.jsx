@@ -1,17 +1,19 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import napopetit from '../assets/napopetitv1.png'
 import NotificationBell from './NotificationBell'
+import SearchBar from './SearchBar'
+import ModuleLauncher from './ModuleLauncher'
 
 export default function TopBar({
   tbItems, setTbItems,
   tbActif, setTbActif,
   accent,
   username, initials,
-  searchOpen, setSearchOpen,
   decoOpen, setDecoOpen,
   onNavigate,
 }) {
   const dragSrc = useRef(null)
+  const [launcherOpen, setLauncherOpen] = useState(false)
 
   function handleClick(item) {
     setTbActif(item.id)
@@ -44,11 +46,16 @@ export default function TopBar({
   const visibleItems = tbItems.filter(o => o.vis)
 
   return (
-    <div className="topbar">
-      <img src={napopetit} alt="Naposolo" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />
+    <div className="topbar" style={{ position: 'relative' }}>
+
+      <img
+        src={napopetit}
+        alt="Naposolo"
+        style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+      />
 
       <nav className="tb-nav" aria-label="Navigation principale">
-        {visibleItems.map((item, idx) => {
+        {visibleItems.map((item) => {
           const isActive = item.id === tbActif
           return (
             <button
@@ -72,16 +79,41 @@ export default function TopBar({
       </nav>
 
       <div className="tb-right">
-        <button className="tb-icon" aria-label="Rechercher"
-          onClick={e => { e.stopPropagation(); setSearchOpen(o => !o) }}>
-          <i className="ti ti-search" aria-hidden="true" />
-        </button>
+
+        <SearchBar onNavigate={onNavigate} />
 
         <NotificationBell />
 
         <div className="tb-sep-v" />
 
-        <button className="tb-profile" aria-label="Mon profil" onClick={() => onNavigate('profil')}>
+        <div style={{ position: 'relative' }}>
+          <button
+            className={`tb-icon${launcherOpen ? ' active' : ''}`}
+            aria-label="Modules"
+            title="Modules Naposolo"
+            onClick={() => setLauncherOpen(o => !o)}
+            style={{
+              background: launcherOpen ? 'var(--color-background-secondary)' : 'transparent',
+              border: launcherOpen ? '0.5px solid var(--color-border-secondary)' : '0.5px solid transparent',
+            }}
+          >
+            <i className="ti ti-grid-dots" aria-hidden="true" />
+          </button>
+
+          <ModuleLauncher
+            open={launcherOpen}
+            onClose={() => setLauncherOpen(false)}
+            onNavigate={onNavigate}
+          />
+        </div>
+
+        <div className="tb-sep-v" />
+
+        <button
+          className="tb-profile"
+          aria-label="Mon profil"
+          onClick={() => onNavigate('profil')}
+        >
           <div className="tb-av" style={{ color: accent }}>{initials}</div>
           <span className="tb-uname">{username}</span>
           <i className="ti ti-chevron-down" style={{ fontSize: 10, color: 'var(--color-text-tertiary)' }} aria-hidden="true" />
@@ -89,10 +121,15 @@ export default function TopBar({
 
         <div className="tb-sep-v" />
 
-        <button className="tb-deco" aria-label="Se déconnecter" title="Se déconnecter"
-          onClick={() => setDecoOpen(true)}>
+        <button
+          className="tb-deco"
+          aria-label="Se déconnecter"
+          title="Se déconnecter"
+          onClick={() => setDecoOpen(true)}
+        >
           <i className="ti ti-power" aria-hidden="true" />
         </button>
+
       </div>
     </div>
   )

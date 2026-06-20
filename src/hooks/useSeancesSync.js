@@ -1,6 +1,53 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
+/* ─── Rendez-vous ─────────────────────────────────────────── */
+
+export function useRendezVousSync() {
+  const [rdvs,    setRdvs]    = useState([])
+  const [loading, setLoading] = useState(true)
+  const [userId,  setUserId]  = useState(null)
+
+  const fetchRdvs = useCallback(async (uid) => {
+    const id = uid || userId
+    if (!id) return
+    setLoading(true)
+    const { data } = await supabase
+      .from('rendez_vous')
+      .select('id, date_rdv, type_seance, statut, notes, client_id, clients(nom, prenom)')
+      .eq('user_id', id)
+      .order('date_rdv', { ascending: true })
+    setRdvs(data || [])
+    setLoading(false)
+  }, [userId])
+
+  useEffect(() => {
+    let channel
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserId(user.id)
+      await fetchRdvs(user.id)
+
+      channel = supabase
+        .channel(`rdv-sync-${user.id}-${Date.now()}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'rendez_vous',
+          filter: `user_id=eq.${user.id}`,
+        }, () => fetchRdvs(user.id))
+        .subscribe()
+    }
+    init()
+    return () => { if (channel) supabase.removeChannel(channel) }
+  }, [])
+
+  return { rdvs, loading, userId, fetchRdvs }
+}
+
+/* ─── Séances ─────────────────────────────────────────────── */
+
 export function useSeancesSync() {
   const [seances, setSeances] = useState([])
   const [loading, setLoading] = useState(false)

@@ -87,9 +87,12 @@ export default function AppShell({ user, onSignOut }) {
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
   const [curView, setCurView] = useState('dash')
-  const [accent, setAccent] = useState('#B8961E')
-  const [bgCol, setBgCol] = useState('#1E1A4E')
-  const [widgets, setWidgets] = useState(DEFAULT_WIDGETS)
+  const [accent, setAccent] = useState(() => localStorage.getItem('napo_accent') || '#B8961E')
+  const [bgCol, setBgCol] = useState(() => localStorage.getItem('napo_bgcol') || '#1E1A4E')
+  const [widgets, setWidgets] = useState(() => {
+    const saved = localStorage.getItem('napo_widgets')
+    return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
+  })
   const [activePanel, setActivePanel] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [decoOpen, setDecoOpen] = useState(false)
@@ -179,7 +182,16 @@ export default function AppShell({ user, onSignOut }) {
 
   useEffect(() => {
     document.documentElement.style.setProperty('--color-accent', accent)
+    localStorage.setItem('napo_accent', accent)
   }, [accent])
+
+  useEffect(() => {
+    localStorage.setItem('napo_bgcol', bgCol)
+  }, [bgCol])
+
+  useEffect(() => {
+    localStorage.setItem('napo_widgets', JSON.stringify(widgets))
+  }, [widgets])
 
   useEffect(() => {
     localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))

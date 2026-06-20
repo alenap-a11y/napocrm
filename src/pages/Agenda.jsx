@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useRendezVousSync } from '../hooks/useSeancesSync'
 import { insertNotif } from '../lib/notif'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -93,9 +94,8 @@ export default function Agenda() {
   const [year,      setYear]      = useState(today.getFullYear())
   const [fcTitle,   setFcTitle]   = useState('')
 
-  const [rdvs,         setRdvs]         = useState([])
+  const { rdvs, loading, fetchRdvs } = useRendezVousSync()
   const [clientsAll,   setClientsAll]   = useState([])
-  const [loading,      setLoading]      = useState(true)
   const [detail,       setDetail]       = useState(null)
   const [selectedDate, setSelectedDate] = useState(todayStr)
 
@@ -108,21 +108,7 @@ export default function Agenda() {
   const [editSaving, setEditSaving] = useState(false)
 
   /* ── Chargement ── */
-  useEffect(() => { fetchRdvs(); fetchClients() }, [])
-
-  async function fetchRdvs() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('rendez_vous')
-        .select('id, date_rdv, type_seance, statut, notes, client_id, clients(nom, prenom)')
-        .eq('user_id', user.id)
-        .order('date_rdv', { ascending: true })
-      setRdvs(data || [])
-    } catch {}
-    setLoading(false)
-  }
+  useEffect(() => { fetchClients() }, [])
 
   async function fetchClients() {
     try {
@@ -254,7 +240,38 @@ export default function Agenda() {
   /* ── Suppression ── */
   async function deleteRdv(id) {
     const { error } = await supabase.from('rendez_vous').delete().eq('id', id)
-    if (!error) { setRdvs(prev => prev.filter(r => r.id !== id)); setDetail(null) }
+    if (!error) setDetail(null)
+  }
+
+  /* ── Drag-and-drop ── */
+  async function handleEventDrop({ event, revert }) {
+    if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const ok = window.confirm(`Déplacer ce RDV au ${event.start.toLocaleString('fr-FR')} ?`)
+    if (!ok) { revert(); return }
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ date_rdv: event.start.toISOString() })
+      .eq('id', event.id)
+    if (error) {
+      revert()
+      insertNotif({ msg: 'Erreur lors du déplacement du RDV', icon: 'ti-alert-circle', iconColor: '#993556', bg: '#FBEAF0' })
+      return
+    }
+    insertNotif({ msg: 'RDV déplacé', icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
+  }
+
+  async function handleEventResize({ event, revert }) {
+    if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ date_rdv: event.start.toISOString() })
+      .eq('id', event.id)
+    if (error) {
+      revert()
+      insertNotif({ msg: 'Erreur lors du redimensionnement du RDV', icon: 'ti-alert-circle', iconColor: '#993556', bg: '#FBEAF0' })
+      return
+    }
+    insertNotif({ msg: 'RDV redimensionné', icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
   }
 
   /* ── Styles ── */
@@ -559,7 +576,12 @@ export default function Agenda() {
               slotMinTime="08:00:00"
               slotMaxTime="20:00:00"
               allDaySlot={false}
+              editable={true}
+              droppable={true}
+              snapDuration="00:15:00"
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              eventDrop={handleEventDrop}
+              eventResize={handleEventResize}
               eventClick={info => {
                 if (info.event.extendedProps?.type === 'anniversaire') {
                   const { age } = info.event.extendedProps

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useRendezVousSync } from '../hooks/useSeancesSync'
 import { insertNotif } from '../lib/notif'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -9,6 +10,7 @@ import frLocale from '@fullcalendar/core/locales/fr'
 import NouveauRdv from '../components/NouveauRdv'
 import SeanceNotesPreview from '../components/SeanceNotesPreview'
 import NotesDuJour from '../components/NotesDuJour'
+import { getAnniversairesClients } from '../utils/anniversaires'
 
 /* ─── Constantes ─────────────────────────────────────────── */
 
@@ -86,14 +88,14 @@ const EMPTY_EDIT = { clientId: '', date: todayStr, heure: '10:00', typeSeance: '
 
 export default function Agenda() {
   const calRef = useRef(null)
+  const noteOpenRef = useRef(false)
 
   const [view,      setView]      = useState('mois')
   const [year,      setYear]      = useState(today.getFullYear())
   const [fcTitle,   setFcTitle]   = useState('')
 
-  const [rdvs,         setRdvs]         = useState([])
+  const { rdvs, loading, fetchRdvs } = useRendezVousSync()
   const [clientsAll,   setClientsAll]   = useState([])
-  const [loading,      setLoading]      = useState(true)
   const [detail,       setDetail]       = useState(null)
   const [selectedDate, setSelectedDate] = useState(todayStr)
 
@@ -106,21 +108,7 @@ export default function Agenda() {
   const [editSaving, setEditSaving] = useState(false)
 
   /* ── Chargement ── */
-  useEffect(() => { fetchRdvs(); fetchClients() }, [])
-
-  async function fetchRdvs() {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('rendez_vous')
-        .select('id, date_rdv, type_seance, statut, notes, client_id, clients(nom, prenom)')
-        .eq('user_id', user.id)
-        .order('date_rdv', { ascending: true })
-      setRdvs(data || [])
-    } catch {}
-    setLoading(false)
-  }
+  useEffect(() => { fetchClients() }, [])
 
   async function fetchClients() {
     try {
@@ -128,7 +116,7 @@ export default function Agenda() {
       if (!user) return
       const { data } = await supabase
         .from('clients')
-        .select('id, nom, prenom')
+        .select('id, nom, prenom, date_naissance')
         .eq('user_id', user.id)
         .order('nom')
       setClientsAll(data || [])
@@ -158,6 +146,8 @@ export default function Agenda() {
       extendedProps: { rdv },
     }
   })
+
+  const anniversaireEvents = getAnniversairesClients(clientsAll, today.getFullYear(), today.getFullYear() + 1)
 
   /* ── Navigation ── */
   function switchView(newView) {
@@ -250,7 +240,22 @@ export default function Agenda() {
   /* ── Suppression ── */
   async function deleteRdv(id) {
     const { error } = await supabase.from('rendez_vous').delete().eq('id', id)
-    if (!error) { setRdvs(prev => prev.filter(r => r.id !== id)); setDetail(null) }
+    if (!error) setDetail(null)
+  }
+
+  /* ── Drag-and-drop ── */
+  async function handleEventDrop({ event, revert }) {
+    if (event.extendedProps?.type === 'anniversaire') { revert(); return }
+    const { error } = await supabase
+      .from('rendez_vous')
+      .update({ date_rdv: event.start.toISOString() })
+      .eq('id', event.id)
+    if (error) {
+      revert()
+      insertNotif({ msg: 'Erreur lors du déplacement du RDV', icon: 'ti-alert-circle', iconColor: '#993556', bg: '#FBEAF0' })
+      return
+    }
+    insertNotif({ msg: 'RDV déplacé', icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
   }
 
   /* ── Styles ── */
@@ -551,18 +556,28 @@ export default function Agenda() {
               firstDay={1}
               headerToolbar={false}
               height="100%"
-              events={fcEvents}
+              events={fcEvents.concat(anniversaireEvents)}
               slotMinTime="08:00:00"
               slotMaxTime="20:00:00"
               allDaySlot={false}
+              editable={true}
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              eventDrop={handleEventDrop}
               eventClick={info => {
+                if (info.event.extendedProps?.type === 'anniversaire') {
+                  const { age } = info.event.extendedProps
+                  const name = info.event.title.replace('🎂 Anniversaire de ', '')
+                  alert(`🎂 ${name} fête ses ${age} ans !`)
+                  return
+                }
                 const rdv = info.event.extendedProps.rdv
                 setDetail(rdv)
                 setSelectedDate(rdv.date_rdv.slice(0, 10))
                 info.jsEvent.stopPropagation()
               }}
               dateClick={info => {
+                if (noteOpenRef.current) return;
+                if (info.jsEvent.target.closest('.notes-panel')) return;
                 const ds = info.dateStr.split('T')[0]
                 setSelectedDate(ds)
                 setDetail(null)
@@ -572,7 +587,7 @@ export default function Agenda() {
               dayCellContent={info => (
                 <>
                   <span>{info.dayNumberText}</span>
-                  <NotesDuJour date={toYMD(info.date)} />
+                  <NotesDuJour date={toYMD(info.date)} onNoteOpen={v => noteOpenRef.current = v} />
                 </>
               )}
             />

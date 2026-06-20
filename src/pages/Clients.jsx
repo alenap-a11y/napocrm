@@ -318,8 +318,8 @@ export default function Clients() {
           </div>
 
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, overflow: 'hidden', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-              {['Client','Email','Spécialité','Âge','Statut',''].map((h,i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 90px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+              {['Client','Email','Spécialité','Âge','Création','Statut',''].map((h,i) => (
                 <div key={i} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</div>
               ))}
             </div>
@@ -332,7 +332,7 @@ export default function Clients() {
               const stat = STATUT_STYLE[c.statut]   || STATUT_STYLE['inactif']
               return (
                 <div key={c.id} onClick={() => openDetail(c)}
-                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
+                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 90px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-primary)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -347,6 +347,7 @@ export default function Clients() {
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: spec.bg, color: spec.color, padding: '2px 8px', borderRadius: 20 }}>{c.specialite}</span></div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{age(c.date_naissance)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(c.date_creation)}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: stat.bg, color: stat.color, padding: '2px 8px', borderRadius: 20 }}>{stat.label}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button onClick={ev => { ev.stopPropagation(); downloadCSV(toCSV([c]), `client-${c.nom}.csv`) }}
