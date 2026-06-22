@@ -447,15 +447,28 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [filtreAnnee,     setFiltreAnnee]      = useState(new Date().getFullYear())
 
   useEffect(() => {
-    async function fetchMeteo() {
-      try {
-        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.69&longitude=6.18&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&timezone=Europe/Paris')
-        const d = await r.json()
-        setMeteoData(d.current)
-      } catch {}
+    function fetchMeteoCoords(lat, lon) {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&timezone=auto`)
+        .then(r => r.json())
+        .then(d => setMeteoData(d.current))
+        .catch(() => {})
     }
-    fetchMeteo()
-    const id = setInterval(fetchMeteo, 600000)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => fetchMeteoCoords(pos.coords.latitude, pos.coords.longitude),
+        ()  => fetchMeteoCoords(48.69, 6.18) // fallback Nancy
+      )
+    } else {
+      fetchMeteoCoords(48.69, 6.18)
+    }
+    const id = setInterval(() => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          pos => fetchMeteoCoords(pos.coords.latitude, pos.coords.longitude),
+          ()  => fetchMeteoCoords(48.69, 6.18)
+        )
+      }
+    }, 600000)
     return () => clearInterval(id)
   }, [])
 
