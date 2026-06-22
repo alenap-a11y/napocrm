@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
+import SlotPicker from './SlotPicker'
 
 const TYPES_SEANCE = [
   'Sophrologie', 'Naturopathie', 'Coaching',
-  'Énergie', 'Massage', 'Fleurs de Bach', 'Autre',
+  'Énergie', 'Massage', 'Fleurs de Bach', '3D Humain', 'Autre',
 ]
 
 const STATUTS = [
@@ -48,9 +49,27 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
   const [typeSeance, setTypeSeance] = useState('Sophrologie')
   const [statut,     setStatut]     = useState('planifié')
   const [notes,      setNotes]      = useState('')
+  const [duree,      setDuree]      = useState(60)
 
   const [saving, setSaving] = useState(false)
   const [msg,    setMsg]    = useState('')
+  const [seancesJour, setSeancesJour] = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
+
+  /* ── Chargement séances du jour ── */
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!date) return
+      setLoadingSlots(true)
+      const { data } = await supabase
+        .from('seances')
+        .select('id, heure_seance, duree_minutes')
+        .eq('date_seance', date)
+      setSeancesJour(data || [])
+      setLoadingSlots(false)
+    }
+    fetchSlots()
+  }, [date])
 
   /* ── Chargement de la liste clients ── */
   useEffect(() => {
@@ -106,7 +125,7 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
           notes:         notes.trim() || null,
           prenom:        client?.prenom || 'Client',
           nom:           client?.nom || 'non renseigné',
-          duree_minutes: 60,
+          duree_minutes: parseInt(duree, 10) || 60,
         })
         .select()
         .single()
@@ -173,16 +192,25 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
         </div>
         <div>
           <label style={lbl}>Heure</label>
-          <input
-            type="time"
+          <SlotPicker
             value={heure}
-            onChange={e => setHeure(e.target.value)}
-            required
-            style={inp}
+            onChange={h => setHeure(h)}
+            duree={parseInt(duree, 10) || 60}
+            seancesJour={seancesJour}
+            loading={loadingSlots}
           />
         </div>
       </div>
 
+      {/* Durée */}
+      <div>
+        <label style={lbl}>Durée (min)</label>
+        <select value={duree} onChange={e => setDuree(e.target.value)} style={inp}>
+          {[15, 30, 45, 60, 75, 90, 120].map(d => (
+            <option key={d} value={d}>{d} min</option>
+          ))}
+        </select>
+      </div>
       {/* Type de séance */}
       <div>
         <label style={lbl}>Type de séance</label>
