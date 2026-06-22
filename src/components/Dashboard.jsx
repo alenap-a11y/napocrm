@@ -53,6 +53,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [selectedDay, setSelectedDay] = useState(today)
   const [rdvList, setRdvList] = useState([])
+  const [notesList, setNotesList] = useState([])
 
   useEffect(() => {
     async function fetchRdv() {
@@ -65,6 +66,11 @@ function AgendaCalendrier({ accent, onNavigate }) {
       }))
     }
     fetchRdv()
+    async function fetchNotes() {
+      const { data } = await supabase.from('notes').select('id, contenu, created_at, seance_id').order('created_at', { ascending: true })
+      setNotesList(data || [])
+    }
+    fetchNotes()
   }, [])
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth)
@@ -78,6 +84,11 @@ function AgendaCalendrier({ accent, onNavigate }) {
   const rdvDuMois = rdvList.filter(
     r => r.date.getMonth() === currentMonth && r.date.getFullYear() === currentYear
   )
+
+  const notesDuJour = notesList.filter(n => {
+    const d = new Date(n.created_at)
+    return isSameDay(d, selectedDay)
+  })
 
   const hasRdv = (day) => rdvList.some(r =>
     r.date.getDate() === day &&
@@ -216,6 +227,22 @@ function AgendaCalendrier({ accent, onNavigate }) {
             </div>
           ))}
         </div>
+
+        {notesDuJour.length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500, marginBottom: 6 }}>NOTES</div>
+            {notesDuJour.map(n => (
+              <div
+                key={n.id}
+                onClick={() => onNavigate?.('/notes')}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8, background: '#FAEEDA', borderLeft: '3px solid #854F0B', cursor: 'pointer', marginBottom: 6 }}
+              >
+                <i className="ti ti-notebook" style={{ fontSize: 14, color: '#854F0B', flexShrink: 0, marginTop: 1 }} />
+                <div style={{ fontSize: 12, color: '#854F0B', lineHeight: 1.4 }}>{n.contenu.slice(0, 80)}{n.contenu.length > 80 ? '…' : ''}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {rdvDuJour.length > 0 && (
           <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
@@ -398,7 +425,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
         supabase.from('seances').select('*', { count: 'exact', head: true }).gte('date_seance', todayStr),
         supabase.from('notes').select('*', { count: 'exact', head: true }),
-        supabase.from('notes').select('*', { count: 'exact', head: true }),
       ]
 
       const [
@@ -409,6 +435,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         { data: newClients },
         { count: actifs },
         { count: avenir },
+        { count: notes },
       ] = await Promise.all(queries)
 
       setRecentSeances(recent || [])
@@ -519,33 +546,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           ))}
 
-          <div style={{ ...cardStyle, flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 8, background: '#D4537E18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <i className="ti ti-checkbox" style={{ fontSize: 16, color: '#D4537E' }} aria-hidden="true" />
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Tâches</span>
-            </div>
-            {taches.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
-                Aucune tâche en cours
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {taches.map(t => (
-                  <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <input type="checkbox" style={{ marginTop: 2, accentColor: '#D4537E', flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                        {t.clients?.prenom} {t.clients?.nom}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{t.contenu}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
       </div>
