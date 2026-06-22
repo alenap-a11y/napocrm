@@ -955,7 +955,7 @@ export default function NouvelleSeance() {
               <div style={{ ...gap, marginBottom: 16 }}>
                 <label style={lbl}>Type de séance</label>
                 <select style={sel} value={type} onChange={e => setType(e.target.value)}>
-                  {['Sophrologie','Naturopathie','Coaching','Énergie','Fleurs de Bach','Massage','Autre'].map(t => (
+                  {['Sophrologie','Naturopathie','Coaching','Énergie','Fleurs de Bach','Massage','3D Humain','Autre'].map(t => (
                     <option key={t} value={t} style={{ background: '#fff' }}>{t}</option>
                   ))}
                 </select>

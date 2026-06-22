@@ -15,7 +15,7 @@ import { getAnniversairesClients } from '../utils/anniversaires'
 
 /* ─── Constantes ─────────────────────────────────────────── */
 
-const TYPES = ['Sophrologie','Naturopathie','Coaching','Énergie','Massage','Fleurs de Bach','Autre']
+const TYPES = ['Sophrologie','Naturopathie','Coaching','Énergie','Massage','Fleurs de Bach','3D Humain','Autre']
 
 const STATUTS = [
   { value: 'planifié', label: 'Planifié' },

@@ -406,7 +406,7 @@ export default function FicheClients({ userId }) {
             <div>
               <span style={S.lbl}>Spécialité</span>
               <select style={S.inp} value={fSpecialite} onChange={e => setFSpecialite(e.target.value)}>
-                {['Sophrologie','Coaching','Fleurs de Bach','Naturopathie','Énergie','Massage','Autre'].map(s => (
+                {['Sophrologie','Coaching','Fleurs de Bach','Naturopathie','Énergie','Massage','3D Humain','Autre'].map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>

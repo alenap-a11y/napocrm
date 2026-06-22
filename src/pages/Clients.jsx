@@ -582,7 +582,7 @@ export default function Clients() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                       <MField label="Type">
                         <select value={newSeanceForm.type_seance} onChange={e => setNewSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
-                          {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                          {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </MField>
                       <MField label="Date">
@@ -631,7 +631,7 @@ export default function Clients() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <MField label="Type">
               <select value={editSeanceForm.type_seance} onChange={e => setEditSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
-                {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </MField>
             <MField label="Date">

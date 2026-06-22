@@ -35,7 +35,7 @@ function parseCSV(text) {
   }).filter(s => s.prenom || s.nom)
 }
 
-const TYPES = ['Tous','Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre']
+const TYPES = ['Tous','Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre']
 const MOIS  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
