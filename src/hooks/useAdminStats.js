@@ -11,7 +11,6 @@ export function useAdminStats() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      // Vérifie si admin
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
@@ -26,8 +25,8 @@ export function useAdminStats() {
 
       setIsAdmin(true)
 
-      // Users (hors admin)
-      const { data: users } = await supabase
+      // Récupère tous les users depuis auth via profiles + email depuis auth.users
+      const { data: authUsers } = await supabase
         .from('profiles')
         .select('id, prenom, is_admin')
         .eq('is_admin', false)
@@ -43,8 +42,12 @@ export function useAdminStats() {
         .from('user_sessions')
         .select('user_id, started_at, ended_at')
 
-      // Agrège par user
-      const statsParUser = users?.map(u => {
+      // Emails depuis auth.users (vue admin)
+      const { data: authData } = await supabase.auth.admin.listUsers()
+      const emailMap = {}
+      authData?.users?.forEach(u => { emailMap[u.id] = u.email })
+
+      const statsParUser = authUsers?.map(u => {
         const ue = events?.filter(e => e.user_id === u.id) ?? []
         const us = sessions?.filter(s => s.user_id === u.id) ?? []
         const durations = us
@@ -53,7 +56,8 @@ export function useAdminStats() {
 
         return {
           id: u.id,
-          prenom: u.prenom ?? 'Inconnu',
+          prenom: u.prenom ?? emailMap[u.id] ?? 'Inconnu',
+          email: emailMap[u.id] ?? '',
           totalEvents: ue.length,
           totalSessions: us.length,
           avgDuration: durations.length
