@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
 import { supabase } from './lib/supabase'
+import AgendaPublic from './pages/AgendaPublic'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -29,6 +30,7 @@ export default function App() {
     setUser(null)
   }
 
+  if (location.pathname.startsWith('/rdv/')) return <AgendaPublic />
   if (loading) return null
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (!user) return <LoginPage />

@@ -9,7 +9,7 @@ const inpStyle = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '' }
+const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '' }
 
 export default function ProfilPage({ accent, onSignOut }) {
   const [user,    setUser]    = useState(null)
@@ -42,6 +42,8 @@ export default function ProfilPage({ accent, onSignOut }) {
           ville:     p?.ville     || '',
           siret:     p?.siret     || '',
           activite:  p?.activite  || '',
+          agenda_public: p?.agenda_public || false,
+          slug: p?.slug || '',
         })
 
         const moisActif = Math.max(1, Math.floor(
@@ -76,6 +78,8 @@ export default function ProfilPage({ accent, onSignOut }) {
         ville:     draft.ville,
         siret:     draft.siret,
         activite:  draft.activite,
+        agenda_public: draft.agenda_public,
+        slug: draft.slug,
       }, { onConflict: 'id' })
       if (error) throw error
       setProfil({ ...draft })
@@ -185,6 +189,50 @@ export default function ProfilPage({ accent, onSignOut }) {
               <div className="pf-field-val">{f.val}</div>
             </div>
           ))
+        )}
+      </div>
+
+
+      {/* ── Agenda Public ── */}
+      <div className="pf-section-title">Agenda public</div>
+      <div style={{ background: 'var(--color-background-secondary)', borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: '0.5px solid var(--color-border-tertiary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: profil.agenda_public ? 12 : 0 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Activer l'agenda public</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>Vos clients peuvent demander un RDV en ligne</div>
+          </div>
+          <div onClick={async () => {
+            const newVal = !profil.agenda_public
+            setProfil(p => ({ ...p, agenda_public: newVal }))
+            await supabase.from('profils').update({ agenda_public: newVal }).eq('id', user.id)
+          }} style={{ width: 44, height: 24, borderRadius: 12, background: profil.agenda_public ? accent : 'var(--color-border-secondary)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+            <div style={{ position: 'absolute', top: 3, left: profil.agenda_public ? 22 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+          </div>
+        </div>
+        {profil.agenda_public && (
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Votre lien public</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', padding: '6px 10px', background: 'var(--color-background-primary)', borderRadius: '6px 0 0 6px', border: '0.5px solid var(--color-border-tertiary)', whiteSpace: 'nowrap' }}>naposolo.com/rdv/</div>
+              <input value={profil.slug} onChange={async e => {
+                const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+                setProfil(p => ({ ...p, slug }))
+                await supabase.from('profils').update({ slug }).eq('id', user.id)
+              }} placeholder="prenom-nom" style={{ ...inpStyle, borderRadius: '0 6px 6px 0', flex: 1 }} />
+            </div>
+            {profil.slug && (
+              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                <a href={`/rdv/${profil.slug}`} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 11, color: accent, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className="ti ti-external-link" style={{ fontSize: 12 }} /> Voir ma page
+                </a>
+                <button onClick={() => navigator.clipboard.writeText(`https://naposolo.com/rdv/${profil.slug}`)}
+                  style={{ fontSize: 11, color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <i className="ti ti-copy" style={{ fontSize: 12 }} /> Copier le lien
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
