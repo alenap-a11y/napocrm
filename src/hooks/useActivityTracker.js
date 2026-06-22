@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../lib/supabase'
 
 export function useActivityTracker() {
   const location = useLocation()

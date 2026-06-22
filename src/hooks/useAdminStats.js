@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../lib/supabase'
 
 export function useAdminStats() {
   const [stats, setStats] = useState(null)
