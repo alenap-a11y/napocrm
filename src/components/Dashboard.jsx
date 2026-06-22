@@ -372,6 +372,49 @@ const inputStyle = {
   color: 'var(--color-text-primary)', boxSizing: 'border-box',
 }
 
+
+// ─── Widget Anniversaires compact ────────────────────────────────────────────
+function AnniversairesWidget({ accent, onNavigate }) {
+  const [clients, setClients] = useState([])
+  useEffect(() => {
+    supabase.from('clients').select('id, prenom, nom, date_naissance')
+      .not('date_naissance', 'is', null)
+      .then(({ data }) => setClients(data || []))
+  }, [])
+  const prochains = clients
+    .map(c => { const a = getProchainAnniversaire(c); return a ? { ...c, ...a } : null })
+    .filter(Boolean)
+    .sort((a, b) => a.joursRestants - b.joursRestants)
+    .slice(0, 3)
+  return (
+    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14, marginTop: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+        <i className="ti ti-cake" style={{ fontSize: 14, color: accent }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>Anniversaires</span>
+      </div>
+      {prochains.length === 0 ? (
+        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', textAlign: 'center', padding: '8px 0' }}>Aucun à venir</div>
+      ) : prochains.map(c => {
+        const name = `${c.prenom || ''} ${c.nom || ''}`.trim()
+        const isToday = c.joursRestants === 0
+        return (
+          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+              {(c.prenom||'')[0]}{(c.nom||'')[0]}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-primary)' }}>{name}</div>
+              <div style={{ fontSize: 10, color: isToday ? accent : 'var(--color-text-secondary)' }}>
+                {isToday ? '🎂 Aujourd'hui !' : `dans ${c.joursRestants}j · ${c.age} ans`}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Dashboard principal ──────────────────────────────────────────────────────
 
 export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidgets, onNavigate }) {
@@ -633,6 +676,9 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           ))}
 
         </div>
+
+        {/* Anniversaires prochains */}
+        <AnniversairesWidget accent={accent} onNavigate={onNavigate} />
 
         {/* Widget CA + nouveaux clients avec sélecteurs */}
         <div style={{ ...cardStyle, marginTop: 10 }}>
