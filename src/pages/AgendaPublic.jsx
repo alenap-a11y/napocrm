@@ -15,21 +15,25 @@ export default function AgendaPublic() {
 
   useEffect(() => {
     async function load() {
-      let { data: p } = await supabase
+      console.log('SEARCHING slug:', slug)
+      let { data: p, error: e1 } = await supabase
         .from('profils')
         .select('*')
         .eq('slug', slug)
         .eq('agenda_public', true)
         .maybeSingle()
       if (!p) {
-        const { data: p2 } = await supabase
+        console.log('ERROR profils:', e1)
+        const { data: p2, error: e2 } = await supabase
           .from('profiles')
           .select('*')
           .eq('slug', slug)
           .eq('agenda_public', true)
           .maybeSingle()
+        console.log('ERROR profiles:', e2, 'RESULT p2:', p2)
         p = p2
       }
+      console.log('PROFIL RESULT:', p)
       if (!p) { setNotFound(true); setLoading(false); return }
       setProfil(p)
       const today = new Date().toISOString()
