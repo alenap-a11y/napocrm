@@ -114,14 +114,29 @@ export default function Seances() {
     loadClients()
   }, [])
 
+  // Numérotation séances par client
+  const seanceNumMap = {}
+  const clientCountMap = {}
+  ;[...seances].sort((a,b) => (a.date_seance||'').localeCompare(b.date_seance||'')).forEach(s => {
+    const cid = s.client_id
+    clientCountMap[cid] = (clientCountMap[cid] || 0) + 1
+    seanceNumMap[s.id] = clientCountMap[cid]
+  })
+
   const moisDispos = [...new Set(seances.map(s => s.date_seance?.slice(0,7)).filter(Boolean))].sort().reverse()
 
-  const filtered = seances.filter(s => {
+  const filteredRaw = seances.filter(s => {
     const q = search.toLowerCase()
     const matchSearch = !q || clientName(s).toLowerCase().includes(q) || (s.type_seance||'').toLowerCase().includes(q) || (s.notes||'').toLowerCase().includes(q)
     const matchType = filterType === 'Tous' || s.type_seance === filterType
     const matchMois = filterMois === 'tous' || (s.date_seance||'').startsWith(filterMois)
     return matchSearch && matchType && matchMois
+  })
+  const filtered = [...filteredRaw].sort((a,b) => {
+    const na = clientName(a).toLowerCase()
+    const nb = clientName(b).toLowerCase()
+    if (na !== nb) return na.localeCompare(nb)
+    return (a.date_seance||'').localeCompare(b.date_seance||'')
   })
 
   const currentMonth = new Date().toISOString().slice(0,7)
@@ -283,7 +298,10 @@ export default function Seances() {
                   onMouseEnter={e => e.currentTarget.style.background='var(--color-background-primary)'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                   <div>
-                    <div style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{clientName(s)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{clientName(s)}</div>
+                      {seanceNumMap[s.id] && <span style={{ fontSize:9, fontWeight:700, background:'var(--color-accent)', color:'#fff', padding:'1px 6px', borderRadius:10, flexShrink:0 }}>#{seanceNumMap[s.id]}</span>}
+                    </div>
                     {s.heure_seance && <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>{s.heure_seance}</div>}
                   </div>
                   <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{fmtDate(s.date_seance)}</div>
