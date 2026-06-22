@@ -391,6 +391,12 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [clientsActifs,   setClientsActifs]   = useState(0)
   const [seancesAVenir,   setSeancesAVenir]   = useState(0)
   const [notesCount,      setNotesCount]      = useState(0)
+  const [filtrePeriode,   setFiltrePeriode]   = useState('mois')
+  const [caFiltre,        setCaFiltre]         = useState(0)
+  const [nouveauxClients, setNouveauxClients]  = useState(0)
+  const [filtreDate,      setFiltreDate]       = useState(new Date().toISOString().slice(0,10))
+  const [filtreMoisNum,   setFiltreMoisNum]    = useState(new Date().getMonth() + 1)
+  const [filtreAnnee,     setFiltreAnnee]      = useState(new Date().getFullYear())
 
   useEffect(() => {
     const getUser = async () => {
@@ -454,6 +460,38 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     }
     loadStats()
   }, [])
+
+  useEffect(() => {
+    async function loadPeriode() {
+      let debutStr, finStr
+      const now = new Date()
+      if (filtrePeriode === 'jour') {
+        debutStr = filtreDate
+        finStr   = filtreDate
+      } else if (filtrePeriode === 'semaine') {
+        const day = now.getDay() || 7
+        const debut = new Date(now); debut.setDate(now.getDate() - day + 1)
+        const fin   = new Date(debut); fin.setDate(debut.getDate() + 6)
+        debutStr = debut.toISOString().slice(0,10)
+        finStr   = fin.toISOString().slice(0,10)
+      } else if (filtrePeriode === 'mois') {
+        const m = String(filtreMoisNum).padStart(2,'0')
+        debutStr = `${filtreAnnee}-${m}-01`
+        const lastDay = new Date(filtreAnnee, filtreMoisNum, 0).getDate()
+        finStr = `${filtreAnnee}-${m}-${String(lastDay).padStart(2,'0')}`
+      } else {
+        debutStr = `${filtreAnnee}-01-01`
+        finStr   = `${filtreAnnee}-12-31`
+      }
+      const [{ data: seancesP }, { data: clientsP }] = await Promise.all([
+        supabase.from('seances').select('prix_euros').gte('date_seance', debutStr).lte('date_seance', finStr),
+        supabase.from('clients').select('id').gte('date_creation', debutStr).lte('date_creation', finStr),
+      ])
+      setCaFiltre((seancesP || []).reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0))
+      setNouveauxClients((clientsP || []).length)
+    }
+    loadPeriode()
+  }, [filtrePeriode, filtreDate, filtreMoisNum, filtreAnnee])
 
   const activeSbItem = sbItems.find(i => i.id === sbActif)
   const timeStr = [time.getHours(), time.getMinutes(), time.getSeconds()]
@@ -546,6 +584,57 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           ))}
 
+        </div>
+
+        {/* Widget CA + nouveaux clients avec sélecteurs */}
+        <div style={{ ...cardStyle, marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>Chiffre d'affaires</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['jour', 'semaine', 'mois', 'année'].map(p => (
+                <button key={p} onClick={() => setFiltrePeriode(p)} style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, border: 'none', cursor: 'pointer', background: filtrePeriode === p ? accent : 'var(--color-background-secondary)', color: filtrePeriode === p ? '#fff' : 'var(--color-text-secondary)' }}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Sélecteurs précis */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {filtrePeriode === 'jour' && (
+              <input type="date" value={filtreDate} onChange={e => setFiltreDate(e.target.value)}
+                style={{ flex: 1, padding: '5px 8px', fontSize: 12, borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' }} />
+            )}
+            {filtrePeriode === 'mois' && (
+              <>
+                <select value={filtreMoisNum} onChange={e => setFiltreMoisNum(e.target.value)}
+                  style={{ flex: 1, padding: '5px 8px', fontSize: 12, borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' }}>
+                  {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map((m,i) => (
+                    <option key={i} value={i+1}>{m}</option>
+                  ))}
+                </select>
+                <select value={filtreAnnee} onChange={e => setFiltreAnnee(e.target.value)}
+                  style={{ width: 80, padding: '5px 8px', fontSize: 12, borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' }}>
+                  {Array.from({length: 70}, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </>
+            )}
+            {filtrePeriode === 'année' && (
+              <select value={filtreAnnee} onChange={e => setFiltreAnnee(e.target.value)}
+                style={{ flex: 1, padding: '5px 8px', fontSize: 12, borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' }}>
+                {Array.from({length: 70}, (_, i) => 2024 + i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1, padding: '10px 12px', background: '#E1F5EE', borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: '#0F6E56', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>CA</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#0F6E56' }}>{caFiltre.toFixed(0)} €</div>
+            </div>
+            <div style={{ flex: 1, padding: '10px 12px', background: `${accent}18`, borderRadius: 8 }}>
+              <div style={{ fontSize: 10, color: accent, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Nouveaux clients</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: accent }}>{nouveauxClients}</div>
+            </div>
+          </div>
         </div>
 
       </div>
