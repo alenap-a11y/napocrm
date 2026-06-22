@@ -25,39 +25,33 @@ export function useAdminStats() {
 
       setIsAdmin(true)
 
-      // Récupère tous les users depuis auth via profiles + email depuis auth.users
-      const { data: authUsers } = await supabase
+      // Tous les profils sauf l'admin
+      const { data: users, error } = await supabase
         .from('profiles')
         .select('id, prenom, is_admin')
-        .eq('is_admin', false)
+        .neq('id', user.id)
 
-      // Events
+      console.log('users:', users, 'error:', error)
+
       const { data: events } = await supabase
         .from('user_events')
         .select('user_id, event_type, page, created_at')
         .order('created_at', { ascending: false })
 
-      // Sessions
       const { data: sessions } = await supabase
         .from('user_sessions')
         .select('user_id, started_at, ended_at')
 
-      // Emails depuis auth.users (vue admin)
-      const { data: authData } = await supabase.auth.admin.listUsers()
-      const emailMap = {}
-      authData?.users?.forEach(u => { emailMap[u.id] = u.email })
-
-      const statsParUser = authUsers?.map(u => {
-        const ue = events?.filter(e => e.user_id === u.id) ?? []
-        const us = sessions?.filter(s => s.user_id === u.id) ?? []
+      const statsParUser = (users ?? []).map(u => {
+        const ue = (events ?? []).filter(e => e.user_id === u.id)
+        const us = (sessions ?? []).filter(s => s.user_id === u.id)
         const durations = us
           .filter(s => s.ended_at)
           .map(s => (new Date(s.ended_at) - new Date(s.started_at)) / 60000)
 
         return {
           id: u.id,
-          prenom: u.prenom ?? emailMap[u.id] ?? 'Inconnu',
-          email: emailMap[u.id] ?? '',
+          prenom: u.prenom ?? `User ${u.id.slice(0, 6)}`,
           totalEvents: ue.length,
           totalSessions: us.length,
           avgDuration: durations.length
@@ -75,7 +69,7 @@ export function useAdminStats() {
             }, {}),
           lastSeen: ue[0]?.created_at ?? null
         }
-      }) ?? []
+      })
 
       setStats(statsParUser)
       setLoading(false)
