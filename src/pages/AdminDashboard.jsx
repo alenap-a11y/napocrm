@@ -3,150 +3,143 @@ import { useState } from 'react'
 
 export default function AdminDashboard() {
   const { stats, isAdmin, loading } = useAdminStats()
-  const [selected, setSelected] = useState(null)
+  const [selected, setSelected] = useState(0)
 
-  if (loading) return (
-    <div style={{ padding: '2rem', color: 'var(--color-text-secondary)' }}>
-      Chargement...
-    </div>
-  )
+  if (loading) return <div style={{padding:'2rem',color:'var(--color-text-secondary)'}}>Chargement...</div>
+  if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
+  if (!stats?.length) return <div style={{padding:'2rem',color:'var(--color-text-secondary)'}}>Aucun utilisateur.</div>
 
-  if (!isAdmin) return (
-    <div style={{ padding: '2rem', color: 'var(--color-text-danger)' }}>
-      Accès refusé.
-    </div>
-  )
+  const u = stats[selected]
 
-  const selectedUser = stats?.find(u => u.id === selected)
+  const features = [
+    { key:'page_view',        label:'Agenda',         icon:'ti-calendar',        color:'#534AB7', bg:'#EEEDFE' },
+    { key:'client_added',     label:'Clients',        icon:'ti-users',           color:'#0F6E56', bg:'#E1F5EE' },
+    { key:'seance_created',   label:'Séances',        icon:'ti-clipboard-list',  color:'#854F0B', bg:'#FAEEDA' },
+    { key:'tache_created',    label:'Tâches',         icon:'ti-checklist',       color:'#888',    bg:'#F1EFE8' },
+    { key:'bach_used',        label:'Fleurs de Bach', icon:'ti-flower',          color:'#993556', bg:'#FBEAF0' },
+    { key:'feedback_sent',    label:'Feedback',       icon:'ti-message-2',       color:'#993C1D', bg:'#FAECE7' },
+  ]
+
+  const totalActions = Object.values(u.eventsByType).reduce((a,b)=>a+b,0)
+  const maxBar = Math.max(...Object.values(u.eventsByType), 1)
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{padding:'1.5rem',maxWidth:'860px',margin:'0 auto',fontFamily:'var(--font-sans)'}}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
-        <span style={{ fontSize: '20px' }}>🛡️</span>
-        <div>
-          <h1 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>Admin Naposolo</h1>
-          <p style={{ fontSize: '12px', color: 'var(--color-text-secondary)', margin: 0 }}>
-            {stats?.length} utilisateur{stats?.length > 1 ? 's' : ''} alpha
-          </p>
+      <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'1.5rem',paddingBottom:'1rem',borderBottom:'0.5px solid var(--color-border-tertiary)'}}>
+        <i className="ti ti-shield-check" style={{fontSize:'20px',color:'var(--color-text-secondary)'}} aria-hidden="true"/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:'15px',fontWeight:500}}>Admin Naposolo</div>
+          <div style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>{stats.length} testeur{stats.length>1?'s':''} alpha</div>
         </div>
+        <span style={{fontSize:'11px',padding:'3px 10px',borderRadius:'20px',background:'#FAEEDA',color:'#633806',fontWeight:500}}>
+          <i className="ti ti-flask" style={{fontSize:'10px'}} aria-hidden="true"/> Alpha
+        </span>
       </div>
 
-      {/* Liste users */}
-      <div style={{ display: 'grid', gap: '10px', marginBottom: '2rem' }}>
-        {stats?.map(u => (
-          <div
-            key={u.id}
-            onClick={() => setSelected(selected === u.id ? null : u.id)}
-            style={{
-              background: selected === u.id
-                ? 'var(--color-background-info)'
-                : 'var(--color-background-secondary)',
-              border: '0.5px solid var(--color-border-tertiary)',
-              borderRadius: '12px',
-              padding: '1rem 1.25rem',
-              cursor: 'pointer',
-              display: 'grid',
-              gridTemplateColumns: '40px 1fr repeat(4, auto)',
-              alignItems: 'center',
-              gap: '16px'
-            }}
-          >
-            {/* Avatar */}
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: '#EEEDFE', color: '#3C3489',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: 500
-            }}>
-              {(u.prenom ?? '?')[0].toUpperCase()}
+      {/* Onglets users */}
+      <div style={{display:'flex',gap:0,borderBottom:'0.5px solid var(--color-border-tertiary)',marginBottom:'1.5rem'}}>
+        {stats.map((u,i) => (
+          <div key={u.id} onClick={()=>setSelected(i)}
+            style={{padding:'10px 20px',fontSize:'13px',fontWeight:500,cursor:'pointer',
+              borderBottom: selected===i ? '2px solid #534AB7' : '2px solid transparent',
+              color: selected===i ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              display:'flex',alignItems:'center',gap:'8px'}}>
+            <div style={{width:24,height:24,borderRadius:'50%',background:'#EEEDFE',color:'#3C3489',
+              display:'flex',alignItems:'center',justifyContent:'center',fontSize:'11px',fontWeight:500}}>
+              {u.prenom[0].toUpperCase()}
             </div>
-
-            {/* Nom */}
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: 500 }}>{u.prenom}</div>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                {u.lastSeen
-                  ? `Vu ${new Date(u.lastSeen).toLocaleDateString('fr-FR')}`
-                  : 'Jamais connecté'}
-              </div>
-            </div>
-
-            {/* Stats rapides */}
-            {[
-              { val: u.totalSessions, lbl: 'sessions' },
-              { val: u.avgDuration + 'mn', lbl: 'durée moy.' },
-              { val: u.totalEvents, lbl: 'actions' },
-              { val: u.eventsByType['seance_created'] ?? 0, lbl: 'séances' },
-            ].map(({ val, lbl }) => (
-              <div key={lbl} style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '16px', fontWeight: 500 }}>{val}</div>
-                <div style={{ fontSize: '10px', color: 'var(--color-text-secondary)' }}>{lbl}</div>
-              </div>
-            ))}
+            {u.prenom}
           </div>
         ))}
       </div>
 
-      {/* Détail user sélectionné */}
-      {selectedUser && (
-        <div style={{
-          background: 'var(--color-background-primary)',
-          border: '0.5px solid var(--color-border-tertiary)',
-          borderRadius: '12px',
-          padding: '1.25rem'
-        }}>
-          <h2 style={{ fontSize: '15px', fontWeight: 500, marginBottom: '1rem' }}>
-            Détail — {selectedUser.prenom}
-          </h2>
-
-          {/* Pages visitées */}
-          <p style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Pages visitées
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1.25rem' }}>
-            {Object.entries(selectedUser.pageViews).length === 0
-              ? <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Aucune</span>
-              : Object.entries(selectedUser.pageViews)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([page, count]) => (
-                    <span key={page} style={{
-                      fontSize: '12px', padding: '4px 10px',
-                      background: 'var(--color-background-secondary)',
-                      borderRadius: '20px',
-                      border: '0.5px solid var(--color-border-tertiary)'
-                    }}>
-                      {page} · {count}x
-                    </span>
-                  ))
-            }
+      {/* Métriques */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'10px',marginBottom:'1.25rem'}}>
+        {[
+          {icon:'ti-login',     label:'Sessions',    val:u.totalSessions,                sub:'connexions'},
+          {icon:'ti-clock',     label:'Durée moy.',  val:u.avgDuration+'mn',             sub:'par session'},
+          {icon:'ti-pointer',   label:'Actions',     val:totalActions,                   sub:'total'},
+          {icon:'ti-calendar',  label:'Séances',     val:u.eventsByType['seance_created']??0, sub:'créées'},
+        ].map(m => (
+          <div key={m.label} style={{background:'var(--color-background-secondary)',borderRadius:'8px',padding:'12px 14px'}}>
+            <div style={{fontSize:'10px',color:'var(--color-text-secondary)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'5px',display:'flex',alignItems:'center',gap:'4px'}}>
+              <i className={`ti ${m.icon}`} aria-hidden="true"/> {m.label}
+            </div>
+            <div style={{fontSize:'22px',fontWeight:500}}>{m.val}</div>
+            <div style={{fontSize:'10px',color:'var(--color-text-secondary)',marginTop:'3px'}}>{m.sub}</div>
           </div>
+        ))}
+      </div>
 
-          {/* Actions par type */}
-          <p style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Actions
-          </p>
-          <div style={{ display: 'grid', gap: '6px' }}>
-            {Object.entries(selectedUser.eventsByType).length === 0
-              ? <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>Aucune action</span>
-              : Object.entries(selectedUser.eventsByType)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([type, count]) => (
-                    <div key={type} style={{
-                      display: 'flex', justifyContent: 'space-between',
-                      alignItems: 'center', fontSize: '13px',
-                      padding: '6px 0',
-                      borderBottom: '0.5px solid var(--color-border-tertiary)'
-                    }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>{type}</span>
-                      <span style={{ fontWeight: 500 }}>{count}x</span>
-                    </div>
-                  ))
-            }
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'12px'}}>
+
+        {/* Features utilisées */}
+        <div style={{background:'var(--color-background-primary)',border:'0.5px solid var(--color-border-tertiary)',borderRadius:'12px',padding:'1rem 1.25rem'}}>
+          <div style={{fontSize:'11px',color:'var(--color-text-secondary)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'10px',display:'flex',alignItems:'center',gap:'6px'}}>
+            <i className="ti ti-puzzle" aria-hidden="true"/> Features utilisées
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+            {features.map(f => {
+              const count = u.eventsByType[f.key] ?? 0
+              return (
+                <div key={f.key} style={{display:'flex',alignItems:'center',gap:'8px',padding:'7px 10px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',opacity:count===0?0.4:1}}>
+                  <i className={`ti ${f.icon}`} style={{fontSize:'14px',color:f.color}} aria-hidden="true"/>
+                  <div>
+                    <div style={{fontSize:'11px',fontWeight:500}}>{f.label}</div>
+                    <div style={{fontSize:'10px',color:'var(--color-text-secondary)'}}>{count} action{count>1?'s':''}</div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
-      )}
+
+        {/* Répartition actions */}
+        <div style={{background:'var(--color-background-primary)',border:'0.5px solid var(--color-border-tertiary)',borderRadius:'12px',padding:'1rem 1.25rem'}}>
+          <div style={{fontSize:'11px',color:'var(--color-text-secondary)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'10px',display:'flex',alignItems:'center',gap:'6px'}}>
+            <i className="ti ti-chart-bar" aria-hidden="true"/> Répartition
+          </div>
+          {Object.keys(u.eventsByType).length === 0
+            ? <div style={{fontSize:'13px',color:'var(--color-text-secondary)'}}>Aucune action encore</div>
+            : Object.entries(u.eventsByType).sort((a,b)=>b[1]-a[1]).map(([type,count]) => (
+              <div key={type} style={{marginBottom:'8px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',fontSize:'12px',marginBottom:'3px'}}>
+                  <span style={{color:'var(--color-text-secondary)'}}>{type.replace(/_/g,' ')}</span>
+                  <span style={{fontWeight:500}}>{count}x</span>
+                </div>
+                <div style={{height:'5px',background:'var(--color-border-tertiary)',borderRadius:'3px'}}>
+                  <div style={{height:'5px',borderRadius:'3px',background:'#534AB7',width:`${Math.round(count/maxBar*100)}%`}}/>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* Pages visitées */}
+      <div style={{background:'var(--color-background-primary)',border:'0.5px solid var(--color-border-tertiary)',borderRadius:'12px',padding:'1rem 1.25rem'}}>
+        <div style={{fontSize:'11px',color:'var(--color-text-secondary)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:'10px',display:'flex',alignItems:'center',gap:'6px'}}>
+          <i className="ti ti-map-pin" aria-hidden="true"/> Pages visitées
+        </div>
+        {Object.keys(u.pageViews).length === 0
+          ? <div style={{fontSize:'13px',color:'var(--color-text-secondary)'}}>Aucune page visitée</div>
+          : <div style={{display:'flex',flexWrap:'wrap',gap:'8px'}}>
+              {Object.entries(u.pageViews).sort((a,b)=>b[1]-a[1]).map(([page,count]) => (
+                <span key={page} style={{fontSize:'12px',padding:'4px 12px',background:'var(--color-background-secondary)',borderRadius:'20px',border:'0.5px solid var(--color-border-tertiary)'}}>
+                  {page} · {count}x
+                </span>
+              ))}
+            </div>
+        }
+      </div>
+
+      {/* Note bas */}
+      <div style={{fontSize:'11px',color:'var(--color-text-secondary)',display:'flex',alignItems:'center',gap:'5px',padding:'8px 10px',background:'var(--color-background-secondary)',borderRadius:'8px',marginTop:'12px'}}>
+        <i className="ti ti-lock" aria-hidden="true"/> Aucune donnée personnelle cliente visible — comptages anonymisés uniquement
+      </div>
+
     </div>
   )
 }
