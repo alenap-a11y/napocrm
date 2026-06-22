@@ -231,6 +231,7 @@ export default function ProfilPage({ accent, onSignOut }) {
                 onChange={async e => {
                   const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-')
                   setProfil(p => ({ ...p, slug }))
+                  setDraft(p => ({ ...p, slug }))
                   await supabase.from('profils').update({ slug }).eq('id', user.id)
                 }}
                 placeholder="prenom-nom"
