@@ -77,8 +77,8 @@ function fmtDate(d) {
 }
 
 export default function Clients() {
-  const [modalSeance, setModalSeance] = useState(null)
   const importRef = useRef()
+  const [modalSeance, setModalSeance] = useState(null)
 
   const location = useLocation()
 
@@ -738,6 +738,39 @@ export default function Clients() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+      {modalSeance && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModalSeance(null)}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 14, padding: 24, maxWidth: 480, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>Fiche séance</span>
+              <button onClick={() => setModalSeance(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-secondary)' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                ['Date',  modalSeance.date_seance ? new Date(modalSeance.date_seance.slice(0,10) + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+                ['Heure', modalSeance.heure_seance ? modalSeance.heure_seance.slice(0,5) : '—'],
+                ['Type',  modalSeance.type_seance || '—'],
+                ['Durée', modalSeance.duree_minutes ? modalSeance.duree_minutes + ' min' : '—'],
+                ['Prix',  modalSeance.prix_euros != null ? parseFloat(modalSeance.prix_euros).toFixed(0) + ' €' : '—'],
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-primary)', fontWeight: 600 }}>{val}</span>
+                </div>
+              ))}
+              {modalSeance.notes && (
+                <div style={{ padding: '10px 12px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>Notes</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-primary)', lineHeight: 1.6 }}>{modalSeance.notes}</div>
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalSeance(null)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Fermer</button>
+            </div>
           </div>
         </div>
       )}
