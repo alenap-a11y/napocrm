@@ -38,27 +38,25 @@ export default function AgendaPublic({ slug }) {
     </div>
   )
 
-  // Grouper créneaux par date
   const slotsByDate = {}
   seances.forEach(s => {
     if (!slotsByDate[s.date_seance]) slotsByDate[s.date_seance] = []
     slotsByDate[s.date_seance].push(s)
   })
 
-  // Semaines à afficher
   const today = new Date()
   today.setHours(0,0,0,0)
   const startOfWeek = new Date(today)
   startOfWeek.setDate(today.getDate() - today.getDay() + 1 + currentWeek * 7)
-  
+
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(startOfWeek)
     d.setDate(startOfWeek.getDate() + i)
     return d
   })
 
-  const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-  const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+  const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
+  const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
 
   function toYMD(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -81,8 +79,6 @@ export default function AgendaPublic({ slug }) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', fontFamily: 'Inter, system-ui, sans-serif' }}>
-
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #085041 0%, #0F6E56 100%)', padding: '32px 24px 28px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
@@ -102,85 +98,61 @@ export default function AgendaPublic({ slug }) {
             <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', marginBottom: 8 }}>Demande envoyée !</div>
             <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
-              {profil.prenom} a bien reçu votre demande.<br />
-              Elle vous recontactera sous 24h pour confirmer le créneau.
+              {profil.prenom} a bien reçu votre demande.<br/>Elle vous recontactera sous 24h.
             </div>
           </div>
         ) : (
           <>
-            {/* Calendrier */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', overflow: 'hidden', marginBottom: 20 }}>
-              
-              {/* Navigation semaine */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #F3F4F6' }}>
                 <button onClick={() => setCurrentWeek(w => Math.max(0, w-1))} disabled={currentWeek === 0}
-                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: currentWeek === 0 ? 'not-allowed' : 'pointer', opacity: currentWeek === 0 ? 0.4 : 1, fontSize: 16 }}>
-                  ‹
-                </button>
+                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: currentWeek === 0 ? 'not-allowed' : 'pointer', opacity: currentWeek === 0 ? 0.4 : 1, fontSize: 18 }}>‹</button>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#111827', textTransform: 'capitalize' }}>{moisAffiche}</div>
                 <button onClick={() => setCurrentWeek(w => w+1)}
-                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontSize: 16 }}>
-                  ›
-                </button>
+                  style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', fontSize: 18 }}>›</button>
               </div>
 
-              {/* Grille jours */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid #F3F4F6' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
                 {weekDays.map((day, i) => {
                   const ymd = toYMD(day)
                   const slots = slotsByDate[ymd] || []
-                  const isToday = toYMD(day) === toYMD(new Date())
+                  const isToday = ymd === toYMD(new Date())
                   const isPast = day < today
                   return (
                     <div key={ymd} style={{ borderRight: i < 6 ? '1px solid #F3F4F6' : 'none', minHeight: 120 }}>
-                      {/* Header jour */}
                       <div style={{ padding: '10px 4px 6px', textAlign: 'center', borderBottom: '1px solid #F3F4F6', background: isToday ? '#E1F5EE' : '#FAFAFA' }}>
                         <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 500, marginBottom: 2 }}>{JOURS[i]}</div>
-                        <div style={{ fontSize: 15, fontWeight: isToday ? 700 : 500, color: isToday ? '#0F6E56' : isPast ? '#D1D5DB' : '#111827' }}>
-                          {day.getDate()}
-                        </div>
+                        <div style={{ fontSize: 15, fontWeight: isToday ? 700 : 500, color: isToday ? '#0F6E56' : isPast ? '#D1D5DB' : '#111827' }}>{day.getDate()}</div>
                       </div>
-                      {/* Créneaux */}
                       <div style={{ padding: '6px 4px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {slots.map(slot => (
                           <button key={slot.id} onClick={() => setSelectedSlot(slot)}
-                            style={{ padding: '4px 2px', borderRadius: 6, border: `1.5px solid ${selectedSlot?.id === slot.id ? '#0F6E56' : '#D1FAE5'}`, background: selectedSlot?.id === slot.id ? '#0F6E56' : '#E1F5EE', color: selectedSlot?.id === slot.id ? '#fff' : '#0F6E56', fontSize: 11, fontWeight: 600, cursor: 'pointer', width: '100%', textAlign: 'center' }}>
+                            style={{ padding: '4px 2px', borderRadius: 6, border: `1.5px solid ${selectedSlot?.id === slot.id ? '#0F6E56' : '#D1FAE5'}`, background: selectedSlot?.id === slot.id ? '#0F6E56' : '#E1F5EE', color: selectedSlot?.id === slot.id ? '#fff' : '#0F6E56', fontSize: 11, fontWeight: 600, cursor: 'pointer', width: '100%' }}>
                             {slot.heure_seance?.slice(0,5)}
                           </button>
                         ))}
-                        {slots.length === 0 && !isPast && (
-                          <div style={{ fontSize: 9, color: '#E5E7EB', textAlign: 'center', marginTop: 8 }}>—</div>
-                        )}
                       </div>
                     </div>
                   )
                 })}
               </div>
 
-              {/* Légende */}
-              <div style={{ padding: '10px 16px', display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ padding: '10px 16px', display: 'flex', gap: 16, alignItems: 'center', borderTop: '1px solid #F3F4F6' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: '#E1F5EE', border: '1px solid #D1FAE5' }} />
                   <span style={{ fontSize: 11, color: '#6B7280' }}>Disponible</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#0F6E56' }} />
-                  <span style={{ fontSize: 11, color: '#6B7280' }}>Sélectionné</span>
-                </div>
                 {selectedSlot && (
                   <div style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#0F6E56' }}>
-                    ✓ {new Date(selectedSlot.date_seance).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {selectedSlot.heure_seance?.slice(0,5)}
+                    ✓ {new Date(selectedSlot.date_seance + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {selectedSlot.heure_seance?.slice(0,5)}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Formulaire */}
             {selectedSlot && (
               <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', padding: '20px' }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 16 }}>
-                  Vos informations
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 16 }}>Vos informations</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                   {[
                     { key: 'prenom', label: 'Prénom *', placeholder: 'Marie', type: 'text' },
@@ -205,7 +177,7 @@ export default function AgendaPublic({ slug }) {
                 </div>
                 <button onClick={submit} disabled={sending || !form.prenom || !form.email}
                   style={{ width: '100%', padding: '12px', borderRadius: 10, border: 'none', background: '#0F6E56', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (!form.prenom || !form.email) ? 0.5 : 1 }}>
-                  {sending ? 'Envoi...' : `Confirmer le ${new Date(selectedSlot.date_seance).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${selectedSlot.heure_seance?.slice(0,5)}`}
+                  {sending ? 'Envoi...' : `Confirmer le ${new Date(selectedSlot.date_seance + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${selectedSlot.heure_seance?.slice(0,5)}`}
                 </button>
                 <div style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 10 }}>
                   Propulsé par <span style={{ fontWeight: 600, color: '#0F6E56' }}>Naposolo</span>
