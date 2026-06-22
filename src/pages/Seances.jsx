@@ -528,6 +528,12 @@ export default function Seances() {
               )
             )}
 
+            {detailTab==='infos' && !editingDetail && detail.schema_image && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Schéma corporel</div>
+                <img src={detail.schema_image} alt="Schéma 3D" style={{ width:'100%', borderRadius:8, border:'0.5px solid var(--color-border-tertiary)', background:'#f5ede0' }} />
+              </div>
+            )}
             {/* ── Onglet HISTORIQUE (autres séances du même client) ── */}
             {detailTab==='historique' && !editingDetail && (() => {
               const autresSeances = seances.filter(s =>

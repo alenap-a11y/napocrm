@@ -671,7 +671,16 @@ export default function NouvelleSeance() {
     }
   }
 
+  async function captureSchema() {
+    try {
+      const canvas = document.getElementById('canvas-3d-corps')
+      if (!canvas) return null
+      return canvas.toDataURL('image/png')
+    } catch(e) { console.warn('Capture schema:', e); return null }
+  }
+
   async function handleSave() {
+    const schemaImg = await captureSchema()
     setSaving(true)
     setSaveStatus(null)
     setSaveError(null)

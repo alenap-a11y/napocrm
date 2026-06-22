@@ -197,6 +197,7 @@ export default function CorpsHumain3D({
       <Canvas
         camera={{ position: CAM_POS, fov: 45 }}
         onCreated={({ camera }) => { cameraRef.current = camera }}
+        id="canvas-3d-corps"
         style={{ background: '#f5ede0' }}
       >
         <color attach="background" args={['#f5ede0']} />
