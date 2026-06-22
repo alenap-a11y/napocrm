@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
+import { FETES } from '../data/fetes'
 import { getProchainAnniversaire } from '../utils/anniversaires'
 
 const MANTRAS = [
@@ -382,6 +383,9 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   )
 
   const [time, setTime] = useState(new Date())
+  const [meteoData, setMeteoData] = useState(null)
+  const [lunePct,   setLunePct]   = useState(0)
+  const [luneNom,   setLuneNom]   = useState('')
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
   const [prenom, setPrenom]               = useState('')
   const [recentSeances,   setRecentSeances]   = useState([])
@@ -397,6 +401,39 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [filtreDate,      setFiltreDate]       = useState(new Date().toISOString().slice(0,10))
   const [filtreMoisNum,   setFiltreMoisNum]    = useState(new Date().getMonth() + 1)
   const [filtreAnnee,     setFiltreAnnee]      = useState(new Date().getFullYear())
+
+  useEffect(() => {
+    async function fetchMeteo() {
+      try {
+        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.69&longitude=6.18&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&timezone=Europe/Paris')
+        const d = await r.json()
+        setMeteoData(d.current)
+      } catch {}
+    }
+    fetchMeteo()
+    const id = setInterval(fetchMeteo, 600000)
+    return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    function calcLune() {
+      const now = new Date()
+      const ref = new Date('2000-01-06T18:14:00Z')
+      const cycle = 29.53058867
+      const diff = (now - ref) / (1000 * 60 * 60 * 24)
+      const phase = ((diff % cycle) + cycle) % cycle
+      const pct = Math.round((phase / cycle) * 100)
+      setLunePct(pct)
+      const phases = [
+        [0,2,'🌑 Nouvelle lune'], [2,6,'🌒 Premier croissant'], [6,9,'🌓 Premier quartier'],
+        [9,13,'🌔 Gibbeuse croissante'], [13,16,'🌕 Pleine lune'], [16,20,'🌖 Gibbeuse décroissante'],
+        [20,24,'🌗 Dernier quartier'], [24,28,'🌘 Dernier croissant'], [28,30,'🌑 Nouvelle lune']
+      ]
+      const p = phases.find(([a,b]) => phase >= a && phase < b)
+      setLuneNom(p ? p[2] : '🌙 Lune')
+    }
+    calcLune()
+  }, [time])
 
   useEffect(() => {
     const getUser = async () => {
@@ -493,6 +530,17 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     loadPeriode()
   }, [filtrePeriode, filtreDate, filtreMoisNum, filtreAnnee])
 
+  function weatherLabel(code) {
+    if (code === 0) return { icon: '☀️', label: 'Ensoleillé' }
+    if (code <= 2)  return { icon: '🌤️', label: 'Peu nuageux' }
+    if (code <= 3)  return { icon: '☁️', label: 'Nuageux' }
+    if (code <= 48) return { icon: '🌫️', label: 'Brouillard' }
+    if (code <= 67) return { icon: '🌧️', label: 'Pluie' }
+    if (code <= 77) return { icon: '❄️', label: 'Neige' }
+    if (code <= 82) return { icon: '🌦️', label: 'Averses' }
+    return { icon: '⛈️', label: 'Orage' }
+  }
+
   const activeSbItem = sbItems.find(i => i.id === sbActif)
   const timeStr = [time.getHours(), time.getMinutes(), time.getSeconds()]
     .map(n => String(n).padStart(2, '0')).join(':')
@@ -524,7 +572,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
                 {widgets.meteo && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', padding: '3px 8px', borderRadius: 20 }}>
-                    <i className="ti ti-cloud-sun" style={{ color: '#378ADD' }} aria-hidden="true" /><span>18°C, nuageux</span>
+                    <i className="ti ti-cloud-sun" style={{ color: '#378ADD' }} aria-hidden="true" /><span>{meteoData ? `${Math.round(meteoData.temperature_2m)}°C · ${weatherLabel(meteoData.weathercode).icon} ${weatherLabel(meteoData.weathercode).label}` : 'Chargement…'}</span>
                   </div>
                 )}
                 {widgets.lune && (
@@ -542,7 +590,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
                     <i className="ti ti-star" style={{ color: accent, fontSize: 14 }} aria-hidden="true" />
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Fête du jour</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>Sainte Émilie</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>{(() => { const k = String(time.getMonth()+1).padStart(2,'0') + '-' + String(time.getDate()).padStart(2,'0'); return FETES[k] || '—' })()}</div>
                     </div>
                   </div>
                 )}
