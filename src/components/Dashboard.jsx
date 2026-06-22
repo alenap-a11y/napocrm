@@ -670,8 +670,14 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         {widgets.mantra && (
           <div style={{ ...cardStyle, borderLeft: `3px solid ${accent}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.5, marginBottom: 8 }}>{(mantraApi || mantra).t}</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{(mantraApi || mantra).s}</div>
+            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.5, marginBottom: 8 }}>{mantra.t}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{mantra.s}</div>
+            {mantraApi && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+                <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 4 }}>{mantraApi.t}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{mantraApi.s}</div>
+              </div>
+            )}
           </div>
         )}
 
