@@ -405,7 +405,7 @@ function AnniversairesWidget({ accent, onNavigate }) {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-primary)' }}>{name}</div>
               <div style={{ fontSize: 10, color: isToday ? accent : 'var(--color-text-secondary)' }}>
-                {isToday ? '🎂 Aujourd'hui !' : `dans ${c.joursRestants}j · ${c.age} ans`}
+                {isToday ? "🎂 Aujourd'hui !" : `dans ${c.joursRestants}j · ${c.age} ans`}
               </div>
             </div>
           </div>
@@ -942,8 +942,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             })}
           </div>
         </div>
-
-        <Anniversaires accent={accent} />
 
       </div>
     </div>
