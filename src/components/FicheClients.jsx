@@ -497,6 +497,22 @@ export default function FicheClients({ userId }) {
                           </div>
                         )}
                         <SeanceNotesPreview seanceId={s.id} />
+                        <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => window.location.hash = `/seances?id=${s.id}`}
+                            style={{ fontSize: 10, color: '#c17a3a', background: '#faeeda', border: '0.5px solid rgba(193,122,58,0.3)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 500 }}
+                          >
+                            Voir la fiche →
+                          </button>
+                        </div>
+                        <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => window.location.hash = `/seances?id=${s.id}`}
+                            style={{ fontSize: 10, color: '#c17a3a', background: '#faeeda', border: '0.5px solid rgba(193,122,58,0.3)', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 500 }}
+                          >
+                            Voir la fiche →
+                          </button>
+                        </div>
                       </div>
                     )
                   })}

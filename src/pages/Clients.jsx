@@ -77,6 +77,7 @@ function fmtDate(d) {
 }
 
 export default function Clients() {
+  const [modalSeance, setModalSeance] = useState(null)
   const importRef = useRef()
 
   const location = useLocation()
@@ -674,6 +675,9 @@ export default function Clients() {
           </div>
           {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <button onClick={() => setModalSeance(s)} style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-eye" style={{ fontSize: 11 }} />Voir
+            </button>
             <button onClick={() => openEditSeance(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
               <i className="ti ti-pencil" style={{ fontSize: 11 }} />Modifier
             </button>
