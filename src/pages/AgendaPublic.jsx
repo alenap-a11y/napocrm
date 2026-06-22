@@ -40,9 +40,10 @@ export default function AgendaPublic({ slug }) {
         .from('seances')
         .select('*')
         .eq('user_id', p.id)
-        .gte('date_heure', today)
+        .gte('date_seance', today.split('T')[0])
         .eq('statut', 'disponible')
-        .order('date_heure')
+        .order('date_seance')
+        .order('heure_seance')
         .limit(20)
       setSeances(s || [])
       setLoading(false)
@@ -123,9 +124,9 @@ export default function AgendaPublic({ slug }) {
                   {seances.map(s => (
                     <button key={s.id} onClick={() => setSelectedSlot(s.date_heure)}
                       style={{ padding: '8px 14px', borderRadius: 8, border: `1.5px solid ${selectedSlot === s.date_heure ? '#0F6E56' : '#E5E7EB'}`, background: selectedSlot === s.date_heure ? '#E1F5EE' : '#fff', color: selectedSlot === s.date_heure ? '#0F6E56' : '#374151', fontSize: 13, fontWeight: selectedSlot === s.date_heure ? 600 : 400, cursor: 'pointer' }}>
-                      {new Date(s.date_heure).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
-                      {' '}
-                      {new Date(s.date_heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(s.date_seance).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {' à '}
+                      {s.heure_seance?.slice(0,5)}
                     </button>
                   ))}
                 </div>
@@ -159,7 +160,7 @@ export default function AgendaPublic({ slug }) {
 
               {selectedSlot && (
                 <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: '#E1F5EE', fontSize: 13, color: '#0F6E56', fontWeight: 500 }}>
-                  📅 Créneau sélectionné : {new Date(selectedSlot).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                  📅 Créneau sélectionné : {selectedSlot}
                 </div>
               )}
 
