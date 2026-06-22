@@ -101,6 +101,8 @@ export default function AppShell({ user, onSignOut }) {
     return user?.user_metadata?.prenom || user?.email?.split('@')[0] || 'Utilisateur'
   })
   const [fs, setFs] = useState(() => parseInt(localStorage.getItem('napo_font_size') || '100', 10))
+  const [userId,     setUserId]     = useState(null)
+  const [prefsLoaded,setPrefsLoaded]= useState(false)
   const searchInputRef = useRef(null)
   const sbDragSrc = useRef(null)
   const tbDragSrc = useRef(null)
@@ -200,6 +202,24 @@ export default function AppShell({ user, onSignOut }) {
   useEffect(() => {
     localStorage.setItem(SB_VIS_KEY, JSON.stringify(sbVis))
   }, [sbVis])
+
+  // Sauvegarde auto Supabase (debounce 1s)
+  useEffect(() => {
+    if (!userId || !prefsLoaded) return
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.from('profiles').update({
+          preferences: {
+            accent, bgCol, fs,
+            widgets,
+            sbItems: sbItems.map(i => i.id),
+            sbVis,
+          }
+        }).eq('id', userId)
+      } catch(e) { console.warn('savePrefs:', e) }
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [accent, bgCol, fs, widgets, sbItems, sbVis, userId, prefsLoaded])
 
   return (
     <div className="app" id="app">
