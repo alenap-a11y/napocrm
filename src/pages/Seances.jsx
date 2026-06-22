@@ -562,6 +562,22 @@ export default function Seances() {
                 <div style={{ fontSize:13, color:'var(--color-text-primary)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{detail.notes}</div>
               </div>
             )}
+            {detailTab==='infos' && !editingDetail && detail.zones_corps && detail.zones_corps.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Zones annotées</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {(Array.isArray(detail.zones_corps) ? detail.zones_corps : []).map(z => (
+                    <span key={z} style={{ fontSize:11, fontWeight:500, background:'#FBEAF0', color:'#993556', padding:'3px 10px', borderRadius:20 }}>{z}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {detailTab==='infos' && !editingDetail && detail.notes && (
+              <div style={{ marginBottom:16, padding:'12px 14px', background:'var(--color-background-secondary)', borderRadius:8 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:6 }}>Notes de séance</div>
+                <div style={{ fontSize:13, color:'var(--color-text-primary)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{detail.notes}</div>
+              </div>
+            )}
             {detailTab==='infos' && !editingDetail && detail.schema_image && (
               <div style={{ marginBottom:16 }}>
                 <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Schéma corporel</div>
