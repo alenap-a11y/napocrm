@@ -5,8 +5,12 @@ import { supabase } from '../lib/supabase'
 export function useActivityTracker() {
   const location = useLocation()
   const sessionId = useRef(null)
+  const started = useRef(false)
 
   useEffect(() => {
+    if (started.current) return
+    started.current = true
+
     async function startSession() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
