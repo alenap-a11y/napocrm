@@ -363,6 +363,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [dernieresSeances,setDernieresSeances]= useState([])
   const [clientsActifs,   setClientsActifs]   = useState(0)
   const [seancesAVenir,   setSeancesAVenir]   = useState(0)
+  const [notesCount,      setNotesCount]      = useState(0)
 
   useEffect(() => {
     const getUser = async () => {
@@ -396,6 +397,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         supabase.from('clients').select('id').gte('date_creation',  monthStartStr),
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
         supabase.from('seances').select('*', { count: 'exact', head: true }).gte('date_seance', todayStr),
+        supabase.from('notes').select('*', { count: 'exact', head: true }),
+        supabase.from('notes').select('*', { count: 'exact', head: true }),
       ]
 
       const [
@@ -420,6 +423,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       })
       setClientsActifs(actifs ?? 0)
       setSeancesAVenir(avenir ?? 0)
+      setNotesCount(notes ?? 0)
     }
     loadStats()
   }, [])
@@ -502,6 +506,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           {[
             { label: 'Clients actifs', val: clientsActifs, icon: 'ti-users', color: accent },
             { label: 'Séances à venir', val: seancesAVenir, icon: 'ti-calendar-event', color: '#1D9E75' },
+            { label: 'Notes', val: notesCount, icon: 'ti-notes', color: '#7F77DD' },
           ].map(m => (
             <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

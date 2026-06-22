@@ -41,8 +41,8 @@ export function useNotifications() {
   };
 
   const markAllAsRead = async () => {
-    await supabase.from('notifications').update({ unread: false }).eq('unread', true);
     setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    await supabase.from('notifications').update({ unread: false }).eq('unread', true);
   };
 
   const unreadCount = notifications.filter(n => n.unread).length;

@@ -2,26 +2,29 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearch } from '../hooks/useSearch'
 
 export default function SearchBar({ onNavigate }) {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const { results, loading } = useSearch(query)
+  const [query,       setQuery]       = useState('')
+  const [open,        setOpen]        = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const { results, loading } = useSearch(query)
   const inputRef = useRef(null)
-  const wrapRef = useRef(null)
+  const wrapRef  = useRef(null)
 
-  const hasResults = results.clients.length > 0 || results.taches.length > 0 || results.modules.length > 0
-  const isEmpty = query.trim().length >= 2 && !loading && !hasResults
+  const groups = [
+    { key: 'clients', label: 'Clients',  color: '#E8F4FD', nav: 'clients'  },
+    { key: 'seances', label: 'Séances',  color: '#EDF7EE', nav: 'seances'  },
+    { key: 'notes',   label: 'Notes',    color: '#FEF9E7', nav: 'notes'    },
+    { key: 'taches',  label: 'Tâches',   color: '#FEF3E2', nav: 'taches'   },
+    { key: 'modules', label: 'Modules',  color: '#F3EEF9', nav: null       },
+  ]
 
-  // Spinner dès la frappe (debounce inclus), s'éteint quand la requête finit
-  useEffect(() => {
-    if (query.trim().length >= 2) setIsSearching(true)
-    else setIsSearching(false)
-  }, [query])
+  const hasResults = groups.some(g => results[g.key]?.items.length > 0)
+  const isEmpty    = query.trim().length >= 2 && !loading && !hasResults
 
-  useEffect(() => {
-    if (!loading) setIsSearching(false)
-  }, [loading])
+  // Spinner dès la frappe, s'éteint quand la requête finit
+  useEffect(() => { setIsSearching(query.trim().length >= 2) }, [query])
+  useEffect(() => { if (!loading) setIsSearching(false) }, [loading])
 
+  // ⌘K / Escape
   useEffect(() => {
     function handleKey(e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -29,30 +32,22 @@ export default function SearchBar({ onNavigate }) {
         inputRef.current?.focus()
         setOpen(true)
       }
-      if (e.key === 'Escape') {
-        setOpen(false)
-        setQuery('')
-        inputRef.current?.blur()
-      }
+      if (e.key === 'Escape') { setOpen(false); setQuery(''); inputRef.current?.blur() }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [])
 
+  // Clic hors dropdown → ferme
   useEffect(() => {
-    function handleClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false)
-      }
+    function onClickOut(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('mousedown', onClickOut)
+    return () => document.removeEventListener('mousedown', onClickOut)
   }, [])
 
-  useEffect(() => {
-    if (query.trim().length >= 2) setOpen(true)
-    else setOpen(false)
-  }, [query])
+  useEffect(() => { setOpen(query.trim().length >= 2) }, [query])
 
   function handleSelect(item) {
     onNavigate(item.nav)
@@ -61,7 +56,7 @@ export default function SearchBar({ onNavigate }) {
   }
 
   function highlight(text, q) {
-    if (!q || q.length < 2) return text
+    if (!q || q.length < 2 || typeof text !== 'string') return text
     const idx = text.toLowerCase().indexOf(q.toLowerCase())
     if (idx === -1) return text
     return (
@@ -75,15 +70,10 @@ export default function SearchBar({ onNavigate }) {
     )
   }
 
-  const groups = [
-    { label: 'Clients',  items: results.clients,  color: '#E8F4FD' },
-    { label: 'Tâches',   items: results.taches,   color: '#FEF3E2' },
-    { label: 'Modules',  items: results.modules,  color: '#F3EEF9' },
-  ]
-
   return (
     <div ref={wrapRef} style={{ flex: 1, maxWidth: 420, position: 'relative' }}>
 
+      {/* ── Barre ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         background: 'var(--color-background-secondary)',
@@ -101,7 +91,7 @@ export default function SearchBar({ onNavigate }) {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => { if (query.trim().length >= 2) setOpen(true) }}
-          placeholder="Rechercher un client, séance, module… (⌘K)"
+          placeholder="Rechercher un client, séance, note… (⌘K)"
           style={{
             border: 'none', background: 'transparent', outline: 'none',
             fontSize: 13, color: 'var(--color-text-primary)',
@@ -133,6 +123,7 @@ export default function SearchBar({ onNavigate }) {
         )}
       </div>
 
+      {/* ── Dropdown ── */}
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)',
@@ -159,33 +150,31 @@ export default function SearchBar({ onNavigate }) {
           )}
 
           {!loading && hasResults && groups.map(group => {
-            if (!group.items.length) return null
+            const { items, hasMore } = results[group.key] || {}
+            if (!items?.length) return null
             return (
-              <div key={group.label}>
+              <div key={group.key}>
+                {/* En-tête catégorie */}
                 <div style={{
-                  fontSize: 10, fontWeight: 500, color: 'var(--color-text-tertiary)',
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
+                  fontSize: 10, fontWeight: 600, color: 'var(--color-text-tertiary)',
+                  textTransform: 'uppercase', letterSpacing: '0.07em',
                   padding: '10px 14px 4px',
                 }}>
                   {group.label}
                 </div>
-                {group.items.map(item => (
+
+                {/* Résultats */}
+                {items.map(item => (
                   <div
                     key={item.id || item.nav}
                     onClick={() => handleSelect(item)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '8px 14px', cursor: 'pointer',
-                      transition: 'background 0.1s',
-                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', cursor: 'pointer' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <div style={{
-                      width: 32, height: 32, borderRadius: 9,
-                      background: group.color,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
+                      width: 32, height: 32, borderRadius: 9, background: group.color,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                       <i className={`ti ${item.icon}`} style={{ fontSize: 16, color: '#6B8F6E' }} aria-hidden="true" />
                     </div>
@@ -193,22 +182,43 @@ export default function SearchBar({ onNavigate }) {
                       <div style={{ fontSize: 13, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {highlight(item.name, query)}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{item.sub}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {highlight(item.sub, query)}
+                      </div>
                     </div>
                     <span style={{
-                      fontSize: 10, padding: '2px 7px', borderRadius: 5,
+                      fontSize: 10, padding: '2px 7px', borderRadius: 5, flexShrink: 0,
                       background: 'var(--color-background-secondary)',
-                      color: 'var(--color-text-secondary)', flexShrink: 0,
+                      color: 'var(--color-text-secondary)',
                     }}>
                       {item.tag}
                     </span>
                   </div>
                 ))}
+
+                {/* Voir tout */}
+                {hasMore && group.nav && (
+                  <div
+                    onClick={() => { onNavigate(group.nav); setQuery(''); setOpen(false) }}
+                    style={{
+                      padding: '5px 14px 8px', fontSize: 12,
+                      color: '#6B8F6E', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    <i className="ti ti-arrow-right" style={{ fontSize: 13 }} aria-hidden="true" />
+                    Voir tout dans {group.label}
+                  </div>
+                )}
+
                 <div style={{ height: '0.5px', background: 'var(--color-border-tertiary)', margin: '4px 0' }} />
               </div>
             )
           })}
 
+          {/* Pied */}
           <div style={{
             padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 6,
             borderTop: '0.5px solid var(--color-border-tertiary)',

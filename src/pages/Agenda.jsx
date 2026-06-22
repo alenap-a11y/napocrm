@@ -8,6 +8,7 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import frLocale from '@fullcalendar/core/locales/fr'
 import NouveauRdv from '../components/NouveauRdv'
+import SlotPicker from '../components/SlotPicker'
 import SeanceNotesPreview from '../components/SeanceNotesPreview'
 import NotesDuJour from '../components/NotesDuJour'
 import { getAnniversairesClients } from '../utils/anniversaires'
@@ -105,7 +106,33 @@ export default function Agenda() {
   const [editingId,  setEditingId]  = useState(null)
   const [editForm,   setEditForm]   = useState(EMPTY_EDIT)
   const [editMsg,    setEditMsg]    = useState('')
-  const [editSaving, setEditSaving] = useState(false)
+  const [editSaving,    setEditSaving]    = useState(false)
+  const [seancesJour,   setSeancesJour]   = useState([])
+  const [loadingSlots,  setLoadingSlots]  = useState(false)
+  const [editDuree,     setEditDuree]     = useState(60)
+
+  /* ── Créneaux du jour édité ── */
+  useEffect(() => {
+    if (!editingId || !editForm.date) return
+    let cancelled = false
+    setLoadingSlots(true)
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled || !user) { setLoadingSlots(false); return }
+      const { data } = await supabase
+        .from('seances')
+        .select('id, heure_seance, duree_minutes')
+        .eq('user_id', user.id)
+        .eq('date_seance', editForm.date)
+      if (!cancelled) {
+        setSeancesJour(data || [])
+        const cur = (data || []).find(s => s.id === editingId)
+        if (cur?.duree_minutes) setEditDuree(cur.duree_minutes)
+        setLoadingSlots(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [editingId, editForm.date])
 
   /* ── Chargement ── */
   useEffect(() => { fetchClients() }, [])
@@ -465,10 +492,17 @@ export default function Agenda() {
             </Fld>
 
             {/* Date + Heure */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <Fld label="Date"><input type="date" value={editForm.date}  onChange={ef('date')}  style={inp} /></Fld>
-              <Fld label="Heure"><input type="time" value={editForm.heure} onChange={ef('heure')} style={inp} /></Fld>
-            </div>
+            <Fld label="Date"><input type="date" value={editForm.date} onChange={ef('date')} style={inp} /></Fld>
+            <Fld label={loadingSlots ? 'Heure …' : 'Heure'}>
+              <SlotPicker
+                value={editForm.heure}
+                onChange={h => setEditForm(p => ({ ...p, heure: h }))}
+                duree={editDuree}
+                seancesJour={seancesJour}
+                loading={loadingSlots}
+                excludeId={editingId}
+              />
+            </Fld>
 
             {/* Type séance */}
             <Fld label="Type de séance">

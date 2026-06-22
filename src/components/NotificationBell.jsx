@@ -3,13 +3,19 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 
 export default function NotificationBell() {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
+  function handleBellClick() {
+    const opening = !open
+    setOpen(opening)
+    if (opening && unreadCount > 0) markAllAsRead()
+  }
+
   return (
     <div className="notification-bell">
-      <button onClick={() => setOpen(!open)}>
+      <button onClick={handleBellClick}>
         🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
       </button>
       {open && (

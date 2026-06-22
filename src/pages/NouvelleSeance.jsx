@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Html, useGLTF } from '@react-three/drei'
 import { supabase } from '../lib/supabase'
+import SlotPicker from '../components/SlotPicker'
 import * as THREE from 'three'
 
 // Supprime le warning THREE.Clock deprecated (r3f interne, pas corrigeable autrement)
@@ -398,11 +399,31 @@ export default function NouvelleSeance() {
 
   /* Séance */
   const today = new Date().toISOString().slice(0, 10)
-  const [date,  setDate]  = useState(searchParams.get('date') ?? today)
-  const [heure, setHeure] = useState(searchParams.get('heure') ?? '09:00')
-  const [duree, setDuree] = useState('60')
+  const [date,         setDate]         = useState(searchParams.get('date') ?? today)
+  const [heure,        setHeure]        = useState(searchParams.get('heure') ?? '09:00')
+  const [duree,        setDuree]        = useState('60')
+  const [seancesJour,  setSeancesJour]  = useState([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [prix,  setPrix]  = useState('')
   const [type,  setType]  = useState('Sophrologie')
+
+  /* Créneaux disponibles — rechargés à chaque changement de date */
+  useEffect(() => {
+    if (!date) return
+    let cancelled = false
+    setLoadingSlots(true)
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (cancelled || !user) { setLoadingSlots(false); return }
+      const { data } = await supabase
+        .from('seances')
+        .select('id, heure_seance, duree_minutes')
+        .eq('user_id', user.id)
+        .eq('date_seance', date)
+      if (!cancelled) { setSeancesJour(data || []); setLoadingSlots(false) }
+    })()
+    return () => { cancelled = true }
+  }, [date])
 
   /* Position fixe du dropdown (échappe overflow:auto du scroll container) */
   useLayoutEffect(() => {
@@ -899,15 +920,22 @@ export default function NouvelleSeance() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase' }}>Informations de la séance</div>
               </div>
 
-              <div style={{ display: 'flex', gap: 6, ...gap }}>
-                <div style={{ flex: 1 }}>
-                  <label style={lbl}>Date</label>
-                  <input style={inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={lbl}>Heure</label>
-                  <input style={inp} type="time" value={heure} onChange={e => setHeure(e.target.value)} />
-                </div>
+              <div style={gap}>
+                <label style={lbl}>Date</label>
+                <input style={inp} type="date" value={date} onChange={e => setDate(e.target.value)} />
+              </div>
+              <div style={gap}>
+                <label style={lbl}>
+                  Heure
+                  {loadingSlots && <span style={{ marginLeft: 5, color: '#9ca3af', fontWeight: 400 }}>…</span>}
+                </label>
+                <SlotPicker
+                  value={heure}
+                  onChange={setHeure}
+                  duree={duree}
+                  seancesJour={seancesJour}
+                  loading={loadingSlots}
+                />
               </div>
 
               <div style={gap}>
