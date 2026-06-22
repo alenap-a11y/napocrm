@@ -4,7 +4,6 @@ import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
 import { useActivityTracker } from './hooks/useActivityTracker'
-import AdminDashboard from './pages/AdminDashboard'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
