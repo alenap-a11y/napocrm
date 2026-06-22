@@ -18,9 +18,10 @@ import { getAnniversairesClients } from '../utils/anniversaires'
 const TYPES = ['Sophrologie','Naturopathie','Coaching','Énergie','Massage','Fleurs de Bach','3D Humain','Autre']
 
 const STATUTS = [
-  { value: 'planifié', label: 'Planifié' },
-  { value: 'confirmé', label: 'Confirmé' },
-  { value: 'annulé',   label: 'Annulé'   },
+  { value: 'planifié',   label: 'Planifié'   },
+  { value: 'confirmé',   label: 'Confirmé'   },
+  { value: 'annulé',     label: 'Annulé'     },
+  { value: 'disponible', label: '🟢 Disponible (agenda public)' },
 ]
 
 const TYPE_COLOR = {
@@ -31,12 +32,15 @@ const TYPE_COLOR = {
   Massage:         '#d4711e',
   'Fleurs de Bach':'#7F3FBF',
   Autre:           '#888780',
+  disponible:      '#0F6E56',
+  disponible:      '#0F6E56',
 }
 
 const STATUT_BG = {
   confirmé: { bg: '#E1F5EE', color: '#0F6E56' },
   planifié: { bg: '#E6F1FB', color: '#185FA5' },
-  annulé:   { bg: '#F5F5F5', color: '#6B7280' },
+  annulé:     { bg: '#F5F5F5', color: '#6B7280' },
+  disponible: { bg: '#E1F5EE', color: '#0F6E56' },
 }
 
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim']
