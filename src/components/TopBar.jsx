@@ -48,11 +48,7 @@ export default function TopBar({
   return (
     <div className="topbar" style={{ position: 'relative' }}>
 
-      <img
-        src={napopetit}
-        alt="Naposolo"
-        style={{ height: 32, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
-      />
+
 
       <nav className="tb-nav" aria-label="Navigation principale">
         {visibleItems.map((item) => {

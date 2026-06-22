@@ -79,6 +79,7 @@ function fmtDate(d) {
 export default function Clients() {
   const importRef = useRef()
   const [modalSeance, setModalSeance] = useState(null)
+  const [modalTab, setModalTab] = useState('infos')
 
   const location = useLocation()
 
@@ -755,18 +756,20 @@ export default function Clients() {
                 ['Type',  modalSeance.type_seance || '—'],
                 ['Durée', modalSeance.duree_minutes ? modalSeance.duree_minutes + ' min' : '—'],
                 ['Prix',  modalSeance.prix_euros != null ? parseFloat(modalSeance.prix_euros).toFixed(0) + ' €' : '—'],
+                ['Tags',  modalSeance.tags || '—'],
               ].map(([label, val]) => (
                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
                   <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{label}</span>
                   <span style={{ fontSize: 12, color: 'var(--color-text-primary)', fontWeight: 600 }}>{val}</span>
                 </div>
               ))}
-              {modalSeance.notes && (
-                <div style={{ padding: '10px 12px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>Notes</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-primary)', lineHeight: 1.6 }}>{modalSeance.notes}</div>
-                </div>
-              )}
+              <div style={{ padding: '10px 12px', background: 'var(--color-background-secondary)', borderRadius: 8, gridColumn: '1/-1' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>Notes de séance</div>
+                {modalSeance.notes
+                  ? <div style={{ fontSize: 12, color: 'var(--color-text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{modalSeance.notes}</div>
+                  : <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Aucune note pour cette séance</div>
+                }
+              </div>
             </div>
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setModalSeance(null)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Fermer</button>

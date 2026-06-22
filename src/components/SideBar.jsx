@@ -51,7 +51,6 @@ export default function SideBar({
     <aside className="sidebar" style={{ background: bgCol }}>
 
       <div className="sb-logo">
-        <img src="/logo-naposolo.png" alt="Naposolo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
       </div>
 
       <div className="sb-items">
