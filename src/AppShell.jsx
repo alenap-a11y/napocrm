@@ -446,7 +446,6 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/faq"      element={<FAQ />} />
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
-              <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
           </Suspense>
         </main>
