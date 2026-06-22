@@ -430,6 +430,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [lunePct,   setLunePct]   = useState(0)
   const [luneNom,   setLuneNom]   = useState('')
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
+  const [mantraApi, setMantraApi] = useState(null)
   const [prenom, setPrenom]               = useState('')
   const [recentSeances,   setRecentSeances]   = useState([])
   const [monthStats,      setMonthStats]      = useState({ count: 0, revenue: 0, clientsCount: 0 })
@@ -477,6 +478,22 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     }
     calcLune()
   }, [time])
+
+  useEffect(() => {
+    async function fetchMantra() {
+      try {
+        const r = await fetch('https://zenquotes.io/api/random')
+        const d = await r.json()
+        if (d && d[0]) {
+          setMantraApi({ t: `"${d[0].q}"`, s: `— ${d[0].a}` })
+        }
+      } catch {
+        // Fallback sur mantra local si API indispo
+        setMantraApi(null)
+      }
+    }
+    fetchMantra()
+  }, [])
 
   useEffect(() => {
     const getUser = async () => {
@@ -653,8 +670,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         {widgets.mantra && (
           <div style={{ ...cardStyle, borderLeft: `3px solid ${accent}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.5, marginBottom: 8 }}>{mantra.t}</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{mantra.s}</div>
+            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.5, marginBottom: 8 }}>{(mantraApi || mantra).t}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{(mantraApi || mantra).s}</div>
           </div>
         )}
 
