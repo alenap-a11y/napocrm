@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import AppShell from './AppShell'
 import LoginPage from './pages/LoginPage'
 import ResetPassword from './pages/ResetPassword'
+import AdminLayout from './pages/AdminLayout'
 import { supabase } from './lib/supabase'
-import { useActivityTracker } from './hooks/useActivityTracker'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
-
-  useActivityTracker()
+  const location = useLocation()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -18,9 +18,7 @@ export default function App() {
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true)
-      }
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -32,10 +30,8 @@ export default function App() {
   }
 
   if (loading) return null
-
-  if (isRecovery) return <ResetPassword onDone={() => { setIsRecovery(false) }} />
-
+  if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (!user) return <LoginPage />
-
+  if (location.pathname.startsWith('/admin')) return <AdminLayout user={user} onSignOut={signOut} />
   return <AppShell user={user} onSignOut={signOut} />
 }
