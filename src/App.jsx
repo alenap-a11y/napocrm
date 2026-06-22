@@ -30,7 +30,10 @@ export default function App() {
     setUser(null)
   }
 
-  if (location.pathname.startsWith('/rdv/')) return <AgendaPublic />
+  if (location.pathname.startsWith('/rdv/')) {
+    const slug = location.pathname.replace('/rdv/', '')
+    return <AgendaPublic slug={slug} />
+  }
   if (loading) return null
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (!user) return <LoginPage />

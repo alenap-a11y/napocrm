@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+
 import { supabase } from '../lib/supabase'
 
-export default function AgendaPublic() {
-  const { slug } = useParams()
+export default function AgendaPublic({ slug }) {
   const [profil, setProfil] = useState(null)
   const [seances, setSeances] = useState([])
   const [loading, setLoading] = useState(true)
