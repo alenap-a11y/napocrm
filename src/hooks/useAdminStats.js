@@ -6,10 +6,62 @@ export function useAdminStats() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  async function fetchStats(userId) {
+    const { data: users } = await supabase
+      .from('profiles')
+      .select('id, prenom, is_admin')
+      .neq('id', userId)
+
+    const { data: events } = await supabase
+      .from('user_events')
+      .select('user_id, event_type, page, created_at')
+      .order('created_at', { ascending: false })
+
+    const { data: sessions } = await supabase
+      .from('user_sessions')
+      .select('user_id, started_at, ended_at')
+
+    const statsParUser = (users ?? []).map(u => {
+      const ue = (events ?? []).filter(e => e.user_id === u.id)
+      const us = (sessions ?? []).filter(s => s.user_id === u.id)
+      const durations = us
+        .filter(s => s.ended_at)
+        .map(s => (new Date(s.ended_at) - new Date(s.started_at)) / 60000)
+
+      return {
+        id: u.id,
+        prenom: u.prenom ?? `User ${u.id.slice(0,6)}`,
+        totalEvents: ue.length,
+        totalSessions: us.length,
+        avgDuration: durations.length
+          ? Math.round(durations.reduce((a,b)=>a+b,0) / durations.length)
+          : 0,
+        eventsByType: ue.reduce((acc, e) => {
+          acc[e.event_type] = (acc[e.event_type] || 0) + 1
+          return acc
+        }, {}),
+        pageViews: ue
+          .filter(e => e.event_type === 'page_view')
+          .reduce((acc, e) => {
+            acc[e.page] = (acc[e.page] || 0) + 1
+            return acc
+          }, {}),
+        lastSeen: ue[0]?.created_at ?? null
+      }
+    })
+
+    setStats(statsParUser)
+    setLoading(false)
+  }
+
   useEffect(() => {
-    async function fetchStats() {
+    let userId = null
+
+    async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+
+      userId = user.id
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -24,58 +76,46 @@ export function useAdminStats() {
       }
 
       setIsAdmin(true)
+      await fetchStats(userId)
 
-      // Tous les profils sauf l'admin
-      const { data: users, error } = await supabase
-        .from('profiles')
-        .select('id, prenom, is_admin')
-        .neq('id', user.id)
+      // Realtime — nouveau profil créé
+      const profileSub = supabase
+        .channel('profiles-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        }, () => fetchStats(userId))
+        .subscribe()
 
-      console.log('users:', users, 'error:', error)
+      // Realtime — nouvel event
+      const eventSub = supabase
+        .channel('events-changes')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_events'
+        }, () => fetchStats(userId))
+        .subscribe()
 
-      const { data: events } = await supabase
-        .from('user_events')
-        .select('user_id, event_type, page, created_at')
-        .order('created_at', { ascending: false })
+      // Realtime — nouvelle session
+      const sessionSub = supabase
+        .channel('sessions-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'user_sessions'
+        }, () => fetchStats(userId))
+        .subscribe()
 
-      const { data: sessions } = await supabase
-        .from('user_sessions')
-        .select('user_id, started_at, ended_at')
-
-      const statsParUser = (users ?? []).map(u => {
-        const ue = (events ?? []).filter(e => e.user_id === u.id)
-        const us = (sessions ?? []).filter(s => s.user_id === u.id)
-        const durations = us
-          .filter(s => s.ended_at)
-          .map(s => (new Date(s.ended_at) - new Date(s.started_at)) / 60000)
-
-        return {
-          id: u.id,
-          prenom: u.prenom ?? `User ${u.id.slice(0, 6)}`,
-          totalEvents: ue.length,
-          totalSessions: us.length,
-          avgDuration: durations.length
-            ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-            : 0,
-          eventsByType: ue.reduce((acc, e) => {
-            acc[e.event_type] = (acc[e.event_type] || 0) + 1
-            return acc
-          }, {}),
-          pageViews: ue
-            .filter(e => e.event_type === 'page_view')
-            .reduce((acc, e) => {
-              acc[e.page] = (acc[e.page] || 0) + 1
-              return acc
-            }, {}),
-          lastSeen: ue[0]?.created_at ?? null
-        }
-      })
-
-      setStats(statsParUser)
-      setLoading(false)
+      return () => {
+        supabase.removeChannel(profileSub)
+        supabase.removeChannel(eventSub)
+        supabase.removeChannel(sessionSub)
+      }
     }
 
-    fetchStats()
+    init()
   }, [])
 
   return { stats, isAdmin, loading }
