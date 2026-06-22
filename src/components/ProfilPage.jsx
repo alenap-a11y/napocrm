@@ -240,7 +240,7 @@ export default function ProfilPage({ accent, onSignOut }) {
             {profil.slug && (
               <div style={{ display: 'flex', gap: 12 }}>
                 
-                  href={'/rdv/' + profil.slug}
+                <a href={'/rdv/' + profil.slug}
                   target="_blank"
                   rel="noreferrer"
                   style={{ fontSize: 12, color: '#0F6E56', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 500 }}>
