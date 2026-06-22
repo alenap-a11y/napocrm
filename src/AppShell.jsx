@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
+import { useActivityTracker } from './hooks/useActivityTracker'
+import AdminDashboard from './pages/AdminDashboard'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -80,6 +82,7 @@ const ACCENT_SWATCHES = ['#B8961E', '#534AB7', '#0F6E56', '#993C1D', '#185FA5', 
 const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C2C2A']
 
 export default function AppShell({ user, onSignOut }) {
+  useActivityTracker()
   const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
   const [sbVis, setSbVis] = useState(loadSbVis)
@@ -443,6 +446,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/faq"      element={<FAQ />} />
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
+              <Route path="/admin" element={<AdminDashboard />} />
             </Routes>
           </Suspense>
         </main>
