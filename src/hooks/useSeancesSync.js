@@ -20,7 +20,7 @@ export function useRendezVousSync() {
     setLoading(true)
     const { data } = await supabase
       .from('seances')
-      .select('id, date_seance, heure_seance, type_seance, statut, notes, client_id, clients(nom, prenom)')
+      .select('id, date_seance, heure_seance, type_seance, statut, notes, client_id, duree_minutes, prix_euros, tags, zones_corps, schema_image, clients(nom, prenom)')
       .eq('user_id', id)
       .order('date_seance', { ascending: true })
     // Reconstruit date_rdv pour compat avec Agenda.jsx
