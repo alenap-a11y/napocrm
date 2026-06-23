@@ -129,7 +129,7 @@ export default function AgendaPublic({ slug }) {
           'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'Naposolo <noreply@naposolo.com>',
+          from: 'Naposolo <onboarding@resend.dev>',
           to: [form.email],
           subject: `✅ RDV confirmé — ${profil.prenom} ${profil.nom}`,
           html: `
@@ -169,7 +169,7 @@ export default function AgendaPublic({ slug }) {
           'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: 'Naposolo <noreply@naposolo.com>',
+          from: 'Naposolo <onboarding@resend.dev>',
           to: [profil.email],
           subject: `🔔 Nouvelle demande RDV — ${form.prenom} ${form.nom}`,
           html: `
