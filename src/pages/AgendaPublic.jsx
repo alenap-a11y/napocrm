@@ -41,8 +41,9 @@ export default function AgendaPublic({ slug }) {
 
   const slotsByDate = {}
   seances.forEach(s => {
-    if (!slotsByDate[s.date_seance]) slotsByDate[s.date_seance] = []
-    slotsByDate[s.date_seance].push(s)
+    const key = s.date_seance?.slice(0, 10)
+    if (!slotsByDate[key]) slotsByDate[key] = []
+    slotsByDate[key].push(s)
   })
 
   const today = new Date()
