@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const FIELDS = [
-  { section: 'Header', fields: [{ key: 'header_tagline', label: 'Tagline header' }]},
+  { section: 'Header', fields: [{ key: 'header_tagline', label: 'Tagline header' },
+    { key: 'header_badge', label: 'Badge version (ex: Alpha v0.2)' }]},
   { section: 'Hero', fields: [
     { key: 'hero_badge', label: 'Badge hero' },
     { key: 'hero_title', label: 'Titre principal' },

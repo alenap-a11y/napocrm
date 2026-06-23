@@ -101,7 +101,7 @@ export default function LoginPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={napopetit} alt="Naposolo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: '#111827' }}>Naposolo</span>
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em' }}>Alpha v0.2</span>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em' }}>{cms.header_badge || 'Alpha v0.2'}</span>
           <span className="landing-tagline" style={{ fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500, ...cs('header_tagline') }}>{cms.header_tagline}</span>
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
