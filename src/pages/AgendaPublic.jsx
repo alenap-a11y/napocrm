@@ -116,7 +116,7 @@ export default function AgendaPublic({ slug }) {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
         body: JSON.stringify({
           to_client: form.email,
-          to_praticien: profil.email,
+          praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
           praticien: profil.prenom + ' ' + profil.nom,
           date: formatDateLong(selectedSlot.date),
