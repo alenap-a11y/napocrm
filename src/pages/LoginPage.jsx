@@ -1,88 +1,88 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
 import MetiersCarousel from '../components/MetiersCarousel'
 import '../components/MetiersCarousel.css'
 
-const FEATURES = [
-  {
-    icon: 'ti-users',
-    title: 'Fiches clients',
-    desc: 'Centralisez toutes les informations de vos clients : coordonnées, historique, notes et documents.',
-  },
-  {
-    icon: 'ti-calendar-stats',
-    title: 'Suivi des séances',
-    desc: 'Enregistrez chaque séance, son contenu, sa durée et son tarif. Suivez la progression de chaque client.',
-  },
-  {
-    icon: 'ti-notebook',
-    title: 'Notes',
-    desc: 'Prenez des notes libres ou structurées après chaque séance, accessibles en un clic.',
-  },
-  {
-    icon: 'ti-calendar',
-    title: 'Agenda',
-    desc: 'Visualisez vos rendez-vous à venir, évitez les conflits et planifiez sereinement.',
-  },
-  {
-    icon: 'ti-bell',
-    title: 'Relances automatiques',
-    desc: 'Envoyez des rappels et relances personnalisés à vos clients sans effort.',
-    optional: true,
-  },
-  {
-    icon: 'ti-shield-check',
-    title: 'RGPD natif',
-    desc: 'Vos données restent les vôtres. Hébergement européen, consentements gérés, export à la demande.',
-  },
-]
+const DEFAULT = {
+  header_tagline:  'Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.',
+  hero_badge:      'Conçu pour les praticiens du bien-être',
+  hero_title:      'Le CRM qui pense comme vous, en plus organisé.',
+  hero_subtitle:   'Gérez vos clients, séances et notes dans un espace pensé pour les thérapeutes, coachs et praticiens indépendants.',
+  hero_cta:        'Découvrir Naposolo',
+  hero_tagline:    'Les petits font les grands !',
+  features_badge:  'Ce que Naposolo fait pour vous',
+  features_title:  'Tout ce dont vous avez besoin, rien de superflu.',
+  features_sub:    'Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.',
+  footer_city:     'Vandœuvre-lès-Nancy',
+  feat_1_title:    'Fiches clients',
+  feat_1_desc:     'Centralisez toutes les informations de vos clients : coordonnées, historique, notes et documents.',
+  feat_2_title:    'Suivi des séances',
+  feat_2_desc:     'Enregistrez chaque séance, son contenu, sa durée et son tarif. Suivez la progression de chaque client.',
+  feat_3_title:    'Notes',
+  feat_3_desc:     'Prenez des notes libres ou structurées après chaque séance, accessibles en un clic.',
+  feat_4_title:    'Agenda',
+  feat_4_desc:     'Visualisez vos rendez-vous à venir, évitez les conflits et planifiez sereinement.',
+  feat_5_title:    'Relances automatiques',
+  feat_5_desc:     'Envoyez des rappels et relances personnalisés à vos clients sans effort.',
+  feat_6_title:    'RGPD natif',
+  feat_6_desc:     'Vos données restent les vôtres. Hébergement européen, consentements gérés, export à la demande.',
+}
 
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
 export default function LoginPage() {
-  const [email,       setEmail]       = useState('')
-  const [password,    setPassword]    = useState('')
-  const [remember,    setRemember]    = useState(false)
-  const [loading,     setLoading]     = useState(false)
-  const [error,       setError]       = useState('')
-  const [magicSent,   setMagicSent]   = useState(false)
-  const [resetOpen,   setResetOpen]   = useState(false)
-  const [resetEmail,  setResetEmail]  = useState('')
-  const [resetSent,   setResetSent]   = useState(false)
-  const [resetError,  setResetError]  = useState('')
-  const [resetLoading,setResetLoading]= useState(false)
+  const [cms, setCms] = useState(DEFAULT)
+  const [email,        setEmail]        = useState('')
+  const [password,     setPassword]     = useState('')
+  const [remember,     setRemember]     = useState(false)
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState('')
+  const [magicSent,    setMagicSent]    = useState(false)
+  const [resetOpen,    setResetOpen]    = useState(false)
+  const [resetEmail,   setResetEmail]   = useState('')
+  const [resetSent,    setResetSent]    = useState(false)
+  const [resetError,   setResetError]   = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+
+  useEffect(() => {
+    supabase.from('landing_content').select('key, value').then(({ data }) => {
+      if (data) {
+        const map = {}
+        data.forEach(r => { map[r.key] = r.value })
+        setCms(c => ({ ...c, ...map }))
+      }
+    })
+  }, [])
+
+  const FEATURES = [
+    { icon: 'ti-users',          title: cms.feat_1_title, desc: cms.feat_1_desc },
+    { icon: 'ti-calendar-stats', title: cms.feat_2_title, desc: cms.feat_2_desc },
+    { icon: 'ti-notebook',       title: cms.feat_3_title, desc: cms.feat_3_desc },
+    { icon: 'ti-calendar',       title: cms.feat_4_title, desc: cms.feat_4_desc },
+    { icon: 'ti-bell',           title: cms.feat_5_title, desc: cms.feat_5_desc, optional: true },
+    { icon: 'ti-shield-check',   title: cms.feat_6_title, desc: cms.feat_6_desc },
+  ]
 
   async function handleResetPassword() {
     if (!resetEmail.trim()) { setResetError('Entrez votre adresse email.'); return }
-    setResetLoading(true)
-    setResetError('')
+    setResetLoading(true); setResetError('')
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: window.location.origin + '/reset-password',
       })
       if (error) throw error
       setResetSent(true)
-    } catch (error) {
-      console.error('Reset password error:', error.message, error.status, error)
-      setResetError(`Erreur: ${error.message}`)
-    }
+    } catch (error) { setResetError('Erreur: ' + error.message) }
     setResetLoading(false)
   }
 
-  function closeReset() {
-    setResetOpen(false)
-    setResetEmail('')
-    setResetSent(false)
-    setResetError('')
-  }
+  function closeReset() { setResetOpen(false); setResetEmail(''); setResetSent(false); setResetError('') }
 
   async function handleLogin(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault(); setLoading(true); setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError(error.message)
     setLoading(false)
@@ -90,272 +90,123 @@ export default function LoginPage() {
 
   async function handleMagicLink() {
     if (!email.trim()) { setError('Entrez votre email pour recevoir un lien magique.'); return }
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin + '/dashboard',
-        },
-      })
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/dashboard' } })
       if (error) throw error
       setMagicSent(true)
-    } catch (error) {
-      console.error('Magic link error:', error.message, error.status, error)
-      setError(`Erreur: ${error.message}`)
-    }
+    } catch (error) { setError('Erreur: ' + error.message) }
     setLoading(false)
   }
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh' }}>
 
-      {/* ── HEADER ── */}
-      <header className="landing-header" style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 56,
-        background: 'rgba(253,248,242,0.92)', backdropFilter: 'blur(8px)',
-        borderBottom: '0.5px solid rgba(14,165,233,0.15)',
-      }}>
-        {/* Logo */}
+      {/* HEADER */}
+      <header className="landing-header" style={{ position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56, background: 'rgba(253,248,242,0.92)', backdropFilter: 'blur(8px)', borderBottom: '0.5px solid rgba(14,165,233,0.15)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={napopetit} alt="Naposolo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: '#111827' }}>Naposolo</span>
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20,
-            background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em',
-          }}>Alpha v0.2</span>
-          <span className="landing-tagline" style={{
-            fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500,
-          }}>Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.</span>
+          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em' }}>Alpha v0.2</span>
+          <span className="landing-tagline" style={{ fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500 }}>{cms.header_tagline}</span>
         </div>
-
-        {/* Nav */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <button
-            className="landing-nav-features"
-            onClick={() => scrollTo('fonctionnalites')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500 }}
-          >
-            Fonctionnalités
-          </button>
-          <button
-            onClick={() => scrollTo('connexion')}
-            style={{
-              padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600,
-            }}
-          >
-            Connexion
-          </button>
+          <button className="landing-nav-features" onClick={() => scrollTo('fonctionnalites')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500 }}>Fonctionnalités</button>
+          <button onClick={() => scrollTo('connexion')} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600 }}>Connexion</button>
         </nav>
       </header>
 
-      {/* ── HERO ── */}
+      {/* HERO */}
       <section className="landing-hero">
-        {/* Texte */}
         <div>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 12, fontWeight: 600, color: '#0EA5E9',
-            background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 24,
-          }}>
-            <i className="ti ti-feather" style={{ fontSize: 13 }} aria-hidden="true" />
-            Conçu pour les praticiens du bien-être
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 24 }}>
+            <i className="ti ti-feather" style={{ fontSize: 13 }} />
+            {cms.hero_badge}
           </div>
-
-          <h1 style={{
-            fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15,
-            color: '#111827', marginBottom: 20, letterSpacing: '-0.02em',
-          }}>
-            Le CRM qui pense<br />comme vous,<br />
-            <span style={{ color: '#0EA5E9' }}>en plus organisé.</span>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em' }}>
+            {cms.hero_title.split(',').map((part, i, arr) => (
+              <span key={i}>{part}{i < arr.length - 1 ? ',' : ''}{i < arr.length - 1 ? <br /> : ''}</span>
+            ))}
           </h1>
-
-          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>
-            Gérez vos clients, séances et notes dans un espace pensé pour les thérapeutes, coachs et praticiens indépendants.
-          </p>
-
+          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>{cms.hero_subtitle}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => scrollTo('fonctionnalites')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600,
-              }}
-            >
-              Découvrir Naposolo
-              <i className="ti ti-arrow-down" style={{ fontSize: 15 }} aria-hidden="true" />
+            <button onClick={() => scrollTo('fonctionnalites')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600 }}>
+              {cms.hero_cta}
+              <i className="ti ti-arrow-down" style={{ fontSize: 15 }} />
             </button>
-            <span style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic' }}>
-              Les petits font les grands !
-            </span>
+            <span style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic' }}>{cms.hero_tagline}</span>
           </div>
         </div>
 
-        {/* ── CARTE CONNEXION ── */}
-        <div id="connexion" style={{
-          background: '#fff', borderRadius: 16, padding: 32,
-          border: '0.5px solid rgba(14,165,233,0.2)',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.07)',
-        }}>
+        {/* CARTE CONNEXION */}
+        <div id="connexion" style={{ background: '#fff', borderRadius: 16, padding: 32, border: '0.5px solid rgba(14,165,233,0.2)', boxShadow: '0 8px 40px rgba(0,0,0,0.07)' }}>
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Connexion</div>
             <div style={{ fontSize: 13, color: '#9ca3af' }}>Accédez à votre espace Naposolo</div>
           </div>
-
           {magicSent ? (
-            <div style={{
-              padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11',
-              fontSize: 14, lineHeight: 1.6, textAlign: 'center',
-            }}>
-              <i className="ti ti-mail-check" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} aria-hidden="true" />
+            <div style={{ padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
+              <i className="ti ti-mail-check" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />
               Lien magique envoyé à <strong>{email}</strong>.<br />Vérifiez votre boîte mail.
-              <button
-                onClick={() => setMagicSent(false)}
-                style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}
-              >
-                Réessayer
-              </button>
+              <button onClick={() => setMagicSent(false)} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Réessayer</button>
             </div>
           ) : (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
               {error && (
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 8,
-                  padding: '10px 12px', borderRadius: 8,
-                  background: '#FCEBEB', color: '#A32D2D', fontSize: 13, lineHeight: 1.4,
-                }}>
-                  <i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
-                  {error}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, lineHeight: 1.4 }}>
+                  <i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}
                 </div>
               )}
-
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                  Email
-                </label>
-                <input
-                  type="email" required autoComplete="email"
-                  value={email} onChange={e => setEmail(e.target.value)}
-                  placeholder="vous@exemple.com"
-                  style={inputStyle}
-                />
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email</label>
+                <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
               </div>
-
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                  Mot de passe
-                </label>
-                <input
-                  type="password" required autoComplete="current-password"
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  style={inputStyle}
-                />
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Mot de passe</label>
+                <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
               </div>
-
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>
-                  <input
-                    type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
-                    style={{ accentColor: '#0EA5E9', width: 14, height: 14, cursor: 'pointer' }}
-                  />
+                  <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ accentColor: '#0EA5E9', width: 14, height: 14, cursor: 'pointer' }} />
                   Se souvenir de moi
                 </label>
-                <button
-                  type="button"
-                  onClick={() => { setResetOpen(true); setResetEmail(email) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0EA5E9', fontWeight: 500 }}
-                >
-                  Mot de passe oublié ?
-                </button>
+                <button type="button" onClick={() => { setResetOpen(true); setResetEmail(email) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0EA5E9', fontWeight: 500 }}>Mot de passe oublié ?</button>
               </div>
-
-              <button
-                type="submit" disabled={loading}
-                style={{
-                  width: '100%', padding: '11px', borderRadius: 9, border: 'none',
-                  minHeight: 44,
-                  background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff',
-                  fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'background .15s',
-                }}
-              >
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', minHeight: 44, background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
                 {loading ? 'Connexion…' : 'Se connecter'}
               </button>
-
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
                 <span style={{ fontSize: 11, color: '#9ca3af' }}>ou</span>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
               </div>
-
-              <button
-                type="button" disabled={loading} onClick={handleMagicLink}
-                style={{
-                  width: '100%', padding: '10px', borderRadius: 9,
-                  border: '0.5px solid rgba(14,165,233,0.4)', background: '#f0f9ff',
-                  color: '#0369A1', fontSize: 14, fontWeight: 600, minHeight: 44,
-                  cursor: loading ? 'not-allowed' : 'pointer', transition: 'background .15s',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                }}
-              >
-                <i className="ti ti-wand" style={{ fontSize: 15 }} aria-hidden="true" />
-                Lien magique
+              <button type="button" disabled={loading} onClick={handleMagicLink} style={{ width: '100%', padding: '10px', borderRadius: 9, border: '0.5px solid rgba(14,165,233,0.4)', background: '#f0f9ff', color: '#0369A1', fontSize: 14, fontWeight: 600, minHeight: 44, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                <i className="ti ti-wand" style={{ fontSize: 15 }} />Lien magique
               </button>
             </form>
           )}
         </div>
       </section>
 
-      {/* ── CAROUSEL MÉTIERS ── */}
       <MetiersCarousel />
 
-      {/* ── FONCTIONNALITÉS ── */}
+      {/* FONCTIONNALITÉS */}
       <section id="fonctionnalites" className="landing-features-section" style={{ background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{
-              display: 'inline-block', fontSize: 12, fontWeight: 600, color: '#0EA5E9',
-              background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 16,
-            }}>
-              Ce que Naposolo fait pour vous
-            </div>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: '#111827', margin: '0 0 12px', letterSpacing: '-0.02em' }}>
-              Tout ce dont vous avez besoin,<br />rien de superflu.
-            </h2>
-            <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 520, margin: '0 auto' }}>
-              Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.
-            </p>
+            <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 16 }}>{cms.features_badge}</div>
+            <h2 style={{ fontSize: 32, fontWeight: 800, color: '#111827', margin: '0 0 12px', letterSpacing: '-0.02em' }}>{cms.features_title}</h2>
+            <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 520, margin: '0 auto' }}>{cms.features_sub}</p>
           </div>
-
           <div className="landing-features-grid">
             {FEATURES.map(f => (
-              <div key={f.title} style={{
-                padding: '24px', borderRadius: 14,
-                border: '0.5px solid #e5e7eb', background: '#f0f9ff',
-                transition: 'box-shadow .15s',
-              }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  marginBottom: 16,
-                }}>
-                  <i className={`ti ${f.icon}`} style={{ fontSize: 22, color: '#0EA5E9' }} aria-hidden="true" />
+              <div key={f.title} style={{ padding: '24px', borderRadius: 14, border: '0.5px solid #e5e7eb', background: '#f0f9ff' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <i className={'ti ' + f.icon} style={{ fontSize: 22, color: '#0EA5E9' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{f.title}</div>
-                  {f.optional && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20,
-                      background: '#EEEDFE', color: '#534AB7',
-                    }}>Optionnel</span>
-                  )}
+                  {f.optional && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#EEEDFE', color: '#534AB7' }}>Optionnel</span>}
                 </div>
                 <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
               </div>
@@ -364,84 +215,41 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer style={{
-        borderTop: '0.5px solid rgba(14,165,233,0.15)',
-        padding: '28px 40px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-        background: '#f0f9ff',
-      }}>
+      {/* FOOTER */}
+      <footer style={{ borderTop: '0.5px solid rgba(14,165,233,0.15)', padding: '28px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: '#f0f9ff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src={napopetit} alt="Naposolo" style={{ height: 20, opacity: 0.7 }} />
           <span style={{ fontSize: 13, color: '#9ca3af' }}>Naposolo — naposolo.com</span>
         </div>
-        <span style={{ fontSize: 13, color: '#9ca3af' }}>Fait avec ❤️ à Vandœuvre-lès-Nancy</span>
+        <span style={{ fontSize: 13, color: '#9ca3af' }}>Fait avec ❤️ à {cms.footer_city}</span>
       </footer>
 
-      {/* ── MODAL RESET MOT DE PASSE ── */}
+      {/* MODAL RESET */}
       {resetOpen && (
-        <div
-          onClick={e => e.target === e.currentTarget && closeReset()}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 500,
-            background: 'rgba(0,0,0,0.35)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '0 16px',
-          }}
-        >
-          <div style={{
-            background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 400,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-          }}>
+        <div onClick={e => e.target === e.currentTarget && closeReset()} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 400, boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
-                  Mot de passe oublié ?
-                </div>
-                <div style={{ fontSize: 13, color: '#9ca3af' }}>
-                  Nous vous enverrons un lien de réinitialisation.
-                </div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Mot de passe oublié ?</div>
+                <div style={{ fontSize: 13, color: '#9ca3af' }}>Nous vous enverrons un lien de réinitialisation.</div>
               </div>
-              <button onClick={closeReset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }} aria-label="Fermer">×</button>
+              <button onClick={closeReset} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }}>×</button>
             </div>
-
             {resetSent ? (
               <div style={{ padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
-                <i className="ti ti-mail-check" style={{ fontSize: 24, display: 'block', marginBottom: 8 }} aria-hidden="true" />
+                <i className="ti ti-mail-check" style={{ fontSize: 24, display: 'block', marginBottom: 8 }} />
                 Email envoyé, vérifiez votre boîte mail.
                 <br />
-                <button onClick={closeReset} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>
-                  Fermer
-                </button>
+                <button onClick={closeReset} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Fermer</button>
               </div>
             ) : (
               <>
-                {resetError && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}>
-                    <i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} aria-hidden="true" />
-                    {resetError}
-                  </div>
-                )}
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-                  Email
-                </label>
-                <input
-                  type="email" autoFocus
-                  value={resetEmail}
-                  onChange={e => setResetEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleResetPassword()}
-                  placeholder="vous@exemple.com"
-                  style={{ ...inputStyle, marginBottom: 16 }}
-                />
+                {resetError && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{resetError}</div>}
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email</label>
+                <input type="email" autoFocus value={resetEmail} onChange={e => setResetEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleResetPassword()} placeholder="vous@exemple.com" style={{ ...inputStyle, marginBottom: 16 }} />
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button onClick={closeReset} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleResetPassword}
-                    disabled={resetLoading}
-                    style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: resetLoading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600, cursor: resetLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}
-                  >
+                  <button onClick={closeReset} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>Annuler</button>
+                  <button onClick={handleResetPassword} disabled={resetLoading} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: resetLoading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600, cursor: resetLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}>
                     {resetLoading ? 'Envoi…' : 'Envoyer le lien'}
                   </button>
                 </div>
@@ -450,7 +258,6 @@ export default function LoginPage() {
           </div>
         </div>
       )}
-
     </div>
   )
 }
