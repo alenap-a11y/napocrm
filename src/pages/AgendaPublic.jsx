@@ -103,11 +103,102 @@ export default function AgendaPublic({ slug }) {
   async function submit() {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
-    await supabase.from('messages_support').insert([{
+
+    // 1. Créer la séance dans Supabase
+    await supabase.from('seances').insert([{
+      user_id: profil.id,
+      prenom: form.prenom,
+      nom: form.nom,
       email: form.email,
-      sujet: `Demande RDV — ${profil.prenom} ${profil.nom}`,
-      message: `Nom: ${form.nom}\nPrénom: ${form.prenom}\nEmail: ${form.email}\nTél: ${form.telephone}\nAdresse: ${form.adresse}\nDate naissance: ${form.date_naissance}\nMotif: ${form.motif}\nCréneau: ${selectedSlot.date} à ${selectedSlot.heure}`,
+      tel: form.telephone,
+      date_naissance: form.date_naissance || null,
+      date_seance: selectedSlot.date,
+      heure_seance: selectedSlot.heure + ':00',
+      duree_minutes: 60,
+      statut: 'planifié',
+      type_seance: 'Séance',
+      notes: form.motif || null,
     }])
+
+    // 2. Email confirmation client via Resend
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'Naposolo <noreply@naposolo.com>',
+          to: [form.email],
+          subject: `✅ RDV confirmé — ${profil.prenom} ${profil.nom}`,
+          html: `
+            <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
+              <div style="background: linear-gradient(135deg, #085041, #0F6E56); padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+                <h1 style="color: #fff; margin: 0; font-size: 20px;">Demande de RDV reçue ✅</h1>
+              </div>
+              <p style="color: #374151;">Bonjour <strong>${form.prenom}</strong>,</p>
+              <p style="color: #374151;">Votre demande de rendez-vous a bien été reçue par <strong>${profil.prenom} ${profil.nom}</strong>.</p>
+              <div style="background: #E1F5EE; border-radius: 10px; padding: 16px; margin: 20px 0;">
+                <p style="margin: 0; color: #0F6E56; font-weight: 600; font-size: 16px;">
+                  📅 ${new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} à ${selectedSlot.heure}
+                </p>
+              </div>
+              <p style="color: #6B7280; font-size: 13px;">
+                ${profil.prenom} vous recontactera sous 24h pour confirmer ce créneau.<br/>
+                En cas de question : ${profil.telephone || profil.email || ''}
+              </p>
+              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;"/>
+              <p style="color: #9CA3AF; font-size: 11px; text-align: center;">
+                Propulsé par <strong style="color: #0F6E56;">Naposolo</strong>
+              </p>
+            </div>
+          `
+        })
+      })
+    } catch(e) {
+      console.error('Email error:', e)
+    }
+
+    // 3. Email notif praticien
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_RESEND_API_KEY}`
+        },
+        body: JSON.stringify({
+          from: 'Naposolo <noreply@naposolo.com>',
+          to: [profil.email],
+          subject: `🔔 Nouvelle demande RDV — ${form.prenom} ${form.nom}`,
+          html: `
+            <div style="font-family: Inter, sans-serif; max-width: 500px; margin: 0 auto; padding: 32px;">
+              <h2 style="color: #111827;">Nouvelle demande de RDV 🔔</h2>
+              <div style="background: #F9FAFB; border-radius: 10px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 4px 0;"><strong>Client :</strong> ${form.prenom} ${form.nom}</p>
+                <p style="margin: 4px 0;"><strong>Email :</strong> ${form.email}</p>
+                <p style="margin: 4px 0;"><strong>Tél :</strong> ${form.telephone}</p>
+                <p style="margin: 4px 0;"><strong>Date naissance :</strong> ${form.date_naissance || '—'}</p>
+                <p style="margin: 4px 0;"><strong>Adresse :</strong> ${form.adresse || '—'}</p>
+                <p style="margin: 4px 0;"><strong>Motif :</strong> ${form.motif || '—'}</p>
+              </div>
+              <div style="background: #E1F5EE; border-radius: 10px; padding: 16px;">
+                <p style="margin: 0; color: #0F6E56; font-weight: 600;">
+                  📅 ${new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${selectedSlot.heure}
+                </p>
+              </div>
+              <p style="color: #6B7280; font-size: 13px; margin-top: 16px;">
+                Connectez-vous à <a href="https://naposolo.com" style="color: #0F6E56;">naposolo.com</a> pour confirmer ce RDV.
+              </p>
+            </div>
+          `
+        })
+      })
+    } catch(e) {
+      console.error('Email praticien error:', e)
+    }
+
     setSent(true)
     setSending(false)
   }
