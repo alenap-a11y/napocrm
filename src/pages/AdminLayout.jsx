@@ -6,6 +6,7 @@ import SupabaseStats from './SupabaseStats'
 import AdminFaq from './AdminFaq'
 import AdminAide from './AdminAide'
 import AdminNews from './AdminNews'
+import AdminLanding from './AdminLanding'
 
 export default function AdminLayout({ user }) {
   const navigate = useNavigate()
@@ -25,6 +26,7 @@ export default function AdminLayout({ user }) {
   const supportItems = [
     { id: 'admin-faq',  label: 'FAQ',   icon: 'ti-help-circle' },
     { id: 'admin-aide', label: 'Aide',  icon: 'ti-book' },
+    { id: 'admin-landing', label: 'Landing page', icon: 'ti-home' },
     { id: 'admin-news', label: 'News',  icon: 'ti-speakerphone' },
   ]
 
@@ -94,6 +96,7 @@ export default function AdminLayout({ user }) {
       <div style={{ flex: 1, overflow: 'auto', background: 'var(--color-background-tertiary)' }}>
         {page === 'dashboard'   && <AdminDashboard />}
         {page === 'supabase'    && <SupabaseStats />}
+        {page === 'admin-landing' && <AdminLanding />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}

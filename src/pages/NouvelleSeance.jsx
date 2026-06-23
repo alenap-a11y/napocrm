@@ -380,6 +380,7 @@ export default function NouvelleSeance() {
   const [orbitBounds,  setOrbitBounds]  = useState({ min: 0.5, max: 20 })
 
   /* Client */
+  const [creneauLibre,      setCreneauLibre]      = useState(false)    // créneau sans client
   const [clientSearch,      setClientSearch]      = useState('')       // champ de recherche combiné
   const [prenom,            setPrenom]            = useState('')       // payload only
   const [nom,               setNom]               = useState('')       // payload only
@@ -722,6 +723,7 @@ export default function NouvelleSeance() {
         // etats_coches: colonne existante mais non utilisée ici
         fleurs_bach:        fleurs.length ? fleurs : null,
         date_creation:      new Date().toISOString(),
+        statut:             creneauLibre ? 'disponible' : 'planifié',
         premiere_seance:    premiereSeance,
       }
 
@@ -800,8 +802,23 @@ export default function NouvelleSeance() {
             {/* ── Formulaire 60% ── */}
             <div style={{ overflowY: 'auto', padding: '14px 14px 0', borderRight: '1px solid #e5e7eb' }}>
 
+              {/* ── Toggle créneau libre ── */}
+              <div onClick={() => setCreneauLibre(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, marginBottom: 12, cursor: 'pointer', background: creneauLibre ? '#E1F5EE' : '#f3f4f6', border: `1px solid ${creneauLibre ? '#0F6E56' : '#e5e7eb'}` }}>
+                <div style={{ width: 36, height: 20, borderRadius: 10, background: creneauLibre ? '#0F6E56' : '#d1d5db', position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+                  <div style={{ position: 'absolute', top: 2, left: creneauLibre ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: creneauLibre ? '#0F6E56' : '#374151' }}>
+                    {creneauLibre ? '🟢 Créneau libre (agenda public)' : 'Séance avec client'}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#6B7280' }}>
+                    {creneauLibre ? 'Visible sur votre page publique naposolo.com/rdv/' : 'Séance normale avec un client existant'}
+                  </div>
+                </div>
+              </div>
+
               {/* ── Section 1 : Informations du client ── */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>Informations du client</div>
+              {!creneauLibre && <div style={{ fontSize: 10, fontWeight: 700, color: '#1a2744', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 10 }}>Informations du client</div>}
 
               {/* ── Champ de recherche client combiné ── */}
               <div style={{ ...gap, position: 'relative' }}>
