@@ -4,7 +4,7 @@ import napopetit from '../assets/napopetitv1.png'
 import MetiersCarousel from '../components/MetiersCarousel'
 import '../components/MetiersCarousel.css'
 
-const DEFAULT = {
+const DEFAULT_CMS = {
   header_tagline:  'Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.',
   hero_badge:      'Conçu pour les praticiens du bien-être',
   hero_title:      'Le CRM qui pense comme vous, en plus organisé.',
@@ -15,18 +15,6 @@ const DEFAULT = {
   features_title:  'Tout ce dont vous avez besoin, rien de superflu.',
   features_sub:    'Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.',
   footer_city:     'Vandœuvre-lès-Nancy',
-  feat_1_title:    'Fiches clients',
-  feat_1_desc:     'Centralisez toutes les informations de vos clients : coordonnées, historique, notes et documents.',
-  feat_2_title:    'Suivi des séances',
-  feat_2_desc:     'Enregistrez chaque séance, son contenu, sa durée et son tarif. Suivez la progression de chaque client.',
-  feat_3_title:    'Notes',
-  feat_3_desc:     'Prenez des notes libres ou structurées après chaque séance, accessibles en un clic.',
-  feat_4_title:    'Agenda',
-  feat_4_desc:     'Visualisez vos rendez-vous à venir, évitez les conflits et planifiez sereinement.',
-  feat_5_title:    'Relances automatiques',
-  feat_5_desc:     'Envoyez des rappels et relances personnalisés à vos clients sans effort.',
-  feat_6_title:    'RGPD natif',
-  feat_6_desc:     'Vos données restent les vôtres. Hébergement européen, consentements gérés, export à la demande.',
 }
 
 function scrollTo(id) {
@@ -34,7 +22,8 @@ function scrollTo(id) {
 }
 
 export default function LoginPage() {
-  const [cms, setCms] = useState(DEFAULT)
+  const [cms,          setCms]          = useState(DEFAULT_CMS)
+  const [features,     setFeatures]     = useState([])
   const [email,        setEmail]        = useState('')
   const [password,     setPassword]     = useState('')
   const [remember,     setRemember]     = useState(false)
@@ -48,34 +37,39 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
 
   useEffect(() => {
-    supabase.from('landing_content').select('key, value').then(({ data }) => {
+    // Charger textes CMS
+    supabase.from('landing_content').select('key, value, color, font_size, font_family').then(({ data }) => {
       if (data) {
         const map = {}
-        data.forEach(r => { map[r.key] = r.value })
-        setCms(c => ({ ...c, ...map }))
+        data.forEach(r => { map[r.key] = r })
+        setCms(c => {
+          const merged = { ...c }
+          Object.keys(map).forEach(k => { merged[k] = map[k].value })
+          merged._styles = map
+          return merged
+        })
       }
+    })
+    // Charger features depuis Supabase
+    supabase.from('landing_features').select('*').order('ordre').then(({ data }) => {
+      if (data) setFeatures(data)
     })
   }, [])
 
-  const FEATURES = [
-    { icon: 'ti-users',          title: cms.feat_1_title, desc: cms.feat_1_desc },
-    { icon: 'ti-calendar-stats', title: cms.feat_2_title, desc: cms.feat_2_desc },
-    { icon: 'ti-notebook',       title: cms.feat_3_title, desc: cms.feat_3_desc },
-    { icon: 'ti-calendar',       title: cms.feat_4_title, desc: cms.feat_4_desc },
-    { icon: 'ti-bell',           title: cms.feat_5_title, desc: cms.feat_5_desc, optional: true },
-    { icon: 'ti-shield-check',   title: cms.feat_6_title, desc: cms.feat_6_desc },
-  ]
+  function cs(key) {
+    const s = cms._styles?.[key]
+    if (!s) return {}
+    return { color: s.color || undefined, fontSize: s.font_size || undefined, fontFamily: s.font_family || undefined }
+  }
 
   async function handleResetPassword() {
     if (!resetEmail.trim()) { setResetError('Entrez votre adresse email.'); return }
     setResetLoading(true); setResetError('')
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: window.location.origin + '/reset-password',
-      })
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, { redirectTo: window.location.origin + '/reset-password' })
       if (error) throw error
       setResetSent(true)
-    } catch (error) { setResetError('Erreur: ' + error.message) }
+    } catch (e) { setResetError('Erreur: ' + e.message) }
     setResetLoading(false)
   }
 
@@ -95,7 +89,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/dashboard' } })
       if (error) throw error
       setMagicSent(true)
-    } catch (error) { setError('Erreur: ' + error.message) }
+    } catch (e) { setError('Erreur: ' + e.message) }
     setLoading(false)
   }
 
@@ -108,7 +102,7 @@ export default function LoginPage() {
           <img src={napopetit} alt="Naposolo" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
           <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: '#111827' }}>Naposolo</span>
           <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#E0F2FE', color: '#0369A1', letterSpacing: '.04em' }}>Alpha v0.2</span>
-          <span className="landing-tagline" style={{ fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500 }}>{cms.header_tagline}</span>
+          <span className="landing-tagline" style={{ fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500, ...cs('header_tagline') }}>{cms.header_tagline}</span>
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <button className="landing-nav-features" onClick={() => scrollTo('fonctionnalites')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500 }}>Fonctionnalités</button>
@@ -121,20 +115,18 @@ export default function LoginPage() {
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 24 }}>
             <i className="ti ti-feather" style={{ fontSize: 13 }} />
-            {cms.hero_badge}
+            <span style={cs('hero_badge')}>{cms.hero_badge}</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em' }}>
-            {cms.hero_title.split(',').map((part, i, arr) => (
-              <span key={i}>{part}{i < arr.length - 1 ? ',' : ''}{i < arr.length - 1 ? <br /> : ''}</span>
-            ))}
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em', ...cs('hero_title') }}>
+            {cms.hero_title}
           </h1>
-          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>{cms.hero_subtitle}</p>
+          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480, ...cs('hero_subtitle') }}>{cms.hero_subtitle}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <button onClick={() => scrollTo('fonctionnalites')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600 }}>
-              {cms.hero_cta}
+              <span style={cs('hero_cta')}>{cms.hero_cta}</span>
               <i className="ti ti-arrow-down" style={{ fontSize: 15 }} />
             </button>
-            <span style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic' }}>{cms.hero_tagline}</span>
+            <span style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', ...cs('hero_tagline') }}>{cms.hero_tagline}</span>
           </div>
         </div>
 
@@ -152,11 +144,7 @@ export default function LoginPage() {
             </div>
           ) : (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {error && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, lineHeight: 1.4 }}>
-                  <i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}
-                </div>
-              )}
+              {error && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}</div>}
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email</label>
                 <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
@@ -194,13 +182,13 @@ export default function LoginPage() {
       <section id="fonctionnalites" className="landing-features-section" style={{ background: '#fff' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 16 }}>{cms.features_badge}</div>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: '#111827', margin: '0 0 12px', letterSpacing: '-0.02em' }}>{cms.features_title}</h2>
-            <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 520, margin: '0 auto' }}>{cms.features_sub}</p>
+            <div style={{ display: 'inline-block', fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 16, ...cs('features_badge') }}>{cms.features_badge}</div>
+            <h2 style={{ fontSize: 32, fontWeight: 800, color: '#111827', margin: '0 0 12px', letterSpacing: '-0.02em', ...cs('features_title') }}>{cms.features_title}</h2>
+            <p style={{ fontSize: 16, color: '#6b7280', maxWidth: 520, margin: '0 auto', ...cs('features_sub') }}>{cms.features_sub}</p>
           </div>
           <div className="landing-features-grid">
-            {FEATURES.map(f => (
-              <div key={f.title} style={{ padding: '24px', borderRadius: 14, border: '0.5px solid #e5e7eb', background: '#f0f9ff' }}>
+            {features.map(f => (
+              <div key={f.id} style={{ padding: '24px', borderRadius: 14, border: '0.5px solid #e5e7eb', background: '#f0f9ff' }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <i className={'ti ' + f.icon} style={{ fontSize: 22, color: '#0EA5E9' }} />
                 </div>
@@ -208,7 +196,7 @@ export default function LoginPage() {
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{f.title}</div>
                   {f.optional && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#EEEDFE', color: '#534AB7' }}>Optionnel</span>}
                 </div>
-                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
+                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, margin: 0 }}>{f.description}</p>
               </div>
             ))}
           </div>
@@ -221,7 +209,7 @@ export default function LoginPage() {
           <img src={napopetit} alt="Naposolo" style={{ height: 20, opacity: 0.7 }} />
           <span style={{ fontSize: 13, color: '#9ca3af' }}>Naposolo — naposolo.com</span>
         </div>
-        <span style={{ fontSize: 13, color: '#9ca3af' }}>Fait avec ❤️ à {cms.footer_city}</span>
+        <span style={{ fontSize: 13, color: '#9ca3af', ...cs('footer_city') }}>Fait avec ❤️ à {cms.footer_city}</span>
       </footer>
 
       {/* MODAL RESET */}
@@ -239,12 +227,11 @@ export default function LoginPage() {
               <div style={{ padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
                 <i className="ti ti-mail-check" style={{ fontSize: 24, display: 'block', marginBottom: 8 }} />
                 Email envoyé, vérifiez votre boîte mail.
-                <br />
                 <button onClick={closeReset} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Fermer</button>
               </div>
             ) : (
               <>
-                {resetError && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{resetError}</div>}
+                {resetError && <div style={{ display: 'flex', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{resetError}</div>}
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email</label>
                 <input type="email" autoFocus value={resetEmail} onChange={e => setResetEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleResetPassword()} placeholder="vous@exemple.com" style={{ ...inputStyle, marginBottom: 16 }} />
                 <div style={{ display: 'flex', gap: 10 }}>
