@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import AdminOnboardingItems from './AdminOnboardingItems'
 import { supabase } from '../lib/supabase'
 
 const FIELDS = [
@@ -67,6 +68,7 @@ function FieldCard({ fieldKey, label, textarea, data, onSaved }) {
           <button onClick={save} disabled={saving} style={{ alignSelf:'flex-start', padding:'6px 18px', borderRadius:7, border:'none', background:'#B8961E', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>{saving ? 'Sauvegarde...' : 'Sauvegarder'}</button>
         </div>
       )}
+      <AdminOnboardingItems />
     </div>
   )
 }
