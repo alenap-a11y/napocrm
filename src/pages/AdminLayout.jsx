@@ -107,7 +107,15 @@ export default function AdminLayout({ user }) {
         {page === 'admin-roadmap' && <AdminRoadmap />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
-        {page === 'admin-news'  && <AdminNews />}
+        {page === 'admin-news'  {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
+        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
+        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
+        {page === 'napoplus'    {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
+        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
+        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
+        {page === 'marketplace'  {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
+        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
+        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}
       </div>
 
       {decoOpen && (
