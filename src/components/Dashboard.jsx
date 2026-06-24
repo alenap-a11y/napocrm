@@ -706,7 +706,33 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
                     <i className="ti ti-calendar-event" style={{ color: '#D4537E', fontSize: 14 }} aria-hidden="true" />
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Prochain férié</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>Pentecôte — 1 juin</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>{(() => {
+                        const y = time.getFullYear()
+                        const easter = (y) => {
+                          const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1
+                          return new Date(y,month-1,day)
+                        }
+                        const e = easter(y)
+                        const add = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r }
+                        const feris = [
+                          [new Date(y,0,1),"Jour de l'An"],
+                          [add(e,1),"Lundi de Pâques"],
+                          [new Date(y,4,1),"Fête du Travail"],
+                          [new Date(y,4,8),"Victoire 1945"],
+                          [add(e,39),"Ascension"],
+                          [add(e,50),"Lundi de Pentecôte"],
+                          [new Date(y,6,14),"Fête Nationale"],
+                          [new Date(y,7,15),"Assomption"],
+                          [new Date(y,10,1),"Toussaint"],
+                          [new Date(y,10,11),"Armistice"],
+                          [new Date(y,11,25),"Noël"],
+                        ]
+                        const today = new Date(new Date().toDateString())
+                        const next = feris.filter(([d])=>d>=today).sort((a,b)=>a[0]-b[0])[0]
+                        if(!next) return "—"
+                        const [nd,nl] = next
+                        return nl+" — "+nd.toLocaleDateString("fr-FR",{day:"numeric",month:"long"})
+                      })()}</div>
                     </div>
                   </div>
                 )}
