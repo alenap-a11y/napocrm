@@ -7,7 +7,7 @@ export default function WelcomeModal({ user }) {
   const [cms, setCms] = useState({
     onboarding_title: { value: 'Bienvenue sur Naposolo !' },
     onboarding_subtitle: { value: 'Votre espace de gestion bien-etre est pret.' },
-    onboarding_body: { value: 'Commencez par ajouter votre premier client. On s'occupe du reste. 🌿' },
+    onboarding_body: { value: `Commencez par ajouter votre premier client. On s'occupe du reste. 🌿` },
     onboarding_cta: { value: "C'est parti ! →" },
   })
 
