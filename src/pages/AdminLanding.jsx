@@ -17,6 +17,12 @@ const FIELDS = [
     { key: 'features_sub', label: 'Sous-titre section', textarea: true },
   ]},
   { section: 'Footer', fields: [{ key: 'footer_city', label: 'Ville (footer)' }]},
+  { section: 'Popup Onboarding', fields: [
+    { key: 'onboarding_title', label: 'Titre popup' },
+    { key: 'onboarding_subtitle', label: 'Sous-titre' },
+    { key: 'onboarding_body', label: 'Corps du message', textarea: true },
+    { key: 'onboarding_cta', label: 'Texte bouton CTA' },
+  ]},
 ]
 
 const FONTS = ['inherit','Georgia, serif','system-ui, sans-serif','Montserrat, sans-serif','Playfair Display, serif','monospace']
