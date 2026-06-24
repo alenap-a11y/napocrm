@@ -473,6 +473,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [clientsActifs,   setClientsActifs]   = useState(0)
   const [seancesAVenir,   setSeancesAVenir]   = useState(0)
   const [notesCount,      setNotesCount]      = useState(0)
+  const [rdvList, setRdvList] = useState([])
   const [filtrePeriode,   setFiltrePeriode]   = useState('mois')
   const [caFiltre,        setCaFiltre]         = useState(0)
   const [nouveauxClients, setNouveauxClients]  = useState(0)
@@ -652,6 +653,35 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     }
     loadPeriode()
   }, [filtrePeriode, filtreDate, filtreMoisNum, filtreAnnee])
+
+  useEffect(() => {
+    async function fetchRdv() {
+      const { data } = await supabase.from('seances').select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros').order('date_seance', { ascending: false })
+      setRdvList(data || [])
+    }
+    fetchRdv()
+  }, [])
+  useEffect(() => {
+    async function fetchRdv() {
+      const { data } = await supabase
+        .from('seances')
+        .select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros')
+        .order('date_seance', { ascending: false })
+      setRdvList(data || [])
+    }
+    fetchRdv()
+  }, [])
+
+  useEffect(() => {
+    async function fetchRdv() {
+      const { data } = await supabase
+        .from('seances')
+        .select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros')
+        .order('date_seance', { ascending: false })
+      setRdvList(data || [])
+    }
+    fetchRdv()
+  }, [])
 
   function weatherLabel(code) {
     if (code === 0) return { icon: '☀️', label: 'Ensoleillé' }
