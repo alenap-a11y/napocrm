@@ -27,6 +27,7 @@ export default function AdminLayout({ user }) {
     { id: 'admin-faq',  label: 'FAQ',   icon: 'ti-help-circle' },
     { id: 'admin-aide', label: 'Aide',  icon: 'ti-book' },
     { id: 'admin-landing', label: 'Landing page', icon: 'ti-home' },
+    { id: 'admin-onboarding', label: 'Popup onboarding', icon: 'ti-message-circle' },
     { id: 'admin-news', label: 'News',  icon: 'ti-speakerphone' },
   ]
 
@@ -97,6 +98,7 @@ export default function AdminLayout({ user }) {
         {page === 'dashboard'   && <AdminDashboard />}
         {page === 'supabase'    && <SupabaseStats />}
         {page === 'admin-landing' && <AdminLanding />}
+        {page === 'admin-onboarding' && <AdminLanding defaultSection='Popup Onboarding' />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}
