@@ -597,7 +597,7 @@ function IACard({ item, onNavigate }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#1A7A4A' : 'var(--color-text-primary)' }}>
-          {item.price ?? (isActive ? 'Bientôt' : '')}
+          
         </div>
         <button
           disabled={isSoon}
@@ -637,7 +637,7 @@ function OutilCard({ outil }) {
         <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{outil.description}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 4 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{outil.price}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}></div>
         <button style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#534AB7', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           Bientôt disponible
         </button>

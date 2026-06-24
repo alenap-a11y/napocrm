@@ -23,6 +23,8 @@ export default function AdminLayout({ user }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard',  icon: 'ti-shield-check', group: null },
     { id: 'supabase',  label: 'Supabase',   icon: 'ti-database',     group: null },
+    { id: 'napoplus',  label: 'Napo+',      icon: 'ti-sparkles',     group: null },
+    { id: 'marketplace', label: 'Marketplace', icon: 'ti-store',        group: null },
   ]
 
   const supportItems = [
