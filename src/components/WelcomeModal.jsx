@@ -12,7 +12,7 @@ export default function WelcomeModal({ user }) {
   })
 
   useEffect(() => {
-    const key = `naposolo_welcomed_${user?.id}`
+    const key = "naposolo_welcomed"
     if (localStorage.getItem(key)) return
 
     supabase.from('landing_content')
@@ -43,7 +43,7 @@ export default function WelcomeModal({ user }) {
   }, [user])
 
   function dismiss() {
-    localStorage.setItem(`naposolo_welcomed_${user?.id}`, '1')
+    localStorage.setItem("naposolo_welcomed", "1")
     setShow(false)
   }
 
