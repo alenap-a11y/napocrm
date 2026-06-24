@@ -53,9 +53,12 @@ export default function NapoAssistant() {
     setShowQuick(false)
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://jzwwqngbgcdeyiqrvtle.supabase.co/functions/v1/chat-assistant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
           max_tokens: 1000,
@@ -80,7 +83,7 @@ export default function NapoAssistant() {
         style={{
           position: 'fixed', bottom: 24, right: 24,
           width: 52, height: 52, borderRadius: '50%',
-          background: '#1e2d4d', border: 'none', cursor: 'pointer',
+          background: '#TACOULEURBRAND', border: 'none', cursor: 'pointer',
           color: 'white', fontSize: 22, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
           zIndex: 1000, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
@@ -102,7 +105,7 @@ export default function NapoAssistant() {
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
         }}>
           {/* Header */}
-          <div style={{ background: '#1e2d4d', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: '#TACOULEURBRAND', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✨</div>
             <div style={{ flex: 1 }}>
               <p style={{ color: 'white', fontWeight: 500, fontSize: 14, margin: 0 }}>NapoAssistant</p>
@@ -119,7 +122,7 @@ export default function NapoAssistant() {
                 borderRadius: 12,
                 borderBottomLeftRadius: m.role === 'assistant' ? 3 : 12,
                 borderBottomRightRadius: m.role === 'user' ? 3 : 12,
-                background: m.role === 'user' ? '#1e2d4d' : '#f4f4f4',
+                background: m.role === 'user' ? '#TACOULEURBRAND' : '#f4f4f4',
                 color: m.role === 'user' ? 'white' : '#1a1a1a',
                 fontSize: 13, lineHeight: 1.5,
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
@@ -169,7 +172,7 @@ export default function NapoAssistant() {
               disabled={loading || !input.trim()}
               style={{
                 width: 36, height: 36, borderRadius: '50%',
-                background: '#1e2d4d', border: 'none', cursor: 'pointer',
+                background: '#TACOULEURBRAND', border: 'none', cursor: 'pointer',
                 color: 'white', fontSize: 16, display: 'flex',
                 alignItems: 'center', justifyContent: 'center',
                 opacity: loading || !input.trim() ? 0.4 : 1,
