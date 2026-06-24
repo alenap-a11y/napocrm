@@ -7,6 +7,7 @@ import AdminFaq from './AdminFaq'
 import AdminAide from './AdminAide'
 import AdminNews from './AdminNews'
 import AdminLanding from './AdminLanding'
+import AdminOnboarding from './AdminOnboarding'
 
 export default function AdminLayout({ user }) {
   const navigate = useNavigate()
@@ -98,7 +99,7 @@ export default function AdminLayout({ user }) {
         {page === 'dashboard'   && <AdminDashboard />}
         {page === 'supabase'    && <SupabaseStats />}
         {page === 'admin-landing' && <AdminLanding />}
-        {page === 'admin-onboarding' && <AdminLanding defaultSection='Popup Onboarding' />}
+        {page === 'admin-onboarding' && <AdminOnboarding />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}
