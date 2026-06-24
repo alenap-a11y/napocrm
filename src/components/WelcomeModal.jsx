@@ -13,7 +13,18 @@ export default function WelcomeModal({ user }) {
 
   useEffect(() => {
     const key = `naposolo_welcomed_${user?.id}`
-    if (!localStorage.getItem(key)) setShow(true)
+    if (localStorage.getItem(key)) return
+
+    supabase.from('landing_content')
+      .select('published, days_active')
+      .eq('key', 'onboarding_settings')
+      .single()
+      .then(({ data: settings }) => {
+        const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
+        const today = DAYS[new Date().getDay()]
+        const active = !settings || (settings.published && (settings.days_active ?? []).includes(today))
+        if (active) setShow(true)
+      })
 
     supabase.from('landing_content')
       .select('key, value, color, font_size, font_family')
@@ -23,18 +34,6 @@ export default function WelcomeModal({ user }) {
         const map = {}
         data.forEach(r => { map[r.key] = r })
         setCms(prev => ({ ...prev, ...map }))
-      })
-
-    supabase.from('landing_content')
-      .select('published, days_active')
-      .eq('key', 'onboarding_settings')
-      .single()
-      .then(({ data: settings }) => {
-        if (!settings) return
-        const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
-        const today = DAYS[new Date().getDay()]
-        const active = settings.published && (settings.days_active ?? []).includes(today)
-        if (!active) setShow(false)
       })
 
     supabase.from('onboarding_items')
@@ -81,7 +80,7 @@ export default function WelcomeModal({ user }) {
         <button onClick={dismiss} style={{background:'#6366f1',color:'#fff',border:'none',borderRadius:'10px',padding:'12px 32px',cursor:'pointer',width:'100%',...sty('onboarding_cta')}}>
           {get('onboarding_cta')}
         </button>
-        <p style={{marginTop:'16px',fontSize:'0.75rem',color:'#cbd5e1'}}>Fait avec ❤️ a Vandoeuvre-les-Nancy</p>
+        <p style={{marginTop:'16px',fontSize:'0.75rem',color:'#cbd5e1'}}>Fait avec coeur a Vandoeuvre-les-Nancy</p>
       </div>
     </div>
   )
