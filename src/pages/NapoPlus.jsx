@@ -470,7 +470,7 @@ function ModuleCard({ mod, onNavigate }) {
       {/* Footer */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 4 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? "#1A7A4A" : "var(--color-text-primary)" }}>
-          {mod.price ?? (isActive ? "Inclus" : "")}
+          {mod.price ?? ""}
         </div>
         <button
           onClick={() => !isSoon && (isActive && mod.path ? onNavigate(mod.path) : null)}
