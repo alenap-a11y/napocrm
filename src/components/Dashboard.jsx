@@ -1055,6 +1055,40 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           </div>
         </div>
 
+      {/* Widget RDV passés */}
+      <div style={{ margin: "24px 32px 0" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>RDV PASSÉS</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {rdvList
+            .filter(s => s.date_seance && new Date(s.date_seance.slice(0,10) + "T00:00:00") < new Date(new Date().toDateString()))
+            .sort((a,b) => new Date(b.date_seance) - new Date(a.date_seance))
+            .slice(0,5)
+            .map(s => {
+              const d = new Date(s.date_seance.slice(0,10) + "T00:00:00")
+              const diff = Math.floor((new Date(new Date().toDateString()) - d) / 86400000)
+              const label = diff === 1 ? "Hier" : `J+${diff}`
+              return (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--color-background-secondary)", borderRadius: 10, border: "0.5px solid var(--color-border-tertiary)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#E6F4EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <i className="ti ti-check" style={{ fontSize: 15, color: "#1A7A4A" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>{s.prenom} {s.nom}</div>
+                      <div style={{ fontSize: 11, color: "var(--color-text-secondary)" }}>{s.type_seance || "Séance"} — {new Date(s.date_seance.slice(0,10) + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600, background: "#E6F4EE", color: "#1A7A4A", padding: "3px 10px", borderRadius: 20 }}>{label}</span>
+                </div>
+              )
+            })
+          }
+          {rdvList.filter(s => s.date_seance && new Date(s.date_seance.slice(0,10) + "T00:00:00") < new Date(new Date().toDateString())).length === 0 && (
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", padding: "12px 0" }}>Aucun RDV passé</div>
+          )}
+        </div>
+      </div>
+
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
 import { useActivityTracker } from './hooks/useActivityTracker'
 import WelcomeModal from './components/WelcomeModal'
+import NapoAssistant from './components/NapoAssistant'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -467,6 +468,7 @@ export default function AppShell({ user, onSignOut }) {
         </main>
       </div>
       <WelcomeModal user={user} />
+      <NapoAssistant />
     </div>
   )
 }
