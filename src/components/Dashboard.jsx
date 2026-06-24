@@ -544,11 +544,11 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           { content: "Le secret du changement est de concentrer toute ton énergie non pas à lutter contre l'ancien, mais à construire le nouveau.", author: "Socrate" },
         ]
         const d = citations[Math.floor(Math.random() * citations.length)]
-        setMantraApi({ t: \`"\${d.content}"\`, s: \`— \${d.author}\` })
+        setMantraApi({ t: `"${d.content}"`, s: `— ${d.author}` })
         return
-        const d = await r.json()
-        if (d && d[0]) {
-          setMantraApi({ t: `"${d.content}"`, s: `— ${d.author}` })
+        const data = await r.json()
+        if (data && data[0]) {
+          setMantraApi({ t: `"${data[0].content}"`, s: `— ${data[0].author}` })
         }
       } catch {
         // Fallback sur mantra local si API indispo
