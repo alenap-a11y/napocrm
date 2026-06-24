@@ -4,6 +4,7 @@ import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
 import { useActivityTracker } from './hooks/useActivityTracker'
+import WelcomeModal from './components/WelcomeModal'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -20,6 +21,7 @@ const FAQ = lazy(() => import('./pages/FAQ'))
 const Aide = lazy(() => import('./pages/Aide'))
 const NewsNapo = lazy(() => import('./pages/NewsNapo'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 
 class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
@@ -459,10 +461,12 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/faq"      element={<FAQ />} />
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense></ChunkErrorBoundary>
         </main>
       </div>
+      <WelcomeModal user={user} />
     </div>
   )
 }
