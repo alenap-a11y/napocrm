@@ -7,7 +7,7 @@ export default function WelcomeModal({ user }) {
   const [cms, setCms] = useState({
     onboarding_title: { value: 'Bienvenue sur Naposolo !' },
     onboarding_subtitle: { value: 'Votre espace de gestion bien-etre est pret.' },
-    onboarding_body: { value: 'Commencez par ajouter votre premier client. On s occupe du reste.' },
+    onboarding_body: { value: 'Commencez par ajouter votre premier client. On s'occupe du reste. 🌿' },
     onboarding_cta: { value: "C'est parti ! →" },
   })
 
@@ -80,7 +80,7 @@ export default function WelcomeModal({ user }) {
         <button onClick={dismiss} style={{background:'#6366f1',color:'#fff',border:'none',borderRadius:'10px',padding:'12px 32px',cursor:'pointer',width:'100%',...sty('onboarding_cta')}}>
           {get('onboarding_cta')}
         </button>
-        <p style={{marginTop:'16px',fontSize:'0.75rem',color:'#cbd5e1'}}>Fait avec coeur a Vandoeuvre-les-Nancy</p>
+        <p style={{marginTop:'16px',fontSize:'0.75rem',color:'#cbd5e1'}}>Fait avec ❤️ à Vandœuvre-lès-Nancy</p>
       </div>
     </div>
   )
