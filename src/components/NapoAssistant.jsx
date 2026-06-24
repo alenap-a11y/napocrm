@@ -22,7 +22,7 @@ Phrase clé : "Resalib gère ton agenda. Naposolo gère ton cabinet."
 
 ━━━ TARIFS ━━━
 - Napo-Réflexion : 9,95€/mois — fonctions essentielles
-- Napo-Bâtisseur : 19,95€/mois — module avancés inclus
+- Napo-Bâtisseur : 19,95€/mois — modules avancés inclus
 - Napo-Visionnaire : 29,95€/mois — tout inclus + priorité support
 - Essai gratuit 14 jours, sans CB
 - Addons : NapoOracle +5€/mois, Fleurs de Bach +3€/mois, Export PDF +3€/mois
@@ -35,13 +35,13 @@ Q: Comment créer une séance ?
 R: Depuis la fiche client > onglet "Séances" > "Nouvelle séance". Tu peux aussi cliquer sur un créneau dans l'Agenda.
 
 Q: Comment partager mon lien de prise de RDV ?
-R: Ton lien public est naposolo.com/rdv/[ton-slug]. Tu le trouves dans Paramètres > Mon profil. Partage-le sur ton site, Instagram, WhatsApp.
+R: Ton lien public est naposolo.com/rdv/[ton-slug]. Tu le trouves dans Paramètres > Mon profil.
 
 Q: Comment modifier mes disponibilités ?
 R: Menu "Agenda" > onglet "Disponibilités". Tu définis tes plages horaires par jour de la semaine.
 
 Q: Je ne reçois pas les emails de confirmation RDV ?
-R: Vérifie ton dossier spam. Les emails partent depuis noreply@naposolo.com. Si le problème persiste, contacte le support.
+R: Vérifie ton dossier spam. Les emails partent depuis noreply@naposolo.com.
 
 Q: Comment accéder au module Fleurs de Bach ?
 R: Menu latéral > icône "Fleurs de Bach". Disponible sur Napo-Bâtisseur et Napo-Visionnaire.
@@ -50,22 +50,83 @@ Q: Comment exporter mes données ?
 R: Fonctionnalité disponible sur Napo-Visionnaire. Menu > Paramètres > Export.
 
 Q: Mon agenda ne se met pas à jour ?
-R: Rafraîchis la page (F5). Si ça persiste, vide le cache du navigateur ou contacte le support.
+R: Rafraîchis la page (F5). Si ça persiste, vide le cache du navigateur.
 
 ━━━ FAQ CLIENTS FINAUX ━━━
 Q: Comment annuler ou modifier mon RDV ?
-R: Contacte directement ton praticien par email ou téléphone. Les coordonnées sont dans ton email de confirmation.
+R: Contacte directement ton praticien. Les coordonnées sont dans ton email de confirmation.
 
 Q: Je n'ai pas reçu ma confirmation de RDV ?
-R: Vérifie tes spams. Si toujours rien après 10 minutes, contacte ton praticien directement.
+R: Vérifie tes spams. Si toujours rien après 10 minutes, contacte ton praticien.
 
 ━━━ RÈGLES DE RÉPONSE ━━━
 - Réponds en français, ton chaleureux et direct
 - Réponses courtes (3-5 lignes max sauf si explication technique)
-- Si tu ne sais pas avec certitude → dis-le et propose le support
-- Termine TOUJOURS par une proposition d'aide supplémentaire ou le contact support si le problème n'est pas résolu
+- TOUJOURS terminer par une proposition d'aide supplémentaire concrète
+- Si tu ne sais pas → dis-le et propose 2-3 alternatives concrètes
+- Ne dis JAMAIS juste "contacte le support" sans proposer autre chose d'abord
 - Support : contact@naposolo.com
 - Ne fabrique jamais d'informations`
+
+const TOPIC_SUGGESTIONS = {
+  agenda: [
+    { label: "Modifier mes horaires", msg: "Comment modifier mes horaires de disponibilité ?" },
+    { label: "Créer un RDV manuel", msg: "Comment créer un rendez-vous manuellement dans l'agenda ?" },
+    { label: "Mon lien de réservation", msg: "Comment trouver mon lien de prise de RDV en ligne ?" },
+  ],
+  client: [
+    { label: "Ajouter un client", msg: "Comment ajouter un nouveau client ?" },
+    { label: "Modifier une fiche", msg: "Comment modifier les infos d'un client existant ?" },
+    { label: "Historique des séances", msg: "Comment voir toutes les séances d'un client ?" },
+  ],
+  seance: [
+    { label: "Créer une séance", msg: "Comment créer une nouvelle séance ?" },
+    { label: "Annotations corporelles", msg: "Comment utiliser les annotations sur le schéma corporel ?" },
+    { label: "Supprimer une séance", msg: "Comment modifier ou supprimer une séance ?" },
+  ],
+  tarif: [
+    { label: "Comparer les plans", msg: "Quelle est la différence entre Napo-Réflexion et Napo-Bâtisseur ?" },
+    { label: "Essai gratuit", msg: "Comment fonctionne l'essai gratuit 14 jours ?" },
+    { label: "Addons disponibles", msg: "Quels sont les modules additionnels disponibles ?" },
+  ],
+  email: [
+    { label: "Email dans les spams", msg: "Les emails Naposolo vont dans mes spams, que faire ?" },
+    { label: "Changer mon email", msg: "Comment modifier mon adresse email dans Naposolo ?" },
+    { label: "Email de confirmation", msg: "Pourquoi je ne reçois pas les emails de confirmation RDV ?" },
+  ],
+  bach: [
+    { label: "Accéder au module Bach", msg: "Comment accéder au module Fleurs de Bach ?" },
+    { label: "Créer un bilan Bach", msg: "Comment créer un bilan Fleurs de Bach pour un client ?" },
+    { label: "Quel plan inclut Bach ?", msg: "Sur quel plan le module Fleurs de Bach est disponible ?" },
+  ],
+  default: [
+    { label: "Mes disponibilités", msg: "Comment modifier mes disponibilités dans l'agenda ?" },
+    { label: "Ajouter un client", msg: "Comment ajouter un nouveau client ?" },
+    { label: "Tarifs Naposolo", msg: "Quels sont les tarifs de Naposolo ?" },
+    { label: "Mon lien RDV", msg: "Comment partager mon lien de prise de RDV ?" },
+  ]
+}
+
+const FALLBACK_REPLIES = {
+  agenda: "Pour tes disponibilités :\n\n→ Menu Agenda > onglet Disponibilités\n→ Définis tes plages par jour de la semaine\n\nTu veux que je t'explique aussi comment créer un RDV manuel ?",
+  client: "Pour gérer tes clients :\n\n→ Menu Clients > Nouveau client\n→ Remplis prénom, nom, email, téléphone\n\nTu veux savoir comment suivre les séances d'un client ?",
+  seance: "Pour créer une séance :\n\n→ Fiche client > onglet Séances > Nouvelle séance\n→ Ou clique directement sur un créneau dans l'Agenda\n\nTu veux en savoir plus sur les annotations corporelles ?",
+  tarif: "Les tarifs Naposolo :\n\n→ Napo-Réflexion : 9,95€/mois\n→ Napo-Bâtisseur : 19,95€/mois\n→ Napo-Visionnaire : 29,95€/mois\n\nEssai gratuit 14 jours sans CB. Tu veux comparer les fonctionnalités ?",
+  email: "Pour les emails de confirmation :\n\n→ Vérifie ton dossier spam\n→ Les emails viennent de noreply@naposolo.com\n→ Si ça persiste : contact@naposolo.com\n\nTu as un autre problème avec les emails ?",
+  bach: "Le module Fleurs de Bach :\n\n→ Disponible sur Napo-Bâtisseur et Napo-Visionnaire\n→ Accès via le menu latéral > icône Fleurs de Bach\n\nTu veux savoir comment créer un bilan Bach ?",
+  default: "Je n'ai pas trouvé de réponse précise à ta question 😕\n\nVoici ce que je peux faire :\n→ Réponds à une des suggestions ci-dessous\n→ Ou contacte le support : contact@naposolo.com\n\nQu'est-ce qui te serait le plus utile ?"
+}
+
+function detectTopic(text) {
+  const t = text.toLowerCase()
+  if (/agenda|disponib|horaire|créneau|calendrier|rdv|rendez/.test(t)) return 'agenda'
+  if (/client|fiche|patient|contact/.test(t)) return 'client'
+  if (/séance|session|annotation|corporel/.test(t)) return 'seance'
+  if (/tarif|prix|plan|abonnement|essai|gratuit|réflexion|bâtisseur|visionnaire/.test(t)) return 'tarif'
+  if (/email|mail|confirmation|spam|message/.test(t)) return 'email'
+  if (/bach|fleur/.test(t)) return 'bach'
+  return 'default'
+}
 
 const ACCUEIL_PHRASES = [
   "Bonjour ! Je suis NapoAssistant 😊\nComment puis-je t'aider avec Naposolo aujourd'hui ?",
@@ -98,6 +159,7 @@ export default function NapoAssistant() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showQuick, setShowQuick] = useState(true)
+  const [contextSugs, setContextSugs] = useState([])
   const [quickSet] = useState(() => QUICK_SETS[Math.floor(Math.random() * QUICK_SETS.length)])
   const [accueil] = useState(() => ACCUEIL_PHRASES[Math.floor(Math.random() * ACCUEIL_PHRASES.length)])
   const messagesEndRef = useRef(null)
@@ -116,12 +178,14 @@ export default function NapoAssistant() {
 
   const send = async (text) => {
     if (!text.trim() || loading) return
+    const topic = detectTopic(text)
     const userMsg = { role: 'user', content: text }
     const newHistory = [...messages, userMsg]
     setMessages(newHistory)
     setInput('')
     setLoading(true)
     setShowQuick(false)
+    setContextSugs([])
 
     try {
       const res = await fetch('https://jzwwqngbgcdeyiqrvtle.supabase.co/functions/v1/chat-assistant', {
@@ -133,14 +197,18 @@ export default function NapoAssistant() {
         body: JSON.stringify({ messages: newHistory, system: SYSTEM_PROMPT })
       })
       const data = await res.json()
-      const reply = data.content?.[0]?.text || "Je n'ai pas pu répondre. Contacte-nous à contact@naposolo.com 😊"
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      const reply = data.content?.[0]?.text
+
+      if (reply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: FALLBACK_REPLIES[topic] }])
+      }
     } catch {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Une erreur est survenue 😕\nTu peux contacter le support directement : contact@naposolo.com"
-      }])
+      setMessages(prev => [...prev, { role: 'assistant', content: FALLBACK_REPLIES[topic] }])
     }
+
+    setContextSugs(TOPIC_SUGGESTIONS[topic])
     setLoading(false)
   }
 
@@ -234,6 +302,26 @@ export default function NapoAssistant() {
                   onMouseLeave={e => e.currentTarget.style.background = '#f0f3f8'}
                 >{q.label}</button>
               ))}
+            </div>
+          )}
+
+          {contextSugs.length > 0 && (
+            <div style={{ padding: '4px 14px 10px' }}>
+              <p style={{ fontSize: 10, color: '#999', margin: '0 0 5px' }}>Suggestions :</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {contextSugs.map((q) => (
+                  <button key={q.msg} onClick={() => send(q.msg)} style={{
+                    fontSize: 11, padding: '5px 11px', borderRadius: 20,
+                    border: `0.5px solid ${accent}33`,
+                    background: '#f0f3f8', color: accent,
+                    cursor: 'pointer', fontWeight: 500,
+                    transition: 'background 0.15s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#e2e8f4'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#f0f3f8'}
+                  >{q.label}</button>
+                ))}
+              </div>
             </div>
           )}
 
