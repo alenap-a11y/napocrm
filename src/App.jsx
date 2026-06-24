@@ -31,7 +31,7 @@ export default function App() {
   }
 
   if (location.pathname.startsWith('/rdv/')) {
-    const slug = location.pathname.replace('/rdv/', '')
+    const slug = location.pathname.split('/rdv/')[1]
     return <AgendaPublic slug={slug} />
   }
   if (loading) return null

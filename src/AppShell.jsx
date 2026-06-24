@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
@@ -20,6 +20,20 @@ const FAQ = lazy(() => import('./pages/FAQ'))
 const Aide = lazy(() => import('./pages/Aide'))
 const NewsNapo = lazy(() => import('./pages/NewsNapo'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
+
+class ChunkErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(error) {
+    if (error?.message?.includes('dynamically imported') || error?.message?.includes('Failed to fetch')) {
+      window.location.reload()
+    }
+  }
+  render() {
+    if (this.state.hasError) return <div style={{padding:'2rem',color:'#666'}}>Rechargement...</div>
+    return this.props.children
+  }
+}
 
 const ALL_SB_ITEMS = [
   { id: 'board',    label: 'Board',    icon: 'ti-layout-dashboard', to: '/board'    },
@@ -426,7 +440,7 @@ export default function AppShell({ user, onSignOut }) {
         </div>
 
         <main className="main">
-          <Suspense fallback={null}>
+          <ChunkErrorBoundary><Suspense fallback={<div style={{padding:'2rem',color:'#666'}}>Chargement...</div>}>
             <Routes>
               <Route path="/"         element={<Navigate to="/board" replace />} />
               <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} onNavigate={routerNavigate} />} />
@@ -446,7 +460,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
             </Routes>
-          </Suspense>
+          </Suspense></ChunkErrorBoundary>
         </main>
       </div>
     </div>
