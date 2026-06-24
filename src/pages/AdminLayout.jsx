@@ -8,6 +8,7 @@ import AdminAide from './AdminAide'
 import AdminNews from './AdminNews'
 import AdminLanding from './AdminLanding'
 import AdminOnboarding from './AdminOnboarding'
+import AdminRoadmap from './AdminRoadmap'
 
 export default function AdminLayout({ user }) {
   const navigate = useNavigate()
@@ -29,6 +30,7 @@ export default function AdminLayout({ user }) {
     { id: 'admin-aide', label: 'Aide',  icon: 'ti-book' },
     { id: 'admin-landing', label: 'Landing page', icon: 'ti-home' },
     { id: 'admin-onboarding', label: 'Popup onboarding', icon: 'ti-message-circle' },
+    { id: 'admin-roadmap', label: 'Roadmap', icon: 'ti-map' },
     { id: 'admin-news', label: 'News',  icon: 'ti-speakerphone' },
   ]
 
@@ -100,6 +102,7 @@ export default function AdminLayout({ user }) {
         {page === 'supabase'    && <SupabaseStats />}
         {page === 'admin-landing' && <AdminLanding />}
         {page === 'admin-onboarding' && <AdminOnboarding />}
+        {page === 'admin-roadmap' && <AdminRoadmap />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}
