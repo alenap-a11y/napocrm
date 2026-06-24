@@ -75,20 +75,81 @@ function FieldCard({ fieldKey, label, textarea, data, onSaved }) {
 
 export default function AdminOnboarding() {
   const [data, setData] = useState({})
+  const [published, setPublished] = useState(true)
+  const [days, setDays] = useState(['lun','mar','mer','jeu','ven','sam','dim'])
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [msgSettings, setMsgSettings] = useState('')
+  const DAYS = ['lun','mar','mer','jeu','ven','sam','dim']
+  const DAYS_LABELS = { lun:'Lun', mar:'Mar', mer:'Mer', jeu:'Jeu', ven:'Ven', sam:'Sam', dim:'Dim' }
   useEffect(() => {
     supabase.from('landing_content')
-      .select('key, value, color, font_size, font_family')
-      .in('key', FIELDS.map(f => f.key))
+      .select('key, value, color, font_size, font_family, published, days_active')
+      .in('key', [...FIELDS.map(f => f.key), 'onboarding_settings'])
       .then(({ data: rows }) => {
         if (!rows) return
         const map = {}
         rows.forEach(r => { map[r.key] = r })
         setData(map)
+        const settings = rows.find(r => r.key === 'onboarding_settings')
+        if (settings) {
+          setPublished(settings.published ?? true)
+          setDays(settings.days_active ?? ['lun','mar','mer','jeu','ven','sam','dim'])
+        }
       })
   }, [])
   function onSaved(key, val) { setData(d => ({ ...d, [key]: val })) }
+
+  async function saveSettings() {
+    setSavingSettings(true)
+    const { error } = await supabase.from('landing_content').upsert(
+      { key: 'onboarding_settings', value: '', published, days_active: days },
+      { onConflict: 'key' }
+    )
+    setSavingSettings(false)
+    if (error) setMsgSettings('✗ ' + error.message)
+    else setMsgSettings('✓ Sauvegardé')
+    setTimeout(() => setMsgSettings(''), 2500)
+  }
+
+  function toggleDay(d) {
+    setDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+  }
+
   return (
     <div style={{ padding:'2rem', maxWidth:700 }}>
+      <div style={{ background:'var(--color-background-secondary)', borderRadius:12, border:'0.5px solid var(--color-border-tertiary)', padding:'16px 20px', marginBottom:24 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.07em', marginBottom:14 }}>Paramètres de diffusion</div>
+
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+          <input type="checkbox" id="published" checked={published} onChange={e => setPublished(e.target.checked)}
+            style={{ width:16, height:16, cursor:'pointer', accentColor:'#6366f1' }} />
+          <label htmlFor="published" style={{ fontSize:13, fontWeight:600, color:'var(--color-text-primary)', cursor:'pointer' }}>
+            {published ? '✅ Popup actif' : '⬜ Popup désactivé'}
+          </label>
+        </div>
+
+        <div style={{ fontSize:11, fontWeight:600, color:'var(--color-text-secondary)', marginBottom:8 }}>Jours d'affichage</div>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:16 }}>
+          {DAYS.map(d => (
+            <label key={d} style={{ display:'flex', alignItems:'center', gap:4, cursor:'pointer',
+              background: days.includes(d) ? '#6366f1' : 'var(--color-background-primary)',
+              color: days.includes(d) ? '#fff' : 'var(--color-text-secondary)',
+              borderRadius:8, padding:'5px 12px', fontSize:12, fontWeight:600,
+              border: '0.5px solid ' + (days.includes(d) ? '#6366f1' : 'var(--color-border-secondary)'),
+              transition:'all .15s' }}>
+              <input type="checkbox" checked={days.includes(d)} onChange={() => toggleDay(d)} style={{ display:'none' }} />
+              {DAYS_LABELS[d]}
+            </label>
+          ))}
+        </div>
+
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <button onClick={saveSettings} disabled={savingSettings} style={{ padding:'6px 18px', borderRadius:7, border:'none', background:'#B8961E', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+            {savingSettings ? 'Sauvegarde...' : 'Sauvegarder'}
+          </button>
+          {msgSettings && <span style={{ fontSize:11, color: msgSettings.startsWith('✓') ? '#3B6D11' : '#993556' }}>{msgSettings}</span>}
+        </div>
+      </div>
       <h2 style={{ fontSize:16, fontWeight:700, marginBottom:24, color:'var(--color-text-primary)' }}>Popup Onboarding</h2>
       {FIELDS.map(({ key, label, textarea }) => (
         <FieldCard key={key} fieldKey={key} label={label} textarea={textarea} data={data} onSaved={onSaved} />

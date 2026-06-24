@@ -25,6 +25,18 @@ export default function WelcomeModal({ user }) {
         setCms(prev => ({ ...prev, ...map }))
       })
 
+    supabase.from('landing_content')
+      .select('published, days_active')
+      .eq('key', 'onboarding_settings')
+      .single()
+      .then(({ data: settings }) => {
+        if (!settings) return
+        const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
+        const today = DAYS[new Date().getDay()]
+        const active = settings.published && (settings.days_active ?? []).includes(today)
+        if (!active) setShow(false)
+      })
+
     supabase.from('onboarding_items')
       .select('*')
       .order('ordre')
