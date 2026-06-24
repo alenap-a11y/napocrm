@@ -50,7 +50,15 @@ export default function SideBar({
   return (
     <aside className="sidebar" style={{ background: bgCol }}>
 
-      <div className="sb-logo">
+      <div className="sb-logo" style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 0 8px'}}>
+        <div style={{
+          width:'36px',height:'36px',borderRadius:'10px',
+          background:'rgba(255,255,255,0.15)',
+          display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:'18px',fontWeight:'800',color:'#fff',
+          letterSpacing:'-1px',marginBottom:'4px'
+        }}>N</div>
+        <span style={{fontSize:'9px',fontWeight:'600',color:'rgba(255,255,255,0.5)',letterSpacing:'2px',textTransform:'uppercase'}}>naposolo</span>
       </div>
 
       <div className="sb-items">
