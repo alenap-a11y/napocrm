@@ -529,7 +529,23 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   useEffect(() => {
     async function fetchMantra() {
       try {
-        const r = await fetch('https://api.quotable.io/random?lang=fr')
+        const citations = [
+          { content: "Le succès c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
+          { content: "La vie, c'est ce qui arrive quand on est occupé à faire d'autres projets.", author: "John Lennon" },
+          { content: "Ce que l'esprit conçoit et croit, il peut l'accomplir.", author: "Napoleon Hill" },
+          { content: "Le mouvement crée la clarté.", author: "Sagesse" },
+          { content: "Un coup pratiqué dix mille fois vaut mieux que dix mille coups pratiqués une fois.", author: "Bruce Lee" },
+          { content: "La simplicité est la sophistication suprême.", author: "Léonard de Vinci" },
+          { content: "Agis comme si ce que tu fais faisait une différence. Ça en fait une.", author: "William James" },
+          { content: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
+          { content: "Tout ce dont vous avez besoin est déjà en vous.", author: "Sagesse" },
+          { content: "La discipline est le pont entre les objectifs et les accomplissements.", author: "Jim Rohn" },
+          { content: "Commence là où tu es, utilise ce que tu as, fais ce que tu peux.", author: "Arthur Ashe" },
+          { content: "Le secret du changement est de concentrer toute ton énergie non pas à lutter contre l'ancien, mais à construire le nouveau.", author: "Socrate" },
+        ]
+        const d = citations[Math.floor(Math.random() * citations.length)]
+        setMantraApi({ t: \`"\${d.content}"\`, s: \`— \${d.author}\` })
+        return
         const d = await r.json()
         if (d && d[0]) {
           setMantraApi({ t: `"${d.content}"`, s: `— ${d.author}` })
