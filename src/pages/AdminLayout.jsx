@@ -9,6 +9,8 @@ import AdminNews from './AdminNews'
 import AdminLanding from './AdminLanding'
 import AdminOnboarding from './AdminOnboarding'
 import AdminRoadmap from './AdminRoadmap'
+import AdminNapoPlus from './AdminNapoPlus'
+import AdminMarketplace from './AdminMarketplace'
 
 export default function AdminLayout({ user }) {
   const navigate = useNavigate()
@@ -107,15 +109,9 @@ export default function AdminLayout({ user }) {
         {page === 'admin-roadmap' && <AdminRoadmap />}
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
-        {page === 'admin-news'  {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
-        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
-        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
-        {page === 'napoplus'    {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
-        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
-        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
-        {page === 'marketplace'  {page === 'admin-news'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNews />}
-        {page === 'napoplus'    {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminNapoPlus />}
-        {page === 'marketplace'  {page === 'admin-news'  && <AdminNews />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}{page === 'admin-news'  && <AdminNews />} <AdminMarketplace />}
+        {page === 'admin-news'  && <AdminNews />}
+        {page === 'napoplus'    && <AdminNapoPlus />}
+        {page === 'marketplace' && <AdminMarketplace />}
       </div>
 
       {decoOpen && (
