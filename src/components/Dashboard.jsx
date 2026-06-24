@@ -529,10 +529,10 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   useEffect(() => {
     async function fetchMantra() {
       try {
-        const r = await fetch('https://zenquotes.io/api/random')
+        const r = await fetch('https://api.quotable.io/random?lang=fr')
         const d = await r.json()
         if (d && d[0]) {
-          setMantraApi({ t: `"${d[0].q}"`, s: `— ${d[0].a}` })
+          setMantraApi({ t: `"${d.content}"`, s: `— ${d.author}` })
         }
       } catch {
         // Fallback sur mantra local si API indispo
