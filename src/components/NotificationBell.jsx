@@ -24,7 +24,7 @@ export default function NotificationBell() {
             <div
               key={n.id}
               className={n.unread ? 'unread' : 'read'}
-              onClick={() => { markAsRead(n.id); if (n.lien) window.location.hash = '#' + n.lien.replace(/^\//, ''); setOpen(false); }}
+              onClick={() => { markAsRead(n.id); if (n.lien) window.location.hash = n.lien; setOpen(false); }}
             >
               <strong>{n.msg}</strong>
               <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>{n.time}</span>
