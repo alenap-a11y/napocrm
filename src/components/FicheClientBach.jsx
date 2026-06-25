@@ -161,6 +161,9 @@ export default function FicheClientBach({ clientNom }) {
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [search, setSearch]       = useState('');
+  const [fleursPerso, setFleursPerso] = useState([]);
+  const [showPersoForm, setShowPersoForm] = useState(false);
+  const [persoForm, setPersoForm] = useState({fr:'',name:'',theme:'',indication:'',famille:'Autre'});
   const [famille, setFamille]     = useState('');
 
   useEffect(() => {
@@ -546,6 +549,67 @@ export default function FicheClientBach({ clientNom }) {
       </div>
     </div>
   );
+  const addFleurPerso = () => {
+    if (!persoForm.fr.trim()) return;
+    const newF = { num: `p${Date.now()}`, fr: persoForm.fr, name: persoForm.name||persoForm.fr,
+      theme: persoForm.theme||'Personnalisée', indication: persoForm.indication||'',
+      famille: persoForm.famille||'Autre', couleur: '#3D5A3E', isPerso: true };
+    setFleursPerso(prev => [...prev, newF]);
+    setPersoForm({fr:'',name:'',theme:'',indication:'',famille:'Autre'});
+    setShowPersoForm(false);
+  };
+  const removeFleurPerso = (num) => {
+    setFleursPerso(prev => prev.filter(f => f.num !== num));
+    setSelection(prev => { const n = {...prev}; delete n[num]; return n; });
+  };
+      {/* Fleurs personnalisées */}
+      {fleursPerso.length > 0 && (
+        <div style={{marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:P.vert,marginBottom:8,textTransform:'uppercase',letterSpacing:1}}>🌿 Fleurs personnalisées</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:10}}>
+            {fleursPerso.map(f => {
+              const sel = selection[f.num];
+              return (
+                <div key={f.num} className={`fb-card${sel?' '+sel:''}`}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                    <div>
+                      <span style={{fontWeight:700,fontSize:13,color:P.texte}}>{f.fr}</span>
+                      <span style={{fontSize:11,color:P.gris,marginLeft:6,fontStyle:'italic'}}>{f.name}</span>
+                    </div>
+                    <button onClick={()=>removeFleurPerso(f.num)} style={{background:'none',border:'none',cursor:'pointer',color:P.gris,fontSize:16,padding:0}}>✕</button>
+                  </div>
+                  <div style={{fontSize:12,color:P.terre,fontWeight:600,marginBottom:4}}>{f.theme}</div>
+                  <div style={{fontSize:11,color:P.gris,lineHeight:1.45,marginBottom:10}}>{f.indication}</div>
+                  <div style={{display:'flex',gap:6}}>
+                    {['mel','fond','prio'].map(n=>(
+                      <button key={n} className={`fb-sel ${n}${sel===n?' on':''}`} onClick={()=>toggleSel(f.num,n)}>
+                        {n==='mel'?'Mélange':n==='fond'?'Fond':'Priorité'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {showPersoForm ? (
+        <div style={{marginTop:16,padding:16,background:'white',borderRadius:12,border:`1.5px solid ${P.vert}`}}>
+          <div style={{fontWeight:700,fontSize:13,color:P.vert,marginBottom:12}}>Nouvelle fleur personnalisée</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+            <input className="fb-inp" placeholder="Nom français *" value={persoForm.fr} onChange={e=>setPersoForm(f=>({...f,fr:e.target.value}))} />
+            <input className="fb-inp" placeholder="Nom latin" value={persoForm.name} onChange={e=>setPersoForm(f=>({...f,name:e.target.value}))} />
+            <input className="fb-inp" placeholder="Thème principal" value={persoForm.theme} onChange={e=>setPersoForm(f=>({...f,theme:e.target.value}))} />
+            <input className="fb-inp" placeholder="Indication / description" value={persoForm.indication} onChange={e=>setPersoForm(f=>({...f,indication:e.target.value}))} />
+          </div>
+          <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+            <button className="fb-btn fb-btn-s" onClick={()=>setShowPersoForm(false)}>Annuler</button>
+            <button className="fb-btn fb-btn-p" onClick={addFleurPerso}>+ Ajouter</button>
+          </div>
+        </div>
+      ) : (
+        <button className="fb-btn fb-btn-s" style={{marginTop:16}} onClick={()=>setShowPersoForm(true)}>+ Ajouter une fleur personnalisée</button>
+      )}
 
   const renderStep3 = () => {
     if (!selected.length) return (
