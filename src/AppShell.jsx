@@ -104,6 +104,7 @@ const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C
 
 export default function AppShell({ user, onSignOut }) {
   useActivityTracker()
+  const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
   const [sbVis, setSbVis] = useState(loadSbVis)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
