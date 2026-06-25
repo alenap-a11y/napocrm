@@ -112,13 +112,14 @@ export default function FicheSeance() {
         <div style={s.card}>
           <div style={s.notesHeader}>
             <h2 style={s.cardTitre}>🖊️ Notes de consultation</h2>
-            <span style={{
-              fontSize: 12,
-              color: saving ? "#f0a500" : saved ? "#2d6a4f" : "#ccc",
-              transition: "color 0.3s",
-            }}>
-              {saving ? "Enregistrement…" : saved ? "✓ Sauvegardé" : "Sauvegarde auto"}
-            </span>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span style={{fontSize:12,color:saving?"#f0a500":saved?"#2d6a4f":"#ccc",transition:"color 0.3s"}}>
+                {saving?"Enregistrement…":saved?"✓ Sauvegardé":"Sauvegarde auto"}
+              </span>
+              <button onClick={()=>saveNotes(notes)} style={{padding:'5px 14px',borderRadius:6,border:'none',background:'#2d6a4f',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                💾 Sauvegarder
+              </button>
+            </div>
           </div>
           <textarea
             value={notes}
