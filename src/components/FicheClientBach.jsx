@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
 
 /* ═══ PALETTE ═══════════════════════════════════════════════════════════ */
 const P = {
