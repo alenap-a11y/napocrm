@@ -601,7 +601,6 @@ export default function Seances() {
                     <button
                       onClick={() => {
                         setDetail(null)
-                        sessionStorage.setItem('napo_nav_state', JSON.stringify({ searchClient: `${detail.prenom} ${detail.nom}`, openSeance: true }))
                         window.location.hash = '#clients'
                       }}
                       style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}
@@ -653,7 +652,6 @@ export default function Seances() {
                   <button
                     onClick={() => {
                       setDetail(null)
-                      sessionStorage.setItem('napo_nav_state', JSON.stringify({ searchClient: `${detail.prenom} ${detail.nom}` }))
                       window.location.hash = '#clients'
                     }}
                     style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}

@@ -85,12 +85,6 @@ export default function Clients() {
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
-  const [napoNavState] = useState(() => {
-    const stored = JSON.parse(sessionStorage.getItem('napo_nav_state') || 'null')
-    if (stored) sessionStorage.removeItem('napo_nav_state')
-    return stored
-  })
-
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
   const [filterSpec,     setFilterSpec]     = useState('Toutes')
@@ -138,19 +132,19 @@ export default function Clients() {
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
 
   useEffect(() => {
-    const state = napoNavState || location.state
-    if (!state?.searchClient) return
-    setSearch(state.searchClient)
-    if (state.openSeance && clients.length > 0) {
-      const found = clients.find(c =>
-        `${c.prenom} ${c.nom}`.toLowerCase() === state.searchClient.toLowerCase()
-      )
-      if (found) {
-        openDetail(found)
-        setTimeout(() => setDetailTab('seances'), 100)
+    if (location.state?.searchClient) {
+      setSearch(location.state.searchClient)
+      if (location.state.openSeance && clients.length > 0) {
+        const found = clients.find(c =>
+          `${c.prenom} ${c.nom}`.toLowerCase() === location.state.searchClient.toLowerCase()
+        )
+        if (found) {
+          openDetail(found)
+          setTimeout(() => setDetailTab('seances'), 100)
+        }
       }
     }
-  }, [napoNavState, location.state, clients])
+  }, [location.state, clients])
 
   useEffect(() => {
     if (detailTab !== 'bach' || !detail) { setBachFiches([]); return }
