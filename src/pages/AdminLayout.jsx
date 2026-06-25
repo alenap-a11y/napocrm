@@ -17,7 +17,7 @@ export default function AdminLayout({ user }) {
 
   async function signOut() {
     await supabase.auth.signOut()
-    window.location.hash = '#/'
+    window.location.hash = '#'
   }
 
   const navItems = [
