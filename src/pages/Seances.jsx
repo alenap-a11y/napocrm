@@ -521,6 +521,7 @@ export default function Seances() {
                   <MField label="Durée (min)"> <input type="number" value={editForm.duree_minutes} onChange={e=>setEditForm(f=>({...f,duree_minutes:e.target.value}))} min={1} style={mInp} /></MField>
                   <MField label="Prix (€)">    <input type="number" value={editForm.prix_euros}    onChange={e=>setEditForm(f=>({...f,prix_euros:e.target.value}))}    min={0} style={mInp} /></MField>
                   <MField label="Tags" style={{ gridColumn:'1/-1' }}><input value={editForm.tags} onChange={e=>setEditForm(f=>({...f,tags:e.target.value}))} placeholder="Stress, Sommeil…" style={mInp} /></MField>
+                  <MField label="Notes" style={{ gridColumn:'1/-1' }}><textarea value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))} placeholder="Observations, compte-rendu…" rows={4} style={{ ...mInp, resize:'vertical', fontFamily:'inherit' }} /></MField>
                 </div>
               ) : (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
