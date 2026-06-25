@@ -162,6 +162,8 @@ export default function FicheClientBach({ clientNom }) {
   const [saved, setSaved]         = useState(false);
   const [search, setSearch]       = useState('');
   const [fleursPerso, setFleursPerso] = useState([]);
+  const [editingFleur, setEditingFleur] = useState(null);
+  const [editFleurForm, setEditFleurForm] = useState({fr:'',name:'',theme:'',indication:''});
   const [showPersoForm, setShowPersoForm] = useState(false);
   const [persoForm, setPersoForm] = useState({fr:'',name:'',theme:'',indication:'',famille:'Autre'});
   const [famille, setFamille]     = useState('');
@@ -532,6 +534,7 @@ export default function FicheClientBach({ clientNom }) {
                 <span style={{background:FAM_BG[f.famille]||'#f5f5f5',color:f.couleur,
                   border:`1px solid ${f.couleur}33`,borderRadius:10,padding:'2px 7px',
                   fontSize:10,fontWeight:700,whiteSpace:'nowrap'}}>{f.famille}</span>
+                <button onClick={()=>{setEditingFleur(f.num);setEditFleurForm({fr:f.fr,name:f.name,theme:f.theme,indication:f.indication})}} style={{background:'none',border:'none',cursor:'pointer',color:'#9B8B7A',fontSize:13,padding:'0 4px'}} title="Modifier">✏️</button>
               </div>
               <div style={{fontSize:12,color:P.terre,fontWeight:600,marginBottom:4}}>{f.theme}</div>
               <div style={{fontSize:11,color:P.gris,lineHeight:1.45,marginBottom:10}}>{f.indication}</div>
@@ -542,6 +545,22 @@ export default function FicheClientBach({ clientNom }) {
                     {n==='mel'?'Mélange':n==='fond'?'Fond':'Priorité'}
                   </button>
                 ))}
+              {editingFleur===f.num && (
+                <div style={{marginTop:10,padding:10,background:'#FBF8F4',borderRadius:8,border:'1.5px solid #3D5A3E'}}>
+                  <input className="fb-inp" style={{marginBottom:6}} placeholder="Nom français" value={editFleurForm.fr} onChange={e=>setEditFleurForm(p=>({...p,fr:e.target.value}))} />
+                  <input className="fb-inp" style={{marginBottom:6}} placeholder="Nom latin" value={editFleurForm.name} onChange={e=>setEditFleurForm(p=>({...p,name:e.target.value}))} />
+                  <input className="fb-inp" style={{marginBottom:6}} placeholder="Thème" value={editFleurForm.theme} onChange={e=>setEditFleurForm(p=>({...p,theme:e.target.value}))} />
+                  <input className="fb-inp" style={{marginBottom:8}} placeholder="Indication" value={editFleurForm.indication} onChange={e=>setEditFleurForm(p=>({...p,indication:e.target.value}))} />
+                  <div style={{display:'flex',gap:8}}>
+                    <button className="fb-btn fb-btn-s" style={{padding:'6px 14px',fontSize:12}} onClick={()=>setEditingFleur(null)}>Annuler</button>
+                    <button className="fb-btn fb-btn-p" style={{padding:'6px 14px',fontSize:12}} onClick={()=>{
+                      const idx2=FLEURS.findIndex(fl=>fl.num===f.num);
+                      if(idx2>=0){FLEURS[idx2]={...FLEURS[idx2],...editFleurForm};}
+                      setEditingFleur(null);
+                    }}>✓ Sauvegarder</button>
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           );
