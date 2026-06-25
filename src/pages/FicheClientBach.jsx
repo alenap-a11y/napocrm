@@ -320,22 +320,98 @@ export default function FicheClientBach() {
 
   useEffect(() => { fetchHistoAll(); }, [fetchHistoAll]);
 
+  /* ── Fleurs personnalisées ──────────────────────────────────────────── */
+  const fetchFleursPerso = useCallback(async () => {
+    if (!userId) return;
+    setLoadingPerso(true);
+    const { data } = await supabase
+      .from('fleurs_perso')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+    setFleursPerso(data || []);
+    setLoadingPerso(false);
+  }, [userId]);
+
+  useEffect(() => { fetchFleursPerso(); }, [fetchFleursPerso]);
+
+  const addFleurPerso = async () => {
+    if (!userId || !formPerso.name.trim() || !formPerso.fr.trim()) return;
+    setSavingPerso(true);
+    const { error } = await supabase
+      .from('fleurs_perso')
+      .insert({ user_id: userId, ...formPerso });
+    if (!error) { await fetchFleursPerso(); setFormPerso(FORM_VIDE); setShowForm(false); }
+    setSavingPerso(false);
+  };
+
+  const updateFleurPerso = async () => {
+    if (!editingId) return;
+    setSavingPerso(true);
+    const { error } = await supabase
+      .from('fleurs_perso')
+      .update({ ...formPerso })
+      .eq('id', editingId);
+    if (!error) { await fetchFleursPerso(); setFormPerso(FORM_VIDE); setEditingId(null); setShowForm(false); }
+    setSavingPerso(false);
+  };
+
+  const deleteFleurPerso = async (id) => {
+    await supabase.from('fleurs_perso').delete().eq('id', id);
+    setDeleteConfirm(null);
+    await fetchFleursPerso();
+    // retire du mélange si présent
+    setSelection(prev => { const n = { ...prev }; delete n[`p_${id}`]; return n; });
+    setDoses(prev =>    { const n = { ...prev }; delete n[`p_${id}`]; return n; });
+  };
+
+  const openEdit = (f) => {
+    setFormPerso({ name: f.name, fr: f.fr, sys: f.sys || 'Australian Bush',
+                   fam: f.fam || 'Incertitude', theme: f.theme || '',
+                   indic: f.indic || '', couleur: f.couleur || '#3D5A3E' });
+    setEditingId(f.id);
+    setShowForm(true);
+  };
+
   const clientFullName = [clientInfo.prenom, clientInfo.nom].filter(Boolean).join(' ') || 'Client';
 
-  const STEPS = ['Historique','Client','Entretien','Fleurs','Mélange','Protocole','Synthèse','Séances'];
+  const STEPS = ['Historique','Client','Entretien','Fleurs','Perso','Mélange','Protocole','Synthèse','Séances'];
+
+  /* ── Fusion Bach + Fleurs perso ─────────────────────────────────────── */
+  const allFleurs = useMemo(() => [
+    ...FLEURS,
+    ...fleursPerso.map(f => ({
+      num:       `p_${f.id}`,
+      name:      f.name,
+      fr:        f.fr,
+      famille:   f.fam || 'Perso',
+      theme:     f.theme || '',
+      indication:f.indic || '',
+      couleur:   f.couleur || '#9B8B7A',
+      sys:       f.sys,
+      _perso:    true,
+      _id:       f.id,
+    })),
+  ], [fleursPerso]);
+
+  const allFamilles = useMemo(() => {
+    const extra = [...new Set(fleursPerso.map(f => f.fam).filter(Boolean))]
+      .filter(f => !FAMILLES.includes(f));
+    return fleursPerso.length ? [...FAMILLES, ...extra, 'Perso'] : FAMILLES;
+  }, [fleursPerso]);
 
   /* ── Dérivés ───────────────────────────────────────────────────────────── */
-  const selected = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
+  const selected = useMemo(() => allFleurs.filter(f => selection[f.num]), [allFleurs, selection]);
   const byNiv    = useCallback(niv => selected.filter(f => selection[f.num] === niv), [selected, selection]);
   const fleursMel  = useMemo(() => byNiv('mel'),  [byNiv]);
   const fleursFond = useMemo(() => byNiv('fond'), [byNiv]);
   const fleursPrio = useMemo(() => byNiv('prio'), [byNiv]);
 
-  const filtered = useMemo(() => FLEURS.filter(f => {
+  const filtered = useMemo(() => allFleurs.filter(f => {
     const q  = search.toLowerCase();
-    const ok = !q || [f.fr, f.name, f.theme, f.indication, f.famille].some(s => s.toLowerCase().includes(q));
+    const ok = !q || [f.fr, f.name, f.theme, f.indication, f.famille].some(s => s && s.toLowerCase().includes(q));
     return ok && (!filtreFam || f.famille === filtreFam);
-  }), [search, filtreFam]);
+  }), [allFleurs, search, filtreFam]);
 
   const entretienComplet = useMemo(() =>
     Object.keys(entretien).filter(k => entretien[k]?.tags?.length || entretien[k]?.note).length,
@@ -393,7 +469,7 @@ export default function FicheClientBach() {
     const pdfProto     = override?.proto      ?? proto;
     const pdfPersos    = override?.persos     ?? persos;
     const pdfDate      = override?.date       ? new Date(override.date) : new Date();
-    const pdfSelected  = FLEURS.filter(f => pdfSel[f.num]);
+    const pdfSelected  = allFleurs.filter(f => pdfSel[f.num]);
 
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
@@ -569,7 +645,7 @@ export default function FicheClientBach() {
       if (!q) return true;
       const nom    = [f.clients?.prenom, f.clients?.nom].filter(Boolean).join(' ').toLowerCase();
       const motif  = (f.client_info?.motif || '').toLowerCase();
-      const fleurs = FLEURS.filter(fl => f.selection?.[fl.num])
+      const fleurs = allFleurs.filter(fl => f.selection?.[fl.num])
                            .map(fl => fl.fr.toLowerCase() + ' ' + fl.name.toLowerCase())
                            .join(' ');
       return nom.includes(q) || motif.includes(q) || fleurs.includes(q);
@@ -642,7 +718,7 @@ export default function FicheClientBach() {
           const sel        = fiche.selection || {};
           const nbFleurs   = Object.keys(sel).length;
           const score      = Math.min(nbFleurs, 10);
-          const fleursListe= FLEURS.filter(f => sel[f.num]);
+          const fleursListe= allFleurs.filter(f => sel[f.num]);
           const tags3      = fleursListe.slice(0, 3);
           const reste      = fleursListe.length - 3;
 
@@ -824,7 +900,7 @@ export default function FicheClientBach() {
           <select className="fb-inp" style={{ paddingLeft: 34, cursor: 'pointer', minWidth: 170 }}
             value={filtreFam} onChange={e => setFiltreFam(e.target.value)} aria-label="Filtrer par famille">
             <option value="">Toutes les familles</option>
-            {FAMILLES.map(f => <option key={f} value={f}>{f} ({FLEURS.filter(fl => fl.famille === f).length})</option>)}
+            {allFamilles.map(f => <option key={f} value={f}>{f} ({allFleurs.filter(fl => fl.famille === f).length})</option>)}
           </select>
         </div>
       </div>
@@ -1337,7 +1413,7 @@ export default function FicheClientBach() {
             {/* Noms des fleurs */}
             {nbFleurs > 0 && (
               <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                {FLEURS.filter(f => selObj[f.num]).map(f => (
+                {allFleurs.filter(f => selObj[f.num]).map(f => (
                   <span key={f.num} style={{ background: P.sable, color: P.texteS, borderRadius: 10,
                                              padding: '2px 9px', fontSize: 11, border: `1px solid ${P.sableFF}` }}>
                     {f.fr}
@@ -1351,10 +1427,228 @@ export default function FicheClientBach() {
     </div>
   );
 
+  /* ── Étape 4 : Fleurs personnalisées ───────────────────────────────── */
+  const SYS_OPTIONS = ['Australian Bush','Pacifique','Alpes','Californie','Création perso'];
+
+  const FormPerso = () => (
+    <div style={{ background: P.sable, borderRadius: 12, padding: 22,
+                  border: `1.5px solid ${P.ambre}55`, marginBottom: 20 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: P.texte, marginBottom: 16 }}>
+        {editingId ? 'Modifier la fleur' : 'Ajouter une fleur personnalisée'}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        {[
+          { key:'name', label:'Nom anglais', ph:'Ex : Desert Rose' },
+          { key:'fr',   label:'Nom français', ph:'Ex : Rose du Désert' },
+        ].map(({ key, label, ph }) => (
+          <div key={key}>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>{label}</label>
+            <input className="fb-inp" placeholder={ph} value={formPerso[key]}
+              onChange={e => setFormPerso(p => ({ ...p, [key]: e.target.value }))} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>Système</label>
+          <select className="fb-inp" style={{ cursor:'pointer' }} value={formPerso.sys}
+            onChange={e => setFormPerso(p => ({ ...p, sys: e.target.value }))}>
+            {SYS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>Famille émotionnelle</label>
+          <select className="fb-inp" style={{ cursor:'pointer' }} value={formPerso.fam}
+            onChange={e => setFormPerso(p => ({ ...p, fam: e.target.value }))}>
+            {FAMILLES.map(f => <option key={f} value={f}>{f}</option>)}
+            <option value="Perso">Perso</option>
+          </select>
+        </div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>Thème émotionnel</label>
+        <input className="fb-inp" placeholder="Ex : Ancrage et confiance en soi"
+          value={formPerso.theme} onChange={e => setFormPerso(p => ({ ...p, theme: e.target.value }))} />
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>Indications spécifiques</label>
+        <textarea className="fb-inp fb-ta" style={{ height: 72 }}
+          placeholder="Ex : Aide lors de transitions, renforce l'enracinement…"
+          value={formPerso.indic} onChange={e => setFormPerso(p => ({ ...p, indic: e.target.value }))} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 18 }}>
+        <div>
+          <label style={{ display:'block', fontSize:12, fontWeight:700, color:P.texteS, marginBottom:5 }}>Couleur de la carte</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="color" value={formPerso.couleur}
+              onChange={e => setFormPerso(p => ({ ...p, couleur: e.target.value }))}
+              style={{ width: 44, height: 34, border: 'none', borderRadius: 8, cursor: 'pointer',
+                       background: 'transparent', padding: 2 }} />
+            <span style={{ fontSize: 12, color: P.gris, fontFamily: 'monospace' }}>{formPerso.couleur}</span>
+          </div>
+        </div>
+        <div style={{ width: 120, height: 34, borderRadius: 8, background: formPerso.couleur, opacity: .8,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, color: '#fff', fontWeight: 700, letterSpacing: '.03em' }}>
+          Aperçu
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="fb-btn fb-btn-a" onClick={editingId ? updateFleurPerso : addFleurPerso}
+          disabled={savingPerso || !formPerso.name.trim() || !formPerso.fr.trim()}>
+          {savingPerso ? 'Enregistrement…' : editingId ? 'Enregistrer les modifications' : 'Ajouter la fleur'}
+        </button>
+        <button className="fb-btn fb-btn-o"
+          onClick={() => { setShowForm(false); setEditingId(null); setFormPerso(FORM_VIDE); }}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderFleursPerso = () => (
+    <div className="fb-anim">
+      {/* En-tête + bouton ajouter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div>
+          <div className="fb-serif" style={{ fontSize: 18, fontWeight: 700, color: P.texte }}>
+            Mes fleurs personnalisées
+          </div>
+          <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>
+            {fleursPerso.length} fleur{fleursPerso.length !== 1 ? 's' : ''} enregistrée{fleursPerso.length !== 1 ? 's' : ''}
+            {' · '}systèmes hors Bach (Australian Bush, Alpes, Pacifique…)
+          </div>
+        </div>
+        {!showForm && (
+          <button className="fb-btn fb-btn-a"
+            onClick={() => { setShowForm(true); setEditingId(null); setFormPerso(FORM_VIDE); }}>
+            <Icon name="plus" size={14} /> Ajouter
+          </button>
+        )}
+      </div>
+
+      {/* Formulaire ajout/édition */}
+      {showForm && <FormPerso />}
+
+      {/* Liste vide */}
+      {!loadingPerso && fleursPerso.length === 0 && !showForm && (
+        <div style={{ textAlign: 'center', padding: 56, background: P.blanc, borderRadius: 14,
+                      border: `1.5px solid ${P.sableF}`, color: P.gris }}>
+          <Icon name="leaf" size={36} color={P.sableFF} />
+          <div style={{ fontSize: 14, fontWeight: 700, marginTop: 12 }}>Aucune fleur personnalisée</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>
+            Ajoutez vos fleurs d'autres systèmes (Australian Bush, Pacifique, Alpes…)
+          </div>
+          <button className="fb-btn fb-btn-a" style={{ marginTop: 20 }}
+            onClick={() => { setShowForm(true); setEditingId(null); setFormPerso(FORM_VIDE); }}>
+            <Icon name="plus" size={14} /> Ajouter ma première fleur
+          </button>
+        </div>
+      )}
+
+      {loadingPerso && (
+        <div style={{ textAlign: 'center', padding: 40, color: P.gris, fontSize: 13 }}>Chargement…</div>
+      )}
+
+      {/* Cartes fleurs perso */}
+      {!loadingPerso && fleursPerso.map(f => {
+        const isEditing  = editingId === f.id && showForm;
+        const isDeleting = deleteConfirm === f.id;
+        const couleur    = f.couleur || P.terre;
+        const persoNum   = `p_${f.id}`;
+        const selNiv     = selection[persoNum];
+
+        return (
+          <div key={f.id} style={{ background: P.blanc, borderRadius: 12, marginBottom: 12,
+                                   border: `1.5px solid ${isEditing ? P.ambre : P.sableF}`,
+                                   overflow: 'hidden', transition: 'border-color .2s' }}>
+            {/* Bande couleur */}
+            <div style={{ height: 4, background: couleur }} />
+
+            <div style={{ padding: '16px 18px' }}>
+              {/* Ligne titre */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: P.texte }}>{f.fr}</span>
+                    <span style={{ fontSize: 12, color: P.gris, fontStyle: 'italic' }}>{f.name}</span>
+                    {f.sys && (
+                      <span style={{ fontSize: 10, fontWeight: 700, background: `${couleur}20`,
+                                     color: couleur, border: `1px solid ${couleur}44`,
+                                     borderRadius: 8, padding: '2px 8px', letterSpacing: '.03em' }}>
+                        {f.sys}
+                      </span>
+                    )}
+                    {f.fam && (
+                      <span style={{ fontSize: 10, background: P.sableF, color: P.gris,
+                                     borderRadius: 8, padding: '2px 8px' }}>
+                        {f.fam}
+                      </span>
+                    )}
+                  </div>
+                  {f.theme && (
+                    <div style={{ fontSize: 12, color: P.terre, fontWeight: 600, marginBottom: 4 }}>{f.theme}</div>
+                  )}
+                  {f.indic && (
+                    <div style={{ fontSize: 11.5, color: P.gris, lineHeight: 1.5 }}>{f.indic}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              {isDeleting ? (
+                <div style={{ background: '#FDECEA', borderRadius: 8, padding: '10px 14px',
+                              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                              border: '1px solid #E8A09A' }}>
+                  <span style={{ fontSize: 13, color: '#A93226', fontWeight: 600, flex: 1 }}>
+                    Supprimer « {f.fr} » ? Cette action est irréversible.
+                  </span>
+                  <button className="fb-btn" style={{ padding: '6px 14px', fontSize: 12,
+                    background: '#C0392B', color: '#fff', border: 'none' }}
+                    onClick={() => deleteFleurPerso(f.id)}>
+                    Confirmer
+                  </button>
+                  <button className="fb-btn fb-btn-o" style={{ padding: '6px 14px', fontSize: 12 }}
+                    onClick={() => setDeleteConfirm(null)}>
+                    Annuler
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {/* Ajouter au mélange */}
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {Object.entries(NIV).map(([niv, { label }]) => (
+                      <button key={niv} className={`fb-niv ${niv}${selNiv === niv ? ' on' : ''}`}
+                        onClick={() => toggleSel(persoNum, niv)}
+                        title={`Ajouter en ${label}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                    <button className="fb-btn fb-btn-o" style={{ padding: '5px 12px', fontSize: 12 }}
+                      onClick={() => openEdit(f)}>
+                      Modifier
+                    </button>
+                    <button className="fb-btn" style={{ padding: '5px 12px', fontSize: 12,
+                      background: P.sableF, color: P.gris, border: 'none' }}
+                      onClick={() => setDeleteConfirm(f.id)}>
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   /* ═══════════════════════════════════════════════════════════════════════
      RENDU PRINCIPAL
   ═══════════════════════════════════════════════════════════════════════ */
-  const STEP_CONTENT = [renderHistoGlobal, renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese, renderHistorique];
+  const STEP_CONTENT = [renderHistoGlobal, renderClient, renderEntretien, renderFleurs, renderFleursPerso, renderMelange, renderProtocole, renderSynthese, renderHistorique];
 
   return (
     <div className="fb">

@@ -274,6 +274,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
           </div>
         )}
       </div>
+      </div>
   )
 }
 
