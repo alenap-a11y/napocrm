@@ -588,28 +588,35 @@ export default function FicheClientBach({ clientNom }) {
           </div>
         );
       })}
-      {/* Carte vierge nouvelle fleur */}
-      {showPersoForm ? (
-        <div style={{marginTop:10,padding:16,background:'white',borderRadius:12,border:`2px dashed ${P.vert}`}}>
-          <div style={{fontWeight:700,fontSize:13,color:P.vert,marginBottom:12}}>🌿 Nouvelle fleur personnalisée</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
-            <input className="fb-inp" placeholder="Nom français *" value={persoForm.fr} onChange={e=>setPersoForm(p=>({...p,fr:e.target.value}))} />
-            <input className="fb-inp" placeholder="Nom latin" value={persoForm.name} onChange={e=>setPersoForm(p=>({...p,name:e.target.value}))} />
-            <input className="fb-inp" placeholder="Thème principal" value={persoForm.theme} onChange={e=>setPersoForm(p=>({...p,theme:e.target.value}))} />
-            <input className="fb-inp" placeholder="Indication / description" value={persoForm.indication} onChange={e=>setPersoForm(p=>({...p,indication:e.target.value}))} />
+      {/* Carte vierge — même style que les 39 fleurs */}
+      <div className="fb-card" style={{marginTop:10,border:`2px dashed ${showPersoForm?P.vert:P.sableF}`,cursor:showPersoForm?'default':'pointer'}}
+        onClick={()=>!showPersoForm&&setShowPersoForm(true)}>
+        {showPersoForm ? (<>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <div style={{display:'flex',gap:8,flex:1}}>
+              <input className="fb-inp" style={{flex:1}} placeholder="Nom français *" value={persoForm.fr} onChange={e=>setPersoForm(p=>({...p,fr:e.target.value}))} />
+              <input className="fb-inp" style={{flex:1}} placeholder="Nom latin" value={persoForm.name} onChange={e=>setPersoForm(p=>({...p,name:e.target.value}))} />
+            </div>
+          </div>
+          <input className="fb-inp" style={{marginBottom:6}} placeholder="Thème principal (ex: Peur, Incertitude...)" value={persoForm.theme} onChange={e=>setPersoForm(p=>({...p,theme:e.target.value}))} />
+          <input className="fb-inp" style={{marginBottom:10}} placeholder="Indication / description" value={persoForm.indication} onChange={e=>setPersoForm(p=>({...p,indication:e.target.value}))} />
+          <div style={{display:'flex',gap:6,marginBottom:10}}>
+            {['mel','fond','prio'].map(n=>(
+              <button key={n} className={`fb-sel ${n}`} disabled style={{opacity:.4}}>
+                {n==='mel'?'Mélange':n==='fond'?'Fond':'Priorité'}
+              </button>
+            ))}
           </div>
           <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-            <button className="fb-btn fb-btn-s" onClick={()=>setShowPersoForm(false)}>Annuler</button>
-            <button className="fb-btn fb-btn-p" onClick={addFleurPerso}>+ Créer cette fleur</button>
+            <button className="fb-btn fb-btn-s" style={{padding:'6px 14px',fontSize:12}} onClick={e=>{e.stopPropagation();setShowPersoForm(false);setPersoForm({fr:'',name:'',theme:'',indication:'',famille:'Autre'})}}>Annuler</button>
+            <button className="fb-btn fb-btn-p" style={{padding:'6px 14px',fontSize:12}} onClick={e=>{e.stopPropagation();addFleurPerso()}}>+ Créer cette fleur</button>
           </div>
-        </div>
-      ) : (
-        <div onClick={()=>setShowPersoForm(true)} style={{marginTop:10,padding:20,borderRadius:12,border:`2px dashed ${P.sableF}`,cursor:'pointer',textAlign:'center',color:P.gris,fontSize:13,fontWeight:600,transition:'all .2s'}}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=P.vert;e.currentTarget.style.color=P.vert}}
-          onMouseLeave={e=>{e.currentTarget.style.borderColor=P.sableF;e.currentTarget.style.color=P.gris}}>
-          + Ajouter une fleur personnalisée
-        </div>
-      )}
+        </>) : (
+          <div style={{textAlign:'center',color:P.gris,fontSize:13,fontWeight:600,padding:'10px 0'}}>
+            🌿 + Ajouter une fleur personnalisée
+          </div>
+        )}
+      </div>
     </div>
   );
   const addFleurPerso = () => {
