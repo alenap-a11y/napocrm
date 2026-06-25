@@ -1,789 +1,699 @@
-import { useState } from 'react'
-import { supabase } from '../lib/supabase'
-import SeanceTimeline from './SeanceTimeline'
+import React, { useState, useMemo } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
-/* ─── Données ──────────────────────────────────────────────────────────── */
+/* ═══ PALETTE ═══════════════════════════════════════════════════════════ */
+const P = {
+  vert: '#3D5A3E', ambre: '#A0622A', terre: '#8B5E3C', sable: '#FBF8F4',
+  sableF: '#EDE8E0', texte: '#2C1F0E', gris: '#9B8B7A', grisClair: '#C8BDB4',
+  vertClair: '#EAF0EA', ambreClair: '#FDF3EA', terreClair: '#F5EDE6',
+};
 
-const FLEUR_SUGGESTIONS = {
-  'Anxiété / peurs': ['Mimulus', 'Aspen', 'Rock Rose'],
-  'Pensées en boucle': ['White Chestnut', 'Agrimony'],
-  'Fatigue profonde': ['Olive', 'Hornbeam', 'Oak'],
-  'Manque de confiance': ['Larch', 'Cerato'],
-  'Tristesse': ['Mustard', 'Sweet Chestnut', 'Willow'],
-  'Colère / impatience': ['Holly', 'Impatiens', 'Beech'],
-  'Difficulté à dire non': ['Centaury', 'Walnut'],
-  'Découragement': ['Gentian', 'Gorse'],
-  'Transition de vie': ['Walnut', 'Wild Oat'],
-  'Perfectionnisme': ['Rock Water', 'Vervain'],
-  'Isolement': ['Water Violet', 'Heather'],
-  'Choc émotionnel récent': ['Star of Bethlehem'],
-}
+/* ═══ CSS INJECTÉ ════════════════════════════════════════════════════════ */
+const CSS = `
+  .fb-root{box-sizing:border-box;font-family:'Georgia',serif;color:#2C1F0E;background:#FBF8F4;min-height:100vh}
+  .fb-root *,.fb-root *::before,.fb-root *::after{box-sizing:inherit}
+  .fb-sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 
-const TOUS_ELIXIRS = {
-  'Pour les peurs': ['Aspen', 'Cherry Plum', 'Mimulus', 'Red Chestnut', 'Rock Rose'],
-  "Pour l'incertitude": ['Cerato', 'Gentian', 'Gorse', 'Hornbeam', 'Scleranthus', 'Wild Oat'],
-  "Manque d'intérêt au présent": ['Chestnut Bud', 'Clematis', 'Honeysuckle', 'Mustard', 'Olive', 'White Chestnut', 'Wild Rose'],
-  'Solitude': ['Heather', 'Impatiens', 'Water Violet'],
-  'Hypersensibilité': ['Agrimony', 'Centaury', 'Holly', 'Walnut'],
-  'Découragement / désespoir': ['Crab Apple', 'Elm', 'Larch', 'Oak', 'Pine', 'Star of Bethlehem', 'Sweet Chestnut', 'Willow'],
-  'Surpréoccupation pour autrui': ['Beech', 'Chicory', 'Rock Water', 'Vervain', 'Vine'],
-}
+  .fb-tag{cursor:pointer;padding:4px 12px;border-radius:20px;border:1.5px solid #C8BDB4;
+    background:white;color:#8B5E3C;font-size:12px;font-family:inherit;transition:all .2s;white-space:nowrap}
+  .fb-tag:hover{border-color:#A0622A;color:#A0622A;background:#FDF3EA}
+  .fb-tag.on{background:#A0622A;border-color:#A0622A;color:white}
 
-const ETATS = Object.keys(FLEUR_SUGGESTIONS)
+  .fb-card{border-radius:12px;border:1.5px solid #EDE8E0;background:white;padding:14px 16px;transition:all .2s}
+  .fb-card.mel{border-color:#3D5A3E!important;background:#EAF0EA!important}
+  .fb-card.fond{border-color:#8B5E3C!important;background:#F5EDE6!important}
+  .fb-card.prio{border-color:#A0622A!important;background:#FDF3EA!important}
 
-const MOCK_HIST = [
-  { id: 1,  nom: 'Sophie Legrand',  age: 38, date: '2026-05-15', motif: 'Stress chronique',       score: 4, fleurs: ['Mimulus', 'White Chestnut', 'Olive'],       notes: 'Tension au travail, difficulté à dormir.' },
-  { id: 2,  nom: 'Pierre Dumont',   age: 52, date: '2026-05-12', motif: 'Deuil',                  score: 3, fleurs: ['Star of Bethlehem', 'Sweet Chestnut', 'Willow'], notes: 'Perte récente. Très ému.' },
-  { id: 3,  nom: 'Marie Caron',     age: 29, date: '2026-05-08', motif: 'Manque de confiance',    score: 6, fleurs: ['Larch', 'Cerato', 'Mimulus'],                notes: 'Transition professionnelle.' },
-  { id: 4,  nom: 'Lucie Bernard',   age: 44, date: '2026-05-02', motif: 'Épuisement',             score: 3, fleurs: ['Olive', 'Hornbeam', 'Oak', 'Elm'],           notes: 'Burn-out modéré. Protocole 21j.' },
-  { id: 5,  nom: 'Paul Renard',     age: 61, date: '2026-04-24', motif: 'Irritabilité',           score: 5, fleurs: ['Holly', 'Impatiens', 'Beech'],               notes: 'Conflits familiaux récurrents.' },
-  { id: 6,  nom: 'Anna Leblanc',    age: 35, date: '2026-04-18', motif: 'Anxiété généralisée',    score: 4, fleurs: ['Aspen', 'Mimulus', 'Rock Rose', 'Agrimony'], notes: 'Antécédent d\'attaques de panique.' },
-  { id: 7,  nom: 'Sophie Legrand',  age: 38, date: '2026-04-10', motif: 'Suivi stress',           score: 6, fleurs: ['White Chestnut', 'Walnut', 'Scleranthus'],   notes: 'Amélioration notable depuis J+21.' },
-]
+  .fb-sel{padding:3px 9px;border-radius:12px;border:1.5px solid;font-size:11px;font-weight:700;
+    cursor:pointer;transition:all .15s;font-family:inherit;background:transparent}
+  .fb-sel.mel{border-color:#3D5A3E;color:#3D5A3E}
+  .fb-sel.mel.on,.fb-sel.mel:hover{background:#3D5A3E;color:white}
+  .fb-sel.fond{border-color:#8B5E3C;color:#8B5E3C}
+  .fb-sel.fond.on,.fb-sel.fond:hover{background:#8B5E3C;color:white}
+  .fb-sel.prio{border-color:#A0622A;color:#A0622A}
+  .fb-sel.prio.on,.fb-sel.prio:hover{background:#A0622A;color:white}
 
-/* ─── CSV helpers ─────────────────────────────────────────────────────── */
+  .fb-inp{width:100%;padding:10px 14px;border:1.5px solid #EDE8E0;border-radius:8px;
+    font-size:13px;background:white;color:#2C1F0E;outline:none;font-family:inherit;transition:border .2s}
+  .fb-inp:focus{border-color:#A0622A}
+  .fb-ta{resize:vertical;min-height:72px}
 
-function toCSV(rows) {
-  const header = 'Nom,Âge,Date,Motif,Score,Fleurs,Notes'
-  const lines = rows.map(r =>
-    `"${r.nom}",${r.age},"${r.date}",` +
-    `"${(r.motif||'').replace(/"/g,"'")}",${r.score||0},` +
-    `"${(r.fleurs||[]).join('|')}","${(r.notes||'').replace(/"/g,"'").replace(/\n/g,' ')}"`
-  )
-  return [header, ...lines].join('\n')
-}
+  .fb-btn{padding:11px 26px;border-radius:10px;font-size:14px;font-weight:700;
+    cursor:pointer;transition:all .2s;font-family:inherit;border:none}
+  .fb-btn-p{background:#3D5A3E;color:white}
+  .fb-btn-p:hover{background:#2E4430}
+  .fb-btn-p:disabled{opacity:.5;cursor:not-allowed}
+  .fb-btn-s{background:transparent;color:#3D5A3E;border:1.5px solid #3D5A3E!important}
+  .fb-btn-s:hover{background:#EAF0EA}
+  .fb-btn-a{background:#A0622A;color:white}
+  .fb-btn-a:hover{background:#8B5222}
+  .fb-btn-t{background:#8B5E3C;color:white}
+  .fb-btn-t:hover{background:#724D2F}
 
-function downloadCSV(content, filename) {
-  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url; a.download = filename; a.click()
-  URL.revokeObjectURL(url)
-}
+  .fb-circ{width:28px;height:28px;border-radius:50%;border:1.5px solid #EDE8E0;
+    background:white;cursor:pointer;font-size:15px;display:flex;align-items:center;
+    justify-content:center;transition:all .15s;color:#2C1F0E;font-family:inherit}
+  .fb-circ:hover{border-color:#A0622A;color:#A0622A}
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n').slice(1)
-  return lines.map((line, i) => {
-    const cols = line.match(/(".*?"|[^,]+)(?=,|$)/g) || []
-    const c    = cols.map(x => x.replace(/^"|"$/g, '').trim())
-    return {
-      id: Date.now() + i,
-      nom:    c[0] || '',
-      age:    c[1] || '',
-      date:   c[2] || '',
-      motif:  c[3] || '',
-      score:  parseInt(c[4]) || 0,
-      fleurs: c[5] ? c[5].split('|').filter(Boolean) : [],
-      notes:  c[6] || '',
-    }
-  }).filter(r => r.nom)
-}
+  .fb-dot{width:10px;height:10px;border-radius:50%;background:#EDE8E0;cursor:pointer;transition:background .15s}
 
-/* ─── Utilitaires ─────────────────────────────────────────────────────── */
+  @keyframes fb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .fb-anim{animation:fb-in .25s ease}
 
-const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+  @media(max-width:640px){
+    .fb-grid-fleurs{grid-template-columns:1fr!important}
+    .fb-grid-proto{grid-template-columns:1fr 1fr!important}
+    .fb-grid-stats{grid-template-columns:1fr 1fr!important}
+    .fb-steps button{font-size:10px!important;padding:8px 4px!important}
+  }
+`;
 
-function fmtDate(d) {
-  if (!d) return '—'
-  const [y, m, j] = d.split('-')
-  return `${j} ${MOIS[parseInt(m) - 1]} ${y}`
-}
+/* ═══ 39 FLEURS DE BACH ══════════════════════════════════════════════════ */
+const FLEURS = [
+  // Peur
+  {num:1,name:'Rock Rose',fr:'Hélianthème',famille:'Peur',couleur:'#C0392B',theme:'Terreur et panique',indication:'Terreur soudaine, cauchemars, crises de panique extrême'},
+  {num:2,name:'Mimulus',fr:'Mimule',famille:'Peur',couleur:'#C0392B',theme:'Peur précise et identifiable',indication:'Peurs du quotidien connues : maladie, mort, animaux, timidité'},
+  {num:3,name:'Cherry Plum',fr:'Prunus',famille:'Peur',couleur:'#C0392B',theme:'Peur de perdre le contrôle',indication:'Crainte de céder à des impulsions violentes, peur de la folie'},
+  {num:4,name:'Aspen',fr:'Tremble',famille:'Peur',couleur:'#C0392B',theme:'Peur vague et inexpliquée',indication:'Pressentiments, appréhensions sans raison connue, frissons'},
+  {num:5,name:'Red Chestnut',fr:'Marronnier Rouge',famille:'Peur',couleur:'#C0392B',theme:'Anxiété pour les autres',indication:'Inquiétude excessive pour les proches, anticipe les catastrophes'},
+  // Incertitude
+  {num:6,name:'Cerato',fr:'Cérato',famille:'Incertitude',couleur:'#8E44AD',theme:'Manque de confiance en son jugement',indication:'Doute de soi, cherche constamment la validation des autres'},
+  {num:7,name:'Scleranthus',fr:'Scléranthe',famille:'Incertitude',couleur:'#8E44AD',theme:'Indécision entre deux options',indication:'Hésitation chronique, humeur fluctuante, incapacité à choisir'},
+  {num:8,name:'Gentian',fr:'Gentiane',famille:'Incertitude',couleur:'#8E44AD',theme:'Découragement et doute',indication:'Découragement après un obstacle, scepticisme, doute facile'},
+  {num:9,name:'Gorse',fr:'Ajonc',famille:'Incertitude',couleur:'#8E44AD',theme:'Désespoir et absence d\'espoir',indication:'Sentiment que rien ne peut aider, résignation profonde'},
+  {num:10,name:'Hornbeam',fr:'Charme',famille:'Incertitude',couleur:'#8E44AD',theme:'Fatigue mentale et procrastination',indication:'Lassitude au lever, doute de sa capacité à accomplir les tâches'},
+  {num:11,name:'Wild Oat',fr:'Avoine Sauvage',famille:'Incertitude',couleur:'#8E44AD',theme:'Manque de direction de vie',indication:'Ne trouve pas sa voie, ambitions vagues, insatisfaction profonde'},
+  // Présent
+  {num:12,name:'Clematis',fr:'Clématite',famille:'Présent',couleur:'#2980B9',theme:'Rêverie et détachement',indication:'Distraction, somnolence, vie dans les rêves plutôt que le présent'},
+  {num:13,name:'Honeysuckle',fr:'Chèvrefeuille',famille:'Présent',couleur:'#2980B9',theme:'Nostalgie du passé',indication:'Ancré dans le passé, regrets envahissants, incapacité à avancer'},
+  {num:14,name:'Wild Rose',fr:'Églantier',famille:'Présent',couleur:'#2980B9',theme:'Résignation et apathie',indication:'Acceptation passive de la vie, sans motivation ni effort'},
+  {num:15,name:'Olive',fr:'Olive',famille:'Présent',couleur:'#2980B9',theme:'Épuisement total',indication:'Fatigue profonde après longue maladie ou effort mental/physique intense'},
+  {num:16,name:'White Chestnut',fr:'Marronnier Blanc',famille:'Présent',couleur:'#2980B9',theme:'Pensées obsessionnelles',indication:'Ruminations mentales, pensées intrusives en boucle, tourments'},
+  {num:17,name:'Mustard',fr:'Moutarde',famille:'Présent',couleur:'#2980B9',theme:'Dépression sans raison',indication:'Mélancolie soudaine sans cause identifiable, nuage sombre qui arrive et repart'},
+  {num:18,name:'Chestnut Bud',fr:'Bourgeon de Marronnier',famille:'Présent',couleur:'#2980B9',theme:'Ne pas apprendre de ses erreurs',indication:'Répétition des mêmes erreurs, manque d\'observation et d\'attention'},
+  // Solitude
+  {num:19,name:'Water Violet',fr:'Violette d\'Eau',famille:'Solitude',couleur:'#16A085',theme:'Fierté et isolement',indication:'Tendance à s\'isoler, difficulté à demander de l\'aide, distance'},
+  {num:20,name:'Impatiens',fr:'Impatiente',famille:'Solitude',couleur:'#16A085',theme:'Impatience et irritabilité',indication:'Rapidité d\'action, irritation devant la lenteur des autres'},
+  {num:21,name:'Heather',fr:'Bruyère',famille:'Solitude',couleur:'#16A085',theme:'Centré sur soi',indication:'Besoin intense d\'attention, solitude difficile à supporter, bavardage'},
+  // Hypersensibilité
+  {num:22,name:'Agrimony',fr:'Agrimonie',famille:'Hypersensibilité',couleur:'#D35400',theme:'Torture intérieure masquée',indication:'Cache son anxiété derrière joie et humour, fuit les conflits'},
+  {num:23,name:'Centaury',fr:'Centaurée',famille:'Hypersensibilité',couleur:'#D35400',theme:'Faiblesse de volonté',indication:'Difficulté à dire non, servitude, oubli de soi au profit des autres'},
+  {num:24,name:'Walnut',fr:'Noyer',famille:'Hypersensibilité',couleur:'#D35400',theme:'Transition et protection',indication:'Lors de changements importants, protection contre les influences extérieures'},
+  {num:25,name:'Holly',fr:'Houx',famille:'Hypersensibilité',couleur:'#D35400',theme:'Jalousie et colère',indication:'Jalousie, envie, méfiance, haine sans raison apparente'},
+  // Désespoir
+  {num:26,name:'Larch',fr:'Mélèze',famille:'Désespoir',couleur:'#7F8C8D',theme:'Manque de confiance en soi',indication:'Convaincu d\'échouer avant d\'essayer, sentiment d\'infériorité'},
+  {num:27,name:'Pine',fr:'Pin',famille:'Désespoir',couleur:'#7F8C8D',theme:'Culpabilité et auto-critique',indication:'Se blâme excessivement, s\'excuse constamment, perfectionnisme culpabilisant'},
+  {num:28,name:'Elm',fr:'Orme',famille:'Désespoir',couleur:'#7F8C8D',theme:'Accablement temporaire',indication:'Submergé ponctuellement par ses responsabilités, doute de sa capacité'},
+  {num:29,name:'Sweet Chestnut',fr:'Châtaignier',famille:'Désespoir',couleur:'#7F8C8D',theme:'Désespoir extrême',indication:'Limite extrême de l\'endurance, sentiment que tout est fini, nuit obscure'},
+  {num:30,name:'Star of Bethlehem',fr:'Étoile de Bethléem',famille:'Désespoir',couleur:'#7F8C8D',theme:'Choc et traumatisme',indication:'Séquelles de choc, traumatisme passé ou récent, deuil non résolu'},
+  {num:31,name:'Willow',fr:'Saule',famille:'Désespoir',couleur:'#7F8C8D',theme:'Amertume et rancœur',indication:'Se sent victime du destin, ressentiment, difficulté à pardonner'},
+  {num:32,name:'Oak',fr:'Chêne',famille:'Désespoir',couleur:'#7F8C8D',theme:'Lutte obstinée malgré épuisement',indication:'Continue de lutter sans se ménager, sens du devoir excessif'},
+  {num:33,name:'Crab Apple',fr:'Pommier Sauvage',famille:'Désespoir',couleur:'#7F8C8D',theme:'Sentiment d\'impureté',indication:'Obsession de la propreté, honte du corps, perfectionnisme ritualisé'},
+  // Souci pour autrui
+  {num:34,name:'Chicory',fr:'Chicorée',famille:'Autrui',couleur:'#1E8BC3',theme:'Possessivité et égocentrisme',indication:'Amour possessif, manipulation affective, besoin d\'être nécessaire'},
+  {num:35,name:'Vervain',fr:'Verveine',famille:'Autrui',couleur:'#1E8BC3',theme:'Excès d\'enthousiasme',indication:'Fanatisme, inflexibilité, sur-tension nerveuse, prosélytisme'},
+  {num:36,name:'Vine',fr:'Vigne',famille:'Autrui',couleur:'#1E8BC3',theme:'Autoritarisme et domination',indication:'Dominance, tyrannie bienveillante, certitude absolue d\'avoir raison'},
+  {num:37,name:'Beech',fr:'Hêtre',famille:'Autrui',couleur:'#1E8BC3',theme:'Intolérance et esprit critique',indication:'Intolérance aux défauts des autres, perfectionnisme critique'},
+  {num:38,name:'Rock Water',fr:'Eau de Roche',famille:'Autrui',couleur:'#1E8BC3',theme:'Rigidité et idéaux austères',indication:'Perfectionnisme envers soi-même, ascétisme, idéaux inflexibles'},
+  // Composite
+  {num:39,name:'Rescue Remedy',fr:'Remède d\'Urgence',famille:'Composite',couleur:'#E74C3C',theme:'Urgence émotionnelle',indication:'Choc, panique, stress intense — composite: Rock Rose, Impatiens, Clematis, Star of Bethlehem, Cherry Plum'},
+];
 
-const scoreColor = s => s >= 8 ? '#1A7A4A' : s >= 5 ? '#185FA5' : s >= 3 ? '#854F0B' : '#993556'
+/* ═══ FAMILLES ═══════════════════════════════════════════════════════════ */
+const FAMILLES = ['Peur','Incertitude','Présent','Solitude','Hypersensibilité','Désespoir','Autrui','Composite'];
+const FAM_BG = {
+  Peur:'#FDECEA',Incertitude:'#F5EDF8',Présent:'#EAF3FB',Solitude:'#E8F6F3',
+  Hypersensibilité:'#FEF0E7',Désespoir:'#F4F4F4',Autrui:'#EAF4FB',Composite:'#FDECEA',
+};
+const NIV_COLOR = {mel:'#3D5A3E',fond:'#8B5E3C',prio:'#A0622A'};
+const NIV_LABEL = {mel:'Mélange',fond:'Fond',prio:'Priorité'};
 
-/* ─── Composant principal ─────────────────────────────────────────────── */
+/* ═══ QUESTIONS D'ENTRETIEN ══════════════════════════════════════════════ */
+const QUESTIONS = [
+  {id:'humeur',label:'État émotionnel',question:'Comment décrivez-vous votre état émotionnel général en ce moment ?',
+   tags:['Anxieux·se','Triste','En colère','Apathique','Épuisé·e','Serein·e','Confus·e','Enthousiaste','Découragé·e','Tendu·e','Déprimé·e','Joyeux·se']},
+  {id:'peurs',label:'Peurs et angoisses',question:'Avez-vous des peurs ou inquiétudes particulières en ce moment ?',
+   tags:['Peur vague','Peur précise','Peur pour les proches','Peur de l\'avenir','Peur du jugement','Peur de perdre contrôle','Panique','Angoisse nocturne','Aucune peur']},
+  {id:'relations',label:'Relations',question:'Comment vivez-vous vos relations avec les autres en ce moment ?',
+   tags:['Isolement','Conflits fréquents','Dépendance affective','Jalousie','Solitude subie','Don excessif de soi','Incompris·e','Harmonie','Relation de contrôle']},
+  {id:'energie',label:'Énergie et vitalité',question:'Comment évaluez-vous votre énergie et votre motivation au quotidien ?',
+   tags:['Épuisé·e total','Fatigue chronique','Procrastination','Motivation fluctuante','Suractivité','Bonne énergie','Léthargie','Nervosité','Fatigue matinale']},
+  {id:'mental',label:'État mental',question:'Avez-vous des pensées récurrentes ou des difficultés de concentration ?',
+   tags:['Ruminations','Indécision','Pensées négatives','Confusion mentale','Nostalgie envahissante','Clarté d\'esprit','Doute de soi','Pensées obsessionnelles','Rêverie excessive']},
+  {id:'vie',label:'Vie et transitions',question:'Y a-t-il des changements ou transitions importants dans votre vie actuellement ?',
+   tags:['Changement majeur','Deuil','Séparation','Nouvelle activité','Manque de sens','Stabilité','En transition','Traumatisme récent','Nouvelle naissance','Renouveau']},
+];
 
+/* ═══ COMPOSANT PRINCIPAL ════════════════════════════════════════════════ */
 export default function FicheClientBach({ clientId, clientNom }) {
-  const [activeTab, setActiveTab] = useState('historique')
-  const [hist, setHist]           = useState(MOCK_HIST)
-  const [step, setStep]           = useState(1)
-  const [detail,       setDetail]       = useState(null)
-  const [editingDetail,setEditingDetail]= useState(false)
-  const [editForm,     setEditForm]     = useState(null)
-  const [search,       setSearch]       = useState('')
-  const [saving, setSaving]       = useState(false)
-  const [saveMsg, setSaveMsg]     = useState('')
-  const [importMsg, setImportMsg] = useState('')
-  const importRef                 = { current: null }
+  const [step, setStep]           = useState(0);
+  const [selection, setSelection] = useState({});   // {num: 'mel'|'fond'|'prio'}
+  const [doses, setDoses]         = useState({});   // {num: 1-6}
+  const [entretien, setEntretien] = useState({});   // {qid: {tags:[], note:''}}
+  const [proto, setProto]         = useState({duree:3, prises:3, gouttes:4, volume:30});
+  const [persos, setPersos]       = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [search, setSearch]       = useState('');
+  const [famille, setFamille]     = useState('');
 
-  const TOTAL = 6
+  const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
 
-  /* Formulaire nouvelle séance */
-  const [nom,          setNom]          = useState(clientNom || '')
-  const [age,          setAge]          = useState('')
-  const [motif,        setMotif]        = useState('')
-  const [typeSeance,   setTypeSeance]   = useState('1ère séance')
-  const [etatsCoches,  setEtatsCoches]  = useState([])
-  const [score,        setScore]        = useState(0)
-  const [notes,        setNotes]        = useState('')
-  const [fleursChoisies, setFleursChoisies] = useState([])
+  /* ── Computed ─────────────────────────────────────────────────────────── */
+  const selected   = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
+  const byNiv      = niv => selected.filter(f => selection[f.num] === niv);
+  const fleursMel  = useMemo(() => byNiv('mel'),  [selected]);  // eslint-disable-line
+  const fleursFond = useMemo(() => byNiv('fond'), [selected]);  // eslint-disable-line
+  const fleursPrio = useMemo(() => byNiv('prio'), [selected]);  // eslint-disable-line
 
-  const togEtat  = (e) => setEtatsCoches(prev => prev.includes(e) ? prev.filter(x => x !== e) : [...prev, e])
-  const togFleur = (f) => {
-    if (fleursChoisies.includes(f)) setFleursChoisies(prev => prev.filter(x => x !== f))
-    else if (fleursChoisies.length < 7) setFleursChoisies(prev => [...prev, f])
-  }
+  const filtered = useMemo(() => FLEURS.filter(f => {
+    const q = search.toLowerCase();
+    const ms = !q || [f.name,f.fr,f.theme,f.indication].some(s => s.toLowerCase().includes(q));
+    const mf = !famille || f.famille === famille;
+    return ms && mf;
+  }), [search, famille]);
 
-  const suggestions = [...new Set(etatsCoches.flatMap(e => FLEUR_SUGGESTIONS[e] || []))].slice(0, 8)
-  const today       = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const isoToday    = new Date().toISOString().slice(0, 10)
-  const nextDate    = () => { const d = new Date(); d.setDate(d.getDate() + 21); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) }
-  const scoreLabels = ['', 'Très difficile', 'Difficile', 'Assez difficile', 'Plutôt difficile', 'Moyen', 'Correct', 'Assez bien', 'Bien', 'Très bien', 'Excellent']
+  /* ── Handlers ─────────────────────────────────────────────────────────── */
+  const toggleSel = (num, niv) => {
+    setSelection(prev => {
+      if (prev[num] === niv) { const n={...prev}; delete n[num]; return n; }
+      return {...prev,[num]:niv};
+    });
+    if (!doses[num]) setDoses(p => ({...p,[num]:3}));
+  };
 
-  /* ─ Édition fiche historique ─ */
-  function openEdit(r) {
-    setEditForm({ nom: r.nom||'', age: r.age||'', date: r.date||isoToday, motif: r.motif||'', score: r.score||0, fleurs: [...(r.fleurs||[])], notes: r.notes||'' })
-    setEditingDetail(true)
-  }
+  const adjDose = (num, d) => setDoses(p => ({...p,[num]:Math.max(1,Math.min(6,d))}));
 
-  function toggleEditFleur(f) {
-    setEditForm(prev => {
-      const has = prev.fleurs.includes(f)
-      if (has) return { ...prev, fleurs: prev.fleurs.filter(x => x !== f) }
-      if (prev.fleurs.length >= 7) return prev
-      return { ...prev, fleurs: [...prev.fleurs, f] }
-    })
-  }
+  const toggleTag = (qid, tag) => setEntretien(prev => {
+    const cur = prev[qid] || {tags:[],note:''};
+    const tags = cur.tags.includes(tag) ? cur.tags.filter(t=>t!==tag) : [...cur.tags,tag];
+    return {...prev,[qid]:{...cur,tags}};
+  });
 
-  function saveEditDetail() {
-    const updated = { ...detail, ...editForm }
-    setHist(prev => prev.map(r => r.id === detail.id ? updated : r))
-    setDetail(updated)
-    setEditingDetail(false)
-  }
+  const setNote = (qid, note) => setEntretien(prev => {
+    const cur = prev[qid] || {tags:[],note:''};
+    return {...prev,[qid]:{...cur,note}};
+  });
 
-  function terminer() {
-    const record = {
-      id: Date.now(), nom, age, date: isoToday, motif, score, fleurs: fleursChoisies, notes,
-    }
-    setHist(prev => [record, ...prev])
-    setNom(''); setAge(''); setMotif(''); setEtatsCoches([]); setScore(0); setNotes(''); setFleursChoisies([])
-    setStep(1)
-    setActiveTab('historique')
-  }
-
-  async function handleSave() {
-    setSaving(true); setSaveMsg('')
+  /* ── Supabase ──────────────────────────────────────────────────────────── */
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const rows = hist.map(r => ({ ...r, user_id: user.id }))
-      const { error } = await supabase.from('bach_seances').upsert(rows, { onConflict: 'id' })
-      if (error) throw error
-      setSaveMsg('✓ Sauvegarde effectuée')
-    } catch (e) {
-      setSaveMsg(`✗ Erreur : ${e.message}`)
+      const {error} = await supabase.from('fiches_bach').insert({
+        client_id: clientId,
+        selection, doses, entretien, proto, persos,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      setSaved(true);
+    } catch(err) {
+      alert('Erreur sauvegarde : ' + err.message);
+    } finally { setSaving(false); }
+  };
+
+  /* ── PDF ───────────────────────────────────────────────────────────────── */
+  const genPDF = async (type) => {
+    const {default:jsPDF} = await import('jspdf');
+    const doc = new jsPDF({orientation:'p',unit:'mm',format:'a4'});
+    const W=210, M=20;
+    const colors = {praticien:[61,90,62], client:[160,98,42], ordonnance:[139,94,60]};
+    const [r,g,b] = colors[type];
+
+    // Header band
+    doc.setFillColor(r,g,b);
+    doc.rect(0,0,W,20,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
+    const titles = {praticien:'FICHE PRATICIEN — FLEURS DE BACH',client:'VOTRE MÉLANGE — FLEURS DE BACH',ordonnance:'ORDONNANCE — FLEURS DE BACH'};
+    doc.text(titles[type], M, 13);
+
+    let y = 28;
+    const h = (txt,size=11,c=[44,31,14]) => {
+      doc.setFont('helvetica','bold'); doc.setFontSize(size); doc.setTextColor(...c); doc.text(txt,M,y);
+    };
+    const t = (txt,x=M,size=10,c=[44,31,14]) => {
+      doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(...c);
+      const lines = doc.splitTextToSize(String(txt), W-M-x+M);
+      lines.forEach(l => { doc.text(l,x,y); y+=5; });
+    };
+    const hr = () => { doc.setDrawColor(200,189,180); doc.line(M,y,W-M,y); y+=6; };
+
+    // Client info
+    h(`Client : ${clientNom || '—'}`,12); y+=6;
+    t(`Date : ${new Date().toLocaleDateString('fr-FR')}`,M,9,[155,139,122]); y+=4;
+    hr();
+
+    // Entretien (praticien only)
+    if (type === 'praticien') {
+      h('ENTRETIEN',11,[r,g,b]); y+=7;
+      QUESTIONS.forEach(q => {
+        const e = entretien[q.id];
+        if (!e || (!e.tags.length && !e.note)) return;
+        t(`• ${q.label}`,M,10,[139,94,60]); y+=1;
+        if (e.tags.length) t(`  ${e.tags.join(', ')}`,M,9,[100,80,60]);
+        if (e.note) t(`  ${e.note}`,M,9,[120,100,80]);
+        y+=2;
+      });
+      hr();
     }
-    setSaving(false)
-    setTimeout(() => setSaveMsg(''), 3000)
-  }
 
-  function handleImport(e) {
-    const file = e.target.files[0]; if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      const imported = parseCSV(ev.target.result)
-      if (!imported.length) { setImportMsg('Fichier invalide.'); return }
-      setHist(prev => [...imported, ...prev])
-      setImportMsg(`✓ ${imported.length} séance(s) importée(s).`)
-      setTimeout(() => setImportMsg(''), 3000)
+    // Composition
+    h(type==='client'?'FLEURS SÉLECTIONNÉES':'COMPOSITION',11,[r,g,b]); y+=7;
+    [['prio','Priorité immédiate'],['mel','Mélange'],['fond','Pattern profond']].forEach(([niv,lbl]) => {
+      const fl = selected.filter(f=>selection[f.num]===niv);
+      if (!fl.length) return;
+      t(lbl.toUpperCase(),M,9,[155,139,122]); y+=1;
+      fl.forEach(f => {
+        const d = doses[f.num]||3;
+        if (type==='client') {
+          t(`  • ${f.fr} (${f.name}) — ${d} gouttes`,M,10);
+          t(`    ${f.theme}`,M,8,[155,139,122]);
+        } else {
+          t(`  • N°${f.num} ${f.fr} / ${f.name} — ${d} gtt`,M,10);
+        }
+      });
+      y+=3;
+    });
+    hr();
+
+    // Protocole
+    h('PROTOCOLE',11,[r,g,b]); y+=7;
+    t(`Durée du traitement : ${proto.duree} semaine${proto.duree>1?'s':''}`);
+    t(`Prises par jour : ${proto.prises}`);
+    t(`Gouttes par prise : ${proto.gouttes}`);
+    t(`Volume du flacon : ${proto.volume} ml`);
+    if (type!=='ordonnance') {
+      y+=2;
+      t(`Total estimé : ${proto.prises*proto.gouttes*proto.duree*7} gouttes`,M,9,[155,139,122]);
     }
-    reader.readAsText(file, 'utf-8')
-    e.target.value = ''
-  }
 
-  const filteredHist = hist.filter(r => {
-    const q = search.toLowerCase()
-    return !q || r.nom.toLowerCase().includes(q) || (r.motif||'').toLowerCase().includes(q) || (r.fleurs||[]).join(' ').toLowerCase().includes(q)
-  })
+    // Notes (praticien)
+    if (persos && type==='praticien') {
+      y+=4; hr();
+      h('NOTES PERSONNALISÉES',11,[r,g,b]); y+=7;
+      t(persos);
+    }
 
-  /* ─── Styles ─── */
-  const card       = { background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 10 }
-  const cardTeal   = { background: '#E1F5EE', border: '0.5px solid #5DCAA5', borderRadius: 12, padding: '0.875rem 1.125rem', marginBottom: 10 }
-  const cardPurple = { background: '#EEEDFE', border: '0.5px solid #AFA9EC', borderRadius: 12, padding: '0.875rem 1.125rem', marginBottom: 10 }
-  const label      = { fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-tertiary)', marginBottom: 8, display: 'block' }
-  const tag        = (on) => ({ display: 'inline-block', fontSize: 12, padding: '3px 10px', borderRadius: 12, margin: 2, cursor: 'pointer', border: '0.5px solid', background: on ? '#E1F5EE' : 'var(--color-background-secondary)', color: on ? '#085041' : 'var(--color-text-secondary)', borderColor: on ? '#5DCAA5' : 'var(--color-border-tertiary)' })
-  const fleurTag   = (on) => ({ display: 'inline-block', fontSize: 12, padding: '3px 10px', borderRadius: 12, margin: 2, cursor: 'pointer', border: '0.5px solid', background: on ? '#EEEDFE' : 'var(--color-background-secondary)', color: on ? '#3C3489' : 'var(--color-text-secondary)', borderColor: on ? '#7F77DD' : 'var(--color-border-tertiary)' })
-  const row        = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '0.5px solid var(--color-border-tertiary)', fontSize: 13 }
-  const btnNav     = { fontSize: 13, padding: '7px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer' }
-  const btnPrimary = { ...btnNav, background: '#E1F5EE', color: '#085041', borderColor: '#5DCAA5' }
+    // Footer
+    doc.setFontSize(8); doc.setTextColor(155,139,122);
+    doc.text('Naposolo CRM · naposolo.com', M, 287);
+    doc.text(new Date().toLocaleDateString('fr-FR'), W-M, 287, {align:'right'});
 
-  const TABS = [
-    { id: 'historique', label: 'Historique',      icon: 'ti-history' },
-    { id: 'nouvelle',   label: 'Nouvelle séance', icon: 'ti-plus' },
-    { id: 'export',     label: 'Import / Export', icon: 'ti-arrows-transfer-down' },
-  ]
+    doc.save(`bach_${type}_${(clientNom||'client').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  };
 
-  return (
-    <div style={{ padding: '1rem 0', fontFamily: 'inherit' }}>
+  /* ── Renders par étape ─────────────────────────────────────────────────── */
 
-      {/* ── En-tête ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div style={{ width: 42, height: 42, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <i className="ti ti-leaf" style={{ fontSize: 22, color: '#0F6E56' }} />
+  const renderStep0 = () => (
+    <div className="fb-anim">
+      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20}}>
+          <div style={{width:56,height:56,borderRadius:'50%',background:P.vertClair,display:'flex',
+            alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:700,color:P.vert}}>
+            {(clientNom||'C').charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style={{fontSize:22,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>{clientNom||'Client'}</div>
+            <div style={{fontSize:12,color:P.gris,marginTop:2}}>ID : {clientId}</div>
+          </div>
         </div>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--color-text-primary)' }}>Fleurs de Bach</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{hist.length} séances enregistrées</div>
+        <div style={{background:P.sable,borderRadius:10,padding:16,fontSize:13,color:P.terre,lineHeight:1.7}}>
+          Ce wizard vous guidera en <strong>6 étapes</strong> pour créer un mélange Fleurs de Bach personnalisé.
+          Naviguez librement entre les étapes et sauvegardez à tout moment en étape Synthèse.
         </div>
-        {activeTab === 'historique' && (
-          <button onClick={() => { setStep(1); setActiveTab('nouvelle') }} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, border: 'none', background: '#0F6E56', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            <i className="ti ti-plus" style={{ fontSize: 14 }} />Nouvelle séance
-          </button>
-        )}
       </div>
+      <div style={{background:P.vertClair,borderRadius:12,padding:20,border:'1px solid #C5D9C6'}}>
+        <div style={{fontSize:12,fontWeight:700,color:P.vert,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.08em'}}>Aperçu de la session</div>
+        <div className="fb-grid-stats" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+          {[
+            {label:'Fleurs sélectionnées',val:`${selected.length}/39`,color:P.vert},
+            {label:'Questions complétées',val:`${Object.keys(entretien).filter(k=>entretien[k]?.tags?.length||entretien[k]?.note).length}/6`,color:P.ambre},
+            {label:'Durée protocole',val:`${proto.duree} sem.`,color:P.terre},
+          ].map(({label,val,color}) => (
+            <div key={label} style={{background:'white',borderRadius:8,padding:14,textAlign:'center'}}>
+              <div style={{fontSize:22,fontWeight:800,color}}>{val}</div>
+              <div style={{fontSize:11,color:P.gris,marginTop:4}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
-      {/* ── Tabs ── */}
-      <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 20, gap: 0 }}>
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (tab.id === 'nouvelle') setStep(1) }} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
-            fontWeight: activeTab === tab.id ? 600 : 400,
-            color: activeTab === tab.id ? '#0F6E56' : 'var(--color-text-secondary)',
-            borderBottom: activeTab === tab.id ? '2px solid #0F6E56' : '2px solid transparent',
-            marginBottom: -1,
-          }}>
-            <i className={`ti ${tab.icon}`} style={{ fontSize: 14 }} />{tab.label}
-          </button>
+  const renderStep1 = () => (
+    <div className="fb-anim">
+      {QUESTIONS.map((q,i) => {
+        const e = entretien[q.id]||{tags:[],note:''};
+        return (
+          <div key={q.id} style={{background:'white',borderRadius:12,padding:20,border:`1.5px solid ${P.sableF}`,marginBottom:14}}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:12,marginBottom:12}}>
+              <span style={{width:26,height:26,borderRadius:'50%',background:P.ambre,color:'white',
+                fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</span>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:P.texte}}>{q.label}</div>
+                <div style={{fontSize:12,color:P.gris,marginTop:2}}>{q.question}</div>
+              </div>
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:12}}>
+              {q.tags.map(tag => (
+                <button key={tag} className={`fb-tag${e.tags.includes(tag)?' on':''}`}
+                  onClick={()=>toggleTag(q.id,tag)}>{tag}</button>
+              ))}
+            </div>
+            <textarea className="fb-inp fb-ta"
+              placeholder="Notes libres (observations, détails...)"
+              value={e.note||''}
+              onChange={ev=>setNote(q.id,ev.target.value)}
+              style={{height:68}}/>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="fb-anim">
+      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+        <input className="fb-inp" style={{flex:1,minWidth:180}}
+          placeholder="Rechercher une fleur..."
+          value={search} onChange={e=>setSearch(e.target.value)}/>
+        <select className="fb-inp" style={{width:'auto',cursor:'pointer'}}
+          value={famille} onChange={e=>setFamille(e.target.value)}>
+          <option value="">Toutes les familles</option>
+          {FAMILLES.map(f=><option key={f} value={f}>{f}</option>)}
+        </select>
+      </div>
+      <div style={{display:'flex',gap:8,marginBottom:14,alignItems:'center',flexWrap:'wrap'}}>
+        {['mel','fond','prio'].map(n=>(
+          <span key={n} style={{background:NIV_COLOR[n],color:'white',borderRadius:16,
+            padding:'3px 12px',fontSize:12,fontWeight:700}}>
+            {NIV_LABEL[n]} : {selected.filter(f=>selection[f.num]===n).length}
+          </span>
+        ))}
+        <span style={{marginLeft:'auto',fontSize:12,color:P.gris}}>{filtered.length} fleurs</span>
+      </div>
+      <div className="fb-grid-fleurs" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:10}}>
+        {filtered.map(f => {
+          const sel = selection[f.num];
+          return (
+            <div key={f.num} className={`fb-card${sel?' '+sel:''}`} style={{cursor:'default'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
+                <div>
+                  <span style={{fontSize:10,fontWeight:700,color:P.gris}}>{f.num}.</span>{' '}
+                  <span style={{fontWeight:700,fontSize:13,color:P.texte}}>{f.fr}</span>
+                  <span style={{fontSize:11,color:P.gris,marginLeft:6,fontStyle:'italic'}}>{f.name}</span>
+                </div>
+                <span style={{background:FAM_BG[f.famille]||'#f5f5f5',color:f.couleur,
+                  border:`1px solid ${f.couleur}33`,borderRadius:10,padding:'2px 7px',
+                  fontSize:10,fontWeight:700,whiteSpace:'nowrap'}}>{f.famille}</span>
+              </div>
+              <div style={{fontSize:12,color:P.terre,fontWeight:600,marginBottom:4}}>{f.theme}</div>
+              <div style={{fontSize:11,color:P.gris,lineHeight:1.45,marginBottom:10}}>{f.indication}</div>
+              <div style={{display:'flex',gap:6}}>
+                {['mel','fond','prio'].map(n=>(
+                  <button key={n} className={`fb-sel ${n}${sel===n?' on':''}`}
+                    onClick={()=>toggleSel(f.num,n)}>
+                    {n==='mel'?'Mélange':n==='fond'?'Fond':'Priorité'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => {
+    if (!selected.length) return (
+      <div className="fb-anim" style={{textAlign:'center',padding:60,color:P.gris}}>
+        <div style={{fontSize:38,marginBottom:14}}>🌿</div>
+        <div style={{fontSize:16,fontWeight:700}}>Aucune fleur sélectionnée</div>
+        <div style={{fontSize:13,marginTop:8}}>Retournez à l'étape Fleurs pour faire votre sélection</div>
+        <button className="fb-btn fb-btn-s" style={{marginTop:20}} onClick={()=>setStep(2)}>Sélectionner des fleurs</button>
+      </div>
+    );
+    return (
+      <div className="fb-anim">
+        {[
+          {niv:'prio',list:fleursPrio,label:'Priorité immédiate',desc:'Adresse les problèmes les plus urgents'},
+          {niv:'mel', list:fleursMel, label:'Mélange principal', desc:'Composition centrale du traitement'},
+          {niv:'fond',list:fleursFond,label:'Pattern profond (fond)',desc:'Travail sur les schémas durables'},
+        ].map(({niv,list,label,desc}) => list.length>0 && (
+          <div key={niv} style={{marginBottom:26}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
+              <span style={{width:12,height:12,borderRadius:'50%',background:NIV_COLOR[niv],flexShrink:0}}/>
+              <span style={{fontWeight:700,fontSize:15,color:NIV_COLOR[niv]}}>{label}</span>
+              <span style={{fontSize:12,color:P.gris}}>{desc}</span>
+              <span style={{marginLeft:'auto',fontSize:12,fontWeight:700,color:P.gris}}>{list.length} fleur{list.length>1?'s':''}</span>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {list.map(f => {
+                const d = doses[f.num]||3;
+                return (
+                  <div key={f.num} style={{background:'white',borderRadius:10,padding:'12px 16px',
+                    border:`1.5px solid ${NIV_COLOR[niv]}44`,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                    <span style={{fontWeight:700,fontSize:11,color:P.gris,width:18,flexShrink:0}}>{f.num}</span>
+                    <div style={{flex:1,minWidth:160}}>
+                      <span style={{fontWeight:600,fontSize:13,color:P.texte}}>{f.fr}</span>
+                      <span style={{color:P.gris,fontSize:11,marginLeft:6,fontStyle:'italic'}}>{f.name}</span>
+                      <div style={{fontSize:11,color:P.gris,marginTop:2}}>{f.theme}</div>
+                    </div>
+                    {/* Dose adjuster */}
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <button className="fb-circ" onClick={()=>adjDose(f.num,d-1)}>−</button>
+                      <div style={{textAlign:'center',minWidth:38}}>
+                        <div style={{fontWeight:800,fontSize:17,color:NIV_COLOR[niv]}}>{d}</div>
+                        <div style={{fontSize:9,color:P.gris}}>gouttes</div>
+                      </div>
+                      <button className="fb-circ" onClick={()=>adjDose(f.num,d+1)}>+</button>
+                    </div>
+                    {/* Dots */}
+                    <div style={{display:'flex',gap:3}}>
+                      {[1,2,3,4,5,6].map(i=>(
+                        <div key={i} className="fb-dot" onClick={()=>adjDose(f.num,i)}
+                          style={{background:i<=d?NIV_COLOR[niv]:P.sableF}}/>
+                      ))}
+                    </div>
+                    <button onClick={()=>toggleSel(f.num,niv)}
+                      style={{width:22,height:22,borderRadius:'50%',border:'none',background:P.sableF,
+                        cursor:'pointer',color:P.gris,fontSize:13,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderStep4 = () => (
+    <div className="fb-anim">
+      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+        <div style={{fontSize:15,fontWeight:700,color:P.texte,marginBottom:20}}>Configuration du protocole</div>
+        <div className="fb-grid-proto" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+          {[
+            {key:'duree', label:'Durée (semaines)', min:1, max:12, unit:'sem.'},
+            {key:'prises',label:'Prises / jour',    min:1, max:6,  unit:'x/j'},
+            {key:'gouttes',label:'Gouttes / prise', min:1, max:10, unit:'gtt'},
+            {key:'volume',label:'Volume flacon',   min:10,max:100, unit:'ml'},
+          ].map(({key,label,min,max,unit}) => (
+            <div key={key} style={{background:P.sable,borderRadius:10,padding:'14px 12px',textAlign:'center'}}>
+              <div style={{fontSize:12,fontWeight:700,color:P.terre,marginBottom:10}}>{label}</div>
+              <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'center',marginBottom:6}}>
+                <button className="fb-circ"
+                  onClick={()=>setProto(p=>({...p,[key]:Math.max(min,p[key]-1)}))}>−</button>
+                <input type="number" min={min} max={max} value={proto[key]}
+                  onChange={e=>setProto(p=>({...p,[key]:Math.max(min,Math.min(max,parseInt(e.target.value)||min))}))}
+                  style={{width:58,padding:'6px',borderRadius:8,border:`1.5px solid ${P.sableF}`,
+                    fontSize:18,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',background:'white'}}/>
+                <button className="fb-circ"
+                  onClick={()=>setProto(p=>({...p,[key]:Math.min(max,p[key]+1)}))}>+</button>
+              </div>
+              <div style={{fontSize:11,color:P.gris}}>{unit}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{background:P.vertClair,borderRadius:10,padding:16,border:'1px solid #C5D9C6'}}>
+          <div style={{fontSize:12,fontWeight:700,color:P.vert,marginBottom:10}}>Résumé du traitement</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
+            {[
+              {l:'Durée totale',v:`${proto.duree} semaine${proto.duree>1?'s':''}`},
+              {l:'Total de prises',v:`${proto.prises*proto.duree*7} prises`},
+              {l:'Gouttes par prise',v:`${proto.gouttes} gouttes`},
+              {l:'Consommation estimée',v:`${proto.prises*proto.gouttes*proto.duree*7} gouttes`},
+            ].map(({l,v})=>(
+              <div key={l} style={{background:'white',borderRadius:8,padding:'10px 14px'}}>
+                <div style={{fontSize:11,color:P.gris}}>{l}</div>
+                <div style={{fontSize:15,fontWeight:700,color:P.vert,marginTop:2}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
+        <label style={{display:'block',fontWeight:700,fontSize:14,color:P.texte,marginBottom:10}}>
+          Notes personnalisées
+          <span style={{fontWeight:400,fontSize:12,color:P.gris,marginLeft:8}}>Conseils complémentaires, recommandations...</span>
+        </label>
+        <textarea className="fb-inp fb-ta" style={{height:110}}
+          placeholder="Ex : Prendre les fleurs hors des repas, matin et soir de préférence. Éviter le café 30 min avant/après..."
+          value={persos} onChange={e=>setPersos(e.target.value)}/>
+      </div>
+    </div>
+  );
+
+  const renderStep5 = () => (
+    <div className="fb-anim">
+      {/* Récap composition */}
+      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:16}}>
+        <div style={{fontFamily:'Georgia,serif',fontSize:20,fontWeight:700,color:P.texte,marginBottom:2}}>{clientNom}</div>
+        <div style={{fontSize:12,color:P.gris,marginBottom:18}}>Fiche Fleurs de Bach · {new Date().toLocaleDateString('fr-FR')}</div>
+        <div className="fb-grid-stats" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:20}}>
+          {[
+            {label:'Total fleurs',val:selected.length,color:P.vert},
+            {label:'Priorité',val:fleursPrio.length,color:P.ambre},
+            {label:'Pattern profond',val:fleursFond.length,color:P.terre},
+          ].map(({label,val,color})=>(
+            <div key={label} style={{background:P.sable,borderRadius:8,padding:14,textAlign:'center'}}>
+              <div style={{fontSize:26,fontWeight:800,color}}>{val}</div>
+              <div style={{fontSize:11,color:P.gris,marginTop:4}}>{label}</div>
+            </div>
+          ))}
+        </div>
+        {[['prio',fleursPrio,'Priorité immédiate'],['mel',fleursMel,'Mélange'],['fond',fleursFond,'Pattern profond']].map(([niv,list,lbl])=>list.length>0&&(
+          <div key={niv} style={{marginBottom:14}}>
+            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:NIV_COLOR[niv],marginBottom:8}}>{lbl}</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+              {list.map(f=>(
+                <span key={f.num} style={{background:`${NIV_COLOR[niv]}18`,color:NIV_COLOR[niv],
+                  border:`1px solid ${NIV_COLOR[niv]}44`,borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:600}}>
+                  {f.fr} ({doses[f.num]||3} gtt)
+                </span>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* ═══════════════ HISTORIQUE ═══════════════ */}
-      {activeTab === 'historique' && (
-        <>
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 18 }}>
-            {[
-              { icon: 'ti-leaf',        bg: '#E1F5EE', col: '#0F6E56', label: 'Total séances',    val: hist.length },
-              { icon: 'ti-calendar',    bg: '#EEEDFE', col: '#534AB7', label: 'Ce mois',           val: hist.filter(r => r.date?.startsWith(isoToday.slice(0,7))).length },
-              { icon: 'ti-heart',       bg: '#FBEAF0', col: '#993556', label: 'Score moyen',        val: hist.length ? `${(hist.reduce((s,r) => s+(r.score||0),0)/hist.length).toFixed(1)}/10` : '—' },
-            ].map(s => (
-              <div key={s.label} style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 9, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <i className={`ti ${s.icon}`} style={{ fontSize: 18, color: s.col }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>{s.label}</div>
-                  <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1 }}>{s.val}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Recherche */}
-          <div style={{ position: 'relative', marginBottom: 14 }}>
-            <i className="ti ti-search" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--color-text-secondary)', pointerEvents: 'none' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher client, motif, fleur…"
-              style={{ width: '100%', padding: '8px 10px 8px 32px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }} />
-          </div>
-
-          {/* Tableau */}
-          <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, overflow: 'hidden', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 60px 1fr 80px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-              {['Client', 'Date', 'Score', 'Fleurs', ''].map((h, i) => (
-                <div key={i} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</div>
-              ))}
+      {/* Protocole */}
+      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:16}}>
+        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:14}}>Protocole prescrit</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+          {[{l:'Durée',v:`${proto.duree} sem.`},{l:'Prises/j',v:proto.prises},{l:'Gouttes/prise',v:proto.gouttes},{l:'Flacon',v:`${proto.volume}ml`}].map(({l,v})=>(
+            <div key={l} style={{background:P.sable,borderRadius:8,padding:'10px',textAlign:'center'}}>
+              <div style={{fontSize:18,fontWeight:800,color:P.terre}}>{v}</div>
+              <div style={{fontSize:11,color:P.gris,marginTop:3}}>{l}</div>
             </div>
-            {filteredHist.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
-                <i className="ti ti-leaf-off" style={{ fontSize: 32, display: 'block', marginBottom: 10 }} />Aucune séance trouvée
-              </div>
-            ) : filteredHist.map((r, idx) => (
-              <div key={r.id} onClick={() => setDetail(r)}
-                style={{ display: 'grid', gridTemplateColumns: '1fr 110px 60px 1fr 80px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filteredHist.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-primary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{r.nom}</div>
-                  {r.motif && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{r.motif}</div>}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(r.date)}</div>
-                <div>
-                  {r.score > 0 && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: scoreColor(r.score) }}>{r.score}/10</span>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                  {(r.fleurs||[]).slice(0,3).map(f => (
-                    <span key={f} style={{ fontSize: 10, background: '#E1F5EE', color: '#0F6E56', padding: '1px 6px', borderRadius: 20, border: '0.5px solid #5DCAA5' }}>{f}</span>
-                  ))}
-                  {(r.fleurs||[]).length > 3 && <span style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>+{r.fleurs.length - 3}</span>}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
-                  <button onClick={e => { e.stopPropagation(); downloadCSV(toCSV([r]), `bach-${r.nom.replace(' ','-')}-${r.date}.csv`) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', padding: 4 }} title="Exporter">
-                    <i className="ti ti-download" style={{ fontSize: 14 }} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+          ))}
+        </div>
+        {persos&&<div style={{marginTop:14,padding:14,background:P.sable,borderRadius:8,fontSize:13,color:P.texte,lineHeight:1.65}}>{persos}</div>}
+      </div>
 
-      {/* ═══════════════ NOUVELLE SÉANCE ═══════════════ */}
-      {activeTab === 'nouvelle' && (
-        <div>
-          {/* Barre de progression */}
-          <div style={{ height: 4, background: 'var(--color-border-tertiary)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${Math.round((step / TOTAL) * 100)}%`, background: '#1D9E75', borderRadius: 2, transition: 'width .3s' }} />
-          </div>
-
-          {/* ── ÉTAPE 1 ── */}
-          {step === 1 && (
-            <div>
-              <StepHeader n={1} title="Accueil & identité du client" sub="Vue praticien · Création du dossier" />
-              <div style={card}>
-                <span style={label}>Informations client</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Prénom &amp; nom</div>
-                    <input value={nom} onChange={e => setNom(e.target.value)} placeholder="ex. Sophie Legrand" style={{ width: '100%' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Âge</div>
-                    <input type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="ex. 38" style={{ width: '100%' }} />
-                  </div>
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Motif principal</div>
-                  <input value={motif} onChange={e => setMotif(e.target.value)} placeholder="ex. Stress chronique, manque de confiance..." style={{ width: '100%' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Type de séance</div>
-                  {['1ère séance', 'Suivi', 'Urgence / Rescue'].map(t => (
-                    <span key={t} style={tag(typeSeance === t)} onClick={() => setTypeSeance(t)}>{t}</span>
+      {/* Entretien résumé */}
+      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:14}}>Notes d'entretien</div>
+        {QUESTIONS.map(q=>{
+          const e=entretien[q.id];
+          if(!e||(!e.tags.length&&!e.note)) return null;
+          return(
+            <div key={q.id} style={{marginBottom:12,paddingBottom:12,borderBottom:`1px solid ${P.sableF}`}}>
+              <div style={{fontWeight:600,fontSize:13,color:P.terre,marginBottom:6}}>{q.label}</div>
+              {e.tags.length>0&&(
+                <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:e.note?6:0}}>
+                  {e.tags.map(tag=>(
+                    <span key={tag} style={{background:P.ambreClair,color:P.ambre,borderRadius:12,padding:'2px 9px',fontSize:11,fontWeight:600}}>{tag}</span>
                   ))}
                 </div>
-              </div>
-              {clientId && (
-                <div style={card}>
-                  <span style={label}>Historique des séances</span>
-                  <SeanceTimeline clientId={clientId} />
-                </div>
               )}
+              {e.note&&<div style={{fontSize:12,color:P.gris,fontStyle:'italic'}}>{e.note}</div>}
             </div>
-          )}
+          );
+        })}
+        {!Object.keys(entretien).some(k=>entretien[k]?.tags?.length||entretien[k]?.note)&&(
+          <div style={{color:P.gris,fontSize:13,fontStyle:'italic'}}>Aucune note d'entretien saisie</div>
+        )}
+      </div>
 
-          {/* ── ÉTAPE 2 ── */}
-          {step === 2 && (
-            <div>
-              <StepHeader n={2} title="Entretien émotionnel" sub="Vue client · Exploration des états" />
-              <div style={cardPurple}>
-                <div style={{ fontSize: 13, color: '#3C3489', fontWeight: 500, marginBottom: 6 }}>Question d'ouverture</div>
-                <div style={{ fontSize: 13, color: '#534AB7', fontStyle: 'italic' }}>"Comment vous sentez-vous en ce moment, dans votre quotidien ?"</div>
-              </div>
-              <div style={card}>
-                <span style={label}>États émotionnels présents</span>
-                {ETATS.map(e => <span key={e} style={tag(etatsCoches.includes(e))} onClick={() => togEtat(e)}>{e}</span>)}
-              </div>
-              <div style={card}>
-                <span style={label}>Score bien-être (client)</span>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Très mal</span>
-                  {[1,2,3,4,5,6,7,8,9,10].map(v => (
-                    <button key={v} onClick={() => setScore(v)} style={{ width: 36, height: 36, borderRadius: 8, border: '0.5px solid', background: score === v ? '#E1F5EE' : 'transparent', color: score === v ? '#085041' : 'var(--color-text-secondary)', borderColor: score === v ? '#5DCAA5' : 'var(--color-border-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>{v}</button>
-                  ))}
-                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Très bien</span>
-                </div>
-                {score > 0 && <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 8 }}>Score {score}/10 — {scoreLabels[score]}</div>}
-              </div>
-              <div style={card}>
-                <span style={label}>Notes praticien</span>
-                <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Événements déclencheurs, contexte familial/professionnel..." style={{ width: '100%', height: 72, fontSize: 13, resize: 'vertical', border: '0.5px solid var(--color-border-secondary)', borderRadius: 8, padding: 8, background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)' }} />
-              </div>
-            </div>
-          )}
+      {/* Actions sauvegarde */}
+      <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:20}}>
+        <button className="fb-btn fb-btn-p" onClick={handleSave} disabled={saving||saved}>
+          {saving?'Enregistrement...':saved?'✓ Sauvegardé':'Sauvegarder la fiche'}
+        </button>
+        {saved&&<span style={{color:P.vert,fontSize:13,fontWeight:700}}>✓ Enregistrée dans Supabase</span>}
+      </div>
 
-          {/* ── ÉTAPE 3 ── */}
-          {step === 3 && (
-            <div>
-              <StepHeader n={3} title="Sélection des fleurs" sub="Vue praticien · Max 7 élixirs" />
-              {suggestions.length > 0 && (
-                <div style={cardTeal}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: '#085041', marginBottom: 6 }}>✦ Suggestions basées sur l'entretien</div>
-                  {suggestions.map(f => <span key={f} style={fleurTag(fleursChoisies.includes(f))} onClick={() => togFleur(f)}>+ {f}</span>)}
-                </div>
-              )}
-              <div style={card}>
-                <span style={label}>Les 38 élixirs</span>
-                <div style={{ marginBottom: 8, fontSize: 12, color: 'var(--color-text-secondary)' }}>Sélectionnés : <strong style={{ color: 'var(--color-text-primary)' }}>{fleursChoisies.length}</strong> / 7</div>
-                {Object.entries(TOUS_ELIXIRS).map(([cat, fleurs]) => (
-                  <div key={cat}>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', margin: '8px 0 3px' }}>{cat}</div>
-                    {fleurs.map(f => <span key={f} style={fleurTag(fleursChoisies.includes(f))} onClick={() => togFleur(f)}>{f}</span>)}
-                  </div>
-                ))}
-              </div>
-              {fleursChoisies.length >= 7 && (
-                <div style={{ ...card, borderColor: '#EF9F27' }}>
-                  <div style={{ fontSize: 13, color: '#633806' }}>⚠ Maximum 7 fleurs atteint. Désélectionnez-en une pour en choisir une autre.</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── ÉTAPE 4 ── */}
-          {step === 4 && (
-            <div>
-              <StepHeader n={4} title="Préparation du flacon" sub="Vue praticien · Protocole" />
-              <div style={cardTeal}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#085041', marginBottom: 10 }}>Flacon personnalisé</div>
-                {[
-                  ['Contenant',       'Flacon 30 ml en verre ambré'],
-                  ['Base',            'Eau de source (28 ml)'],
-                  ['Conservateur',    'Brandy 1/4 ou vinaigre de cidre'],
-                  ['Élixirs retenus', fleursChoisies.length ? fleursChoisies.join(', ') : '—'],
-                  ['Doses par élixir','2 gouttes chacun'],
-                  ['Conservation',    '3 semaines · hors chaleur'],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ ...row, borderColor: '#9FE1CB' }}>
-                    <span style={{ color: '#0F6E56' }}>{k}</span>
-                    <span style={{ fontWeight: 500, color: '#085041', textAlign: 'right', maxWidth: '60%' }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={card}>
-                <span style={label}>Étiquette du flacon</span>
-                <div style={{ border: '0.5px dashed var(--color-border-secondary)', borderRadius: 8, padding: 12, background: 'var(--color-background-secondary)' }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{nom || 'Client'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>Préparé le {today}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>Mélange : <span style={{ color: 'var(--color-text-primary)' }}>{fleursChoisies.join(', ') || '—'}</span></div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>4 gouttes · 4× par jour · sous la langue</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── ÉTAPE 5 ── */}
-          {step === 5 && (
-            <div>
-              <StepHeader n={5} title="Conseils remis au client" sub="Vue client · Mode d'emploi" />
-              <div style={cardPurple}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#3C3489', marginBottom: 10 }}>Votre protocole personnalisé</div>
-                {[
-                  ['Posologie',    '4 gouttes · 4 fois par jour'],
-                  ['Moment idéal', 'Matin, midi, goûter, soir'],
-                  ['Comment',      "Sous la langue ou dans l'eau"],
-                  ['À éviter',     'Café, menthe, tabac (30 min avant)'],
-                  ['Durée',        'Minimum 3 semaines'],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ ...row, borderColor: '#AFA9EC' }}>
-                    <span style={{ color: '#534AB7' }}>{k}</span>
-                    <span style={{ fontWeight: 500, color: '#3C3489' }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── ÉTAPE 6 ── */}
-          {step === 6 && (
-            <div>
-              <StepHeader n={6} title="Clôture & récapitulatif" sub="Vue praticien · Bilan de séance" />
-              <div style={card}>
-                <span style={label}>Bilan de la séance</span>
-                {[
-                  ['Client',               `${nom || '—'}, ${age || '—'} ans`],
-                  ['Motif',                motif || '—'],
-                  ['Score bien-être initial', score ? `${score} / 10 — ${scoreLabels[score]}` : '—'],
-                  ['Mélange',              fleursChoisies.length ? fleursChoisies.join(' · ') : '—'],
-                  ['Prochaine séance',     `Vers le ${nextDate()} (J+21)`],
-                ].map(([k, v]) => (
-                  <div key={k} style={{ ...row }}>
-                    <span style={{ color: 'var(--color-text-secondary)' }}>{k}</span>
-                    <span style={{ fontWeight: 500, maxWidth: '60%', textAlign: 'right' }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              <div style={card}>
-                <span style={label}>Automatisations NapoCRM</span>
-                {[
-                  { label: 'Email bienvenue + récap',         tag: 'Brevo · J+0' },
-                  { label: 'Rappel observance flacon',         tag: 'n8n · J+14' },
-                  { label: 'Invitation bilan & renouvellement',tag: 'n8n · J+21' },
-                  { label: 'Enquête NPS satisfaction',         tag: 'Brevo · J+30' },
-                ].map(item => (
-                  <div key={item.label} style={{ ...row }}>
-                    <span style={{ fontSize: 13 }}>{item.label}</span>
-                    <span style={{ fontSize: 11, background: '#E1F5EE', color: '#085041', padding: '2px 8px', borderRadius: 10, fontWeight: 500 }}>{item.tag}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, paddingTop: 14, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-            <button style={{ ...btnNav, visibility: step > 1 ? 'visible' : 'hidden' }} onClick={() => setStep(s => s - 1)}>← Précédent</button>
-            <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Étape {step} / {TOTAL}</span>
-            <button style={btnPrimary} onClick={() => step === TOTAL ? terminer() : setStep(s => s + 1)}>
-              {step === TOTAL ? '✓ Enregistrer & terminer' : 'Suivant →'}
+      {/* PDF */}
+      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
+        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:4}}>Générer un PDF</div>
+        <div style={{fontSize:12,color:P.gris,marginBottom:16}}>3 formats disponibles selon l'usage</div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          {[
+            {type:'praticien',label:'Version Praticien',desc:'Complet avec entretien et notes',bg:P.vert},
+            {type:'client',   label:'Version Client',  desc:'Vulgarisé et pédagogique',      bg:P.ambre},
+            {type:'ordonnance',label:'Ordonnance',     desc:'Format officiel simplifié',     bg:P.terre},
+          ].map(({type,label,desc,bg})=>(
+            <button key={type} onClick={()=>genPDF(type)}
+              style={{flex:1,minWidth:150,padding:'14px 16px',borderRadius:10,background:bg,
+                color:'white',border:'none',cursor:'pointer',textAlign:'left',fontFamily:'inherit'}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{label}</div>
+              <div style={{fontSize:11,opacity:.8}}>{desc}</div>
             </button>
-          </div>
+          ))}
         </div>
-      )}
-
-      {/* ═══════════════ IMPORT / EXPORT ═══════════════ */}
-      {activeTab === 'export' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 800 }}>
-
-          {saveMsg && (
-            <div style={{ gridColumn: '1/-1', padding: '10px 14px', borderRadius: 8, background: saveMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: saveMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
-              {saveMsg}
-            </div>
-          )}
-          {importMsg && (
-            <div style={{ gridColumn: '1/-1', padding: '10px 14px', borderRadius: 8, background: importMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: importMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
-              {importMsg}
-            </div>
-          )}
-
-          {/* Export */}
-          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-download" style={{ fontSize: 20, color: '#0F6E56' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Exporter l'historique</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Format CSV compatible Excel</div>
-              </div>
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Colonnes exportées : Nom, Âge, Date, Motif, Score, Fleurs, Notes.
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => downloadCSV(toCSV(hist), 'bach-napocrm.csv')} style={xBtn('#0F6E56', '#E1F5EE')}>
-                <i className="ti ti-table-export" style={{ fontSize: 15 }} /> Exporter tout ({hist.length} séances)
-              </button>
-              <button onClick={() => { const m = hist.filter(r => r.date?.startsWith(isoToday.slice(0,7))); downloadCSV(toCSV(m), `bach-${isoToday.slice(0,7)}.csv`) }} style={xBtn('#185FA5', '#E6F1FB')}>
-                <i className="ti ti-calendar-down" style={{ fontSize: 15 }} /> Exporter ce mois
-              </button>
-            </div>
-          </div>
-
-          {/* Import */}
-          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-upload" style={{ fontSize: 20, color: '#534AB7' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Importer des séances</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Fichier CSV (même format export)</div>
-              </div>
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
-              Format attendu : <code style={{ fontSize: 11, background: 'var(--color-background-primary)', padding: '1px 5px', borderRadius: 4 }}>Nom, Âge, Date, Motif, Score, Fleurs, Notes</code>
-            </div>
-            <input ref={el => importRef.current = el} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleImport} />
-            <button onClick={() => importRef.current?.click()} style={xBtn('#534AB7', '#EEEDFE')}>
-              <i className="ti ti-file-upload" style={{ fontSize: 15 }} /> Choisir un fichier CSV
-            </button>
-          </div>
-
-          {/* Sauvegarde Supabase */}
-          <div style={{ padding: '22px', borderRadius: 12, background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', gridColumn: '1 / -1' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#FAEEDA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-device-floppy" style={{ fontSize: 20, color: '#854F0B' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>Sauvegarde cloud</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Synchronisation avec votre base Supabase</div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                Les séances terminées sont ajoutées à l'historique local. Utilisez ce bouton pour synchroniser avec votre base cloud.
-              </div>
-              <button onClick={handleSave} disabled={saving} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#854F0B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? .7 : 1 }}>
-                <i className="ti ti-cloud-upload" style={{ fontSize: 16 }} />
-                {saving ? 'Sauvegarde…' : 'Sauvegarder maintenant'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal détail ── */}
-      {detail && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
-          onClick={e => e.target === e.currentTarget && !editingDetail && setDetail(null)}>
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 520, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              {editingDetail ? (
-                <input value={editForm.nom} onChange={e => setEditForm(f => ({ ...f, nom: e.target.value }))}
-                  placeholder="Nom du client"
-                  style={{ fontSize: 16, fontWeight: 600, flex: 1, padding: '5px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', marginRight: 12 }} />
-              ) : (
-                <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--color-text-primary)' }}>{detail.nom}</div>
-              )}
-              <button onClick={() => { setEditingDetail(false); setDetail(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: 'var(--color-text-secondary)' }}>×</button>
-            </div>
-
-            {/* Champs principaux */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              {editingDetail ? (
-                <>
-                  <MField label="Date">
-                    <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={mInp} />
-                  </MField>
-                  <MField label="Âge">
-                    <input type="number" value={editForm.age} onChange={e => setEditForm(f => ({ ...f, age: e.target.value }))} placeholder="38" style={mInp} />
-                  </MField>
-                  <MField label="Motif" style={{ gridColumn: '1/-1' }}>
-                    <input value={editForm.motif} onChange={e => setEditForm(f => ({ ...f, motif: e.target.value }))} placeholder="Motif principal" style={{ ...mInp, width: '100%' }} />
-                  </MField>
-                  <MField label={`Score bien-être · ${editForm.score}/10`} style={{ gridColumn: '1/-1' }}>
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      {[1,2,3,4,5,6,7,8,9,10].map(v => (
-                        <button key={v} onClick={() => setEditForm(f => ({ ...f, score: v }))}
-                          style={{ width: 34, height: 34, borderRadius: 7, border: '0.5px solid', cursor: 'pointer', fontSize: 13, fontWeight: 500, background: editForm.score === v ? '#E1F5EE' : 'transparent', color: editForm.score === v ? '#085041' : 'var(--color-text-secondary)', borderColor: editForm.score === v ? '#5DCAA5' : 'var(--color-border-secondary)' }}>{v}</button>
-                      ))}
-                    </div>
-                  </MField>
-                </>
-              ) : (
-                [['Date', fmtDate(detail.date)], ['Score', detail.score ? `${detail.score}/10` : '—'], ['Âge', detail.age || '—'], ['Motif', detail.motif || '—']].map(([k,v]) => (
-                  <div key={k}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 }}>{k}</div>
-                    <div style={{ fontSize: 14, color: 'var(--color-text-primary)', fontWeight: k === 'Score' ? 600 : 400 }}>{v}</div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Fleurs */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
-                Fleurs sélectionnées{editingDetail ? ` (${editForm.fleurs.length}/7)` : ''}
-              </div>
-              {editingDetail ? (
-                <div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-                    {editForm.fleurs.map(f => (
-                      <span key={f} onClick={() => toggleEditFleur(f)}
-                        style={{ fontSize: 12, background: '#E1F5EE', color: '#0F6E56', padding: '3px 9px', borderRadius: 20, border: '0.5px solid #5DCAA5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {f} <span style={{ fontSize: 14, lineHeight: 1 }}>×</span>
-                      </span>
-                    ))}
-                    {editForm.fleurs.length === 0 && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Aucune fleur sélectionnée</span>}
-                  </div>
-                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 10px' }}>
-                    {Object.entries(TOUS_ELIXIRS).map(([cat, fleurs]) => (
-                      <div key={cat}>
-                        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', margin: '6px 0 3px', fontWeight: 600 }}>{cat}</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                          {fleurs.map(f => {
-                            const on = editForm.fleurs.includes(f)
-                            return (
-                              <span key={f} onClick={() => toggleEditFleur(f)}
-                                style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, cursor: editForm.fleurs.length >= 7 && !on ? 'not-allowed' : 'pointer', border: '0.5px solid', background: on ? '#EEEDFE' : 'var(--color-background-secondary)', color: on ? '#3C3489' : 'var(--color-text-secondary)', borderColor: on ? '#7F77DD' : 'var(--color-border-tertiary)', opacity: editForm.fleurs.length >= 7 && !on ? 0.4 : 1 }}>
-                                {f}
-                              </span>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {(detail.fleurs||[]).length > 0
-                    ? detail.fleurs.map(f => <span key={f} style={{ fontSize: 12, background: '#E1F5EE', color: '#0F6E56', padding: '3px 9px', borderRadius: 20, border: '0.5px solid #5DCAA5' }}>{f}</span>)
-                    : <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>—</span>
-                  }
-                </div>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Notes</div>
-              {editingDetail ? (
-                <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Observations, compte-rendu…" rows={3}
-                  style={{ width: '100%', fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.7, border: '0.5px solid var(--color-border-secondary)', borderRadius: 8, padding: '10px 12px', background: 'var(--color-background-secondary)', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-              ) : (
-                detail.notes
-                  ? <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.7, background: 'var(--color-background-secondary)', padding: '12px 14px', borderRadius: 8 }}>{detail.notes}</div>
-                  : <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>—</div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              {editingDetail ? (
-                <>
-                  <button onClick={() => setEditingDetail(false)}
-                    style={{ padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>
-                    Annuler
-                  </button>
-                  <button onClick={saveEditDetail}
-                    style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                    <i className="ti ti-check" style={{ marginRight: 5 }} />Sauvegarder les modifications
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => { setHist(prev => prev.filter(r => r.id !== detail.id)); setDetail(null) }}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
-                    <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
-                  </button>
-                  <button onClick={() => openEdit(detail)}
-                    style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
-                    <i className="ti ti-pencil" style={{ marginRight: 5 }} />Modifier
-                  </button>
-                  <button onClick={() => downloadCSV(toCSV([detail]), `bach-${detail.nom.replace(' ','-')}-${detail.date}.csv`)}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
-                    <i className="ti ti-download" />
-                  </button>
-                  <button onClick={() => setDetail(null)}
-                    style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                    Fermer
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── Composants utilitaires ─────────────────────────────────────────── */
-
-function StepHeader({ n, title, sub }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#E1F5EE', color: '#085041', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{n}</div>
-      <div>
-        <div style={{ fontSize: 16, fontWeight: 500 }}>{title}</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{sub}</div>
       </div>
     </div>
-  )
-}
+  );
 
-function xBtn(color, bg) {
-  return { display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 16px', borderRadius: 8, border: `0.5px solid ${color}44`, background: bg, color, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
-}
+  const RENDERS = [renderStep0,renderStep1,renderStep2,renderStep3,renderStep4,renderStep5];
 
-function MField({ label, children, style }) {
+  /* ─────────────────────────────────────────────────────────────────────── */
   return (
-    <div style={style}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>{label}</div>
-      {children}
-    </div>
-  )
-}
+    <div className="fb-root">
+      <style>{CSS}</style>
+      <div style={{maxWidth:980,margin:'0 auto',padding:'0 16px 48px'}}>
 
-const mInp = { width: '100%', padding: '6px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
+        {/* Header */}
+        <div style={{padding:'28px 0 22px',borderBottom:`1.5px solid ${P.sableF}`,marginBottom:28}}>
+          <div style={{fontFamily:'Georgia,serif',fontSize:26,fontWeight:700,color:P.vert,marginBottom:4}}>
+            Fleurs de Bach
+          </div>
+          <div style={{fontSize:13,color:P.gris}}>
+            Fiche personnalisée · <span style={{color:P.texte,fontWeight:700}}>{clientNom}</span>
+          </div>
+        </div>
+
+        {/* Wizard nav */}
+        <div className="fb-steps" style={{display:'flex',gap:0,marginBottom:32,background:P.sableF,borderRadius:12,padding:4}}>
+          {STEPS.map((s,i)=>{
+            const isActive=i===step, isDone=i<step;
+            return(
+              <button key={s} onClick={()=>setStep(i)} style={{
+                flex:1,padding:'10px 6px',border:'none',cursor:'pointer',borderRadius:8,
+                fontFamily:'inherit',fontSize:12,fontWeight:700,lineHeight:1.3,
+                background:isActive?P.vert:isDone?P.ambreClair:'transparent',
+                color:isActive?'white':isDone?P.ambre:P.gris,transition:'all .2s',
+              }}>
+                <div style={{fontSize:10,marginBottom:2,opacity:.7}}>0{i+1}</div>
+                {s}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Contenu étape */}
+        {RENDERS[step]?.()}
+
+        {/* Navigation bas */}
+        <div style={{display:'flex',justifyContent:'space-between',marginTop:32,paddingTop:20,borderTop:`1.5px solid ${P.sableF}`}}>
+          <button className="fb-btn fb-btn-s" style={{visibility:step===0?'hidden':'visible'}}
+            onClick={()=>setStep(s=>s-1)}>← Précédent</button>
+          <span style={{fontSize:12,color:P.gris,alignSelf:'center'}}>Étape {step+1} / {STEPS.length}</span>
+          <button className="fb-btn fb-btn-p" style={{visibility:step===STEPS.length-1?'hidden':'visible'}}
+            onClick={()=>setStep(s=>s+1)}>Suivant →</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
