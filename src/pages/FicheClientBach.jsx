@@ -1,418 +1,646 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-/* ═══ PALETTE ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PALETTE & TOKENS
+═══════════════════════════════════════════════════════════════════════════ */
 const P = {
-  vert: '#3D5A3E', ambre: '#A0622A', terre: '#8B5E3C', sable: '#FBF8F4',
-  sableF: '#EDE8E0', texte: '#2C1F0E', gris: '#9B8B7A', grisClair: '#C8BDB4',
-  vertClair: '#EAF0EA', ambreClair: '#FDF3EA', terreClair: '#F5EDE6',
+  vert:       '#3D5A3E',
+  vertDark:   '#2C4330',
+  vertClair:  '#EBF0EB',
+  ambre:      '#A0622A',
+  ambreDark:  '#7D4C1F',
+  ambreClair: '#FBF0E6',
+  terre:      '#8B5E3C',
+  terreClair: '#F5EDE5',
+  sable:      '#FBF8F4',
+  sableF:     '#EDE8DF',
+  sableFF:    '#E0D9CE',
+  blanc:      '#FFFFFF',
+  texte:      '#1E1309',
+  texteS:     '#5C4A36',
+  gris:       '#9B8B7A',
+  grisClair:  '#C8BDB0',
 };
 
-/* ═══ CSS INJECTÉ ════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   STYLES INLINE (constante CSS)
+═══════════════════════════════════════════════════════════════════════════ */
 const CSS = `
-  .fb-root{box-sizing:border-box;font-family:'Georgia',serif;color:#2C1F0E;background:#FBF8F4;min-height:100vh}
-  .fb-root *,.fb-root *::before,.fb-root *::after{box-sizing:inherit}
-  .fb-sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Raleway:wght@400;500;600;700&display=swap');
 
-  .fb-tag{cursor:pointer;padding:4px 12px;border-radius:20px;border:1.5px solid #C8BDB4;
-    background:white;color:#8B5E3C;font-size:12px;font-family:inherit;transition:all .2s;white-space:nowrap}
-  .fb-tag:hover{border-color:#A0622A;color:#A0622A;background:#FDF3EA}
-  .fb-tag.on{background:#A0622A;border-color:#A0622A;color:white}
+  .fb { all: initial; display: block; background: ${P.sable}; min-height: 100vh;
+        font-family: 'Raleway', system-ui, sans-serif; color: ${P.texte};
+        -webkit-font-smoothing: antialiased; }
+  .fb *, .fb *::before, .fb *::after { box-sizing: border-box; }
 
-  .fb-card{border-radius:12px;border:1.5px solid #EDE8E0;background:white;padding:14px 16px;transition:all .2s}
-  .fb-card.mel{border-color:#3D5A3E!important;background:#EAF0EA!important}
-  .fb-card.fond{border-color:#8B5E3C!important;background:#F5EDE6!important}
-  .fb-card.prio{border-color:#A0622A!important;background:#FDF3EA!important}
+  .fb-serif { font-family: 'Lora', Georgia, serif; }
 
-  .fb-sel{padding:3px 9px;border-radius:12px;border:1.5px solid;font-size:11px;font-weight:700;
-    cursor:pointer;transition:all .15s;font-family:inherit;background:transparent}
-  .fb-sel.mel{border-color:#3D5A3E;color:#3D5A3E}
-  .fb-sel.mel.on,.fb-sel.mel:hover{background:#3D5A3E;color:white}
-  .fb-sel.fond{border-color:#8B5E3C;color:#8B5E3C}
-  .fb-sel.fond.on,.fb-sel.fond:hover{background:#8B5E3C;color:white}
-  .fb-sel.prio{border-color:#A0622A;color:#A0622A}
-  .fb-sel.prio.on,.fb-sel.prio:hover{background:#A0622A;color:white}
+  /* ── Wizard stepper ── */
+  .fb-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+             padding: 10px 4px; border: none; background: transparent; cursor: pointer;
+             font-family: inherit; transition: all .2s; position: relative; }
+  .fb-step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex;
+                 align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+                 transition: all .25s; }
+  .fb-step-line { position: absolute; top: 26px; left: calc(50% + 16px);
+                  width: calc(100% - 32px); height: 2px; }
 
-  .fb-inp{width:100%;padding:10px 14px;border:1.5px solid #EDE8E0;border-radius:8px;
-    font-size:13px;background:white;color:#2C1F0E;outline:none;font-family:inherit;transition:border .2s}
-  .fb-inp:focus{border-color:#A0622A}
-  .fb-ta{resize:vertical;min-height:72px}
+  /* ── Tags cliquables ── */
+  .fb-tag { cursor: pointer; padding: 5px 13px; border-radius: 20px; font-size: 12px;
+            font-weight: 600; border: 1.5px solid ${P.sableFF}; background: ${P.blanc};
+            color: ${P.texteS}; font-family: inherit; transition: all .2s; white-space: nowrap;
+            letter-spacing: .01em; }
+  .fb-tag:hover { border-color: ${P.ambre}; color: ${P.ambre}; background: ${P.ambreClair}; }
+  .fb-tag.on { background: ${P.ambre}; border-color: ${P.ambre}; color: ${P.blanc}; }
 
-  .fb-btn{padding:11px 26px;border-radius:10px;font-size:14px;font-weight:700;
-    cursor:pointer;transition:all .2s;font-family:inherit;border:none}
-  .fb-btn-p{background:#3D5A3E;color:white}
-  .fb-btn-p:hover{background:#2E4430}
-  .fb-btn-p:disabled{opacity:.5;cursor:not-allowed}
-  .fb-btn-s{background:transparent;color:#3D5A3E;border:1.5px solid #3D5A3E!important}
-  .fb-btn-s:hover{background:#EAF0EA}
-  .fb-btn-a{background:#A0622A;color:white}
-  .fb-btn-a:hover{background:#8B5222}
-  .fb-btn-t{background:#8B5E3C;color:white}
-  .fb-btn-t:hover{background:#724D2F}
+  /* ── Cartes fleurs ── */
+  .fb-fleur { border-radius: 10px; border: 1.5px solid ${P.sableF}; background: ${P.blanc};
+              padding: 14px; transition: border-color .2s, box-shadow .2s; }
+  .fb-fleur:hover { border-color: ${P.grisClair}; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+  .fb-fleur.mel  { border-color: ${P.vert}   !important; background: ${P.vertClair}  !important; }
+  .fb-fleur.fond { border-color: ${P.terre}  !important; background: ${P.terreClair} !important; }
+  .fb-fleur.prio { border-color: ${P.ambre}  !important; background: ${P.ambreClair} !important; }
 
-  .fb-circ{width:28px;height:28px;border-radius:50%;border:1.5px solid #EDE8E0;
-    background:white;cursor:pointer;font-size:15px;display:flex;align-items:center;
-    justify-content:center;transition:all .15s;color:#2C1F0E;font-family:inherit}
-  .fb-circ:hover{border-color:#A0622A;color:#A0622A}
+  /* ── Boutons niveau ── */
+  .fb-niv { padding: 4px 10px; border-radius: 12px; border: 1.5px solid; font-size: 11px;
+            font-weight: 700; cursor: pointer; font-family: inherit; transition: all .18s;
+            background: transparent; letter-spacing: .02em; }
+  .fb-niv.mel  { border-color: ${P.vert};  color: ${P.vert};  }
+  .fb-niv.fond { border-color: ${P.terre}; color: ${P.terre}; }
+  .fb-niv.prio { border-color: ${P.ambre}; color: ${P.ambre}; }
+  .fb-niv.mel.on,  .fb-niv.mel:hover  { background: ${P.vert};  color: ${P.blanc}; }
+  .fb-niv.fond.on, .fb-niv.fond:hover { background: ${P.terre}; color: ${P.blanc}; }
+  .fb-niv.prio.on, .fb-niv.prio:hover { background: ${P.ambre}; color: ${P.blanc}; }
 
-  .fb-dot{width:10px;height:10px;border-radius:50%;background:#EDE8E0;cursor:pointer;transition:background .15s}
+  /* ── Boutons principaux ── */
+  .fb-btn { padding: 11px 24px; border-radius: 10px; font-size: 14px; font-weight: 700;
+            cursor: pointer; font-family: inherit; border: none; transition: all .2s;
+            display: inline-flex; align-items: center; gap: 8px; letter-spacing: .01em; }
+  .fb-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .fb-btn-v { background: ${P.vert};  color: ${P.blanc}; }
+  .fb-btn-v:hover:not(:disabled) { background: ${P.vertDark}; }
+  .fb-btn-a { background: ${P.ambre}; color: ${P.blanc}; }
+  .fb-btn-a:hover:not(:disabled) { background: ${P.ambreDark}; }
+  .fb-btn-t { background: ${P.terre}; color: ${P.blanc}; }
+  .fb-btn-o { background: transparent; color: ${P.vert}; border: 1.5px solid ${P.vert} !important; }
+  .fb-btn-o:hover { background: ${P.vertClair}; }
 
-  @keyframes fb-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  .fb-anim{animation:fb-in .25s ease}
+  /* ── Inputs ── */
+  .fb-inp { width: 100%; padding: 10px 14px; border: 1.5px solid ${P.sableF};
+            border-radius: 8px; font-size: 13px; background: ${P.blanc}; color: ${P.texte};
+            outline: none; font-family: inherit; transition: border .2s; }
+  .fb-inp:focus { border-color: ${P.ambre}; box-shadow: 0 0 0 3px ${P.ambreClair}; }
+  .fb-ta { resize: vertical; min-height: 72px; line-height: 1.55; }
 
-  @media(max-width:640px){
-    .fb-grid-fleurs{grid-template-columns:1fr!important}
-    .fb-grid-proto{grid-template-columns:1fr 1fr!important}
-    .fb-grid-stats{grid-template-columns:1fr 1fr!important}
-    .fb-steps button{font-size:10px!important;padding:8px 4px!important}
+  /* ── Dose dots ── */
+  .fb-dot { width: 10px; height: 10px; border-radius: 50%; cursor: pointer;
+            transition: background .15s, transform .1s; }
+  .fb-dot:hover { transform: scale(1.25); }
+
+  /* ── Rond bouton ── */
+  .fb-rnd { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid ${P.sableFF};
+            background: ${P.blanc}; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 15px; color: ${P.texteS}; font-family: inherit;
+            transition: all .18s; flex-shrink: 0; }
+  .fb-rnd:hover { border-color: ${P.ambre}; color: ${P.ambre}; }
+
+  /* ── Animations ── */
+  @keyframes fb-fade { from { opacity: 0; transform: translateY(8px); }
+                        to   { opacity: 1; transform: translateY(0); } }
+  .fb-anim { animation: fb-fade .28s ease; }
+
+  /* ── Scrollbar subtile ── */
+  .fb-scroll { scrollbar-width: thin; scrollbar-color: ${P.sableFF} transparent; }
+
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    .fb-fleurs-grid { grid-template-columns: 1fr !important; }
+    .fb-proto-grid  { grid-template-columns: 1fr 1fr !important; }
+    .fb-synth-grid  { grid-template-columns: 1fr 1fr !important; }
+    .fb-step-label  { display: none; }
+    .fb-pdf-row     { flex-direction: column !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fb-anim, .fb-tag, .fb-niv, .fb-btn, .fb-fleur, .fb-dot { transition: none !important; animation: none !important; }
   }
 `;
 
-/* ═══ 39 FLEURS DE BACH ══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   DONNÉES : 39 FLEURS DE BACH
+═══════════════════════════════════════════════════════════════════════════ */
 const FLEURS = [
-  // Peur
-  {num:1,name:'Rock Rose',fr:'Hélianthème',famille:'Peur',couleur:'#C0392B',theme:'Terreur et panique',indication:'Terreur soudaine, cauchemars, crises de panique extrême'},
-  {num:2,name:'Mimulus',fr:'Mimule',famille:'Peur',couleur:'#C0392B',theme:'Peur précise et identifiable',indication:'Peurs du quotidien connues : maladie, mort, animaux, timidité'},
-  {num:3,name:'Cherry Plum',fr:'Prunus',famille:'Peur',couleur:'#C0392B',theme:'Peur de perdre le contrôle',indication:'Crainte de céder à des impulsions violentes, peur de la folie'},
-  {num:4,name:'Aspen',fr:'Tremble',famille:'Peur',couleur:'#C0392B',theme:'Peur vague et inexpliquée',indication:'Pressentiments, appréhensions sans raison connue, frissons'},
-  {num:5,name:'Red Chestnut',fr:'Marronnier Rouge',famille:'Peur',couleur:'#C0392B',theme:'Anxiété pour les autres',indication:'Inquiétude excessive pour les proches, anticipe les catastrophes'},
-  // Incertitude
-  {num:6,name:'Cerato',fr:'Cérato',famille:'Incertitude',couleur:'#8E44AD',theme:'Manque de confiance en son jugement',indication:'Doute de soi, cherche constamment la validation des autres'},
-  {num:7,name:'Scleranthus',fr:'Scléranthe',famille:'Incertitude',couleur:'#8E44AD',theme:'Indécision entre deux options',indication:'Hésitation chronique, humeur fluctuante, incapacité à choisir'},
-  {num:8,name:'Gentian',fr:'Gentiane',famille:'Incertitude',couleur:'#8E44AD',theme:'Découragement et doute',indication:'Découragement après un obstacle, scepticisme, doute facile'},
-  {num:9,name:'Gorse',fr:'Ajonc',famille:'Incertitude',couleur:'#8E44AD',theme:'Désespoir et absence d\'espoir',indication:'Sentiment que rien ne peut aider, résignation profonde'},
-  {num:10,name:'Hornbeam',fr:'Charme',famille:'Incertitude',couleur:'#8E44AD',theme:'Fatigue mentale et procrastination',indication:'Lassitude au lever, doute de sa capacité à accomplir les tâches'},
-  {num:11,name:'Wild Oat',fr:'Avoine Sauvage',famille:'Incertitude',couleur:'#8E44AD',theme:'Manque de direction de vie',indication:'Ne trouve pas sa voie, ambitions vagues, insatisfaction profonde'},
-  // Présent
-  {num:12,name:'Clematis',fr:'Clématite',famille:'Présent',couleur:'#2980B9',theme:'Rêverie et détachement',indication:'Distraction, somnolence, vie dans les rêves plutôt que le présent'},
-  {num:13,name:'Honeysuckle',fr:'Chèvrefeuille',famille:'Présent',couleur:'#2980B9',theme:'Nostalgie du passé',indication:'Ancré dans le passé, regrets envahissants, incapacité à avancer'},
-  {num:14,name:'Wild Rose',fr:'Églantier',famille:'Présent',couleur:'#2980B9',theme:'Résignation et apathie',indication:'Acceptation passive de la vie, sans motivation ni effort'},
-  {num:15,name:'Olive',fr:'Olive',famille:'Présent',couleur:'#2980B9',theme:'Épuisement total',indication:'Fatigue profonde après longue maladie ou effort mental/physique intense'},
-  {num:16,name:'White Chestnut',fr:'Marronnier Blanc',famille:'Présent',couleur:'#2980B9',theme:'Pensées obsessionnelles',indication:'Ruminations mentales, pensées intrusives en boucle, tourments'},
-  {num:17,name:'Mustard',fr:'Moutarde',famille:'Présent',couleur:'#2980B9',theme:'Dépression sans raison',indication:'Mélancolie soudaine sans cause identifiable, nuage sombre qui arrive et repart'},
-  {num:18,name:'Chestnut Bud',fr:'Bourgeon de Marronnier',famille:'Présent',couleur:'#2980B9',theme:'Ne pas apprendre de ses erreurs',indication:'Répétition des mêmes erreurs, manque d\'observation et d\'attention'},
-  // Solitude
-  {num:19,name:'Water Violet',fr:'Violette d\'Eau',famille:'Solitude',couleur:'#16A085',theme:'Fierté et isolement',indication:'Tendance à s\'isoler, difficulté à demander de l\'aide, distance'},
-  {num:20,name:'Impatiens',fr:'Impatiente',famille:'Solitude',couleur:'#16A085',theme:'Impatience et irritabilité',indication:'Rapidité d\'action, irritation devant la lenteur des autres'},
-  {num:21,name:'Heather',fr:'Bruyère',famille:'Solitude',couleur:'#16A085',theme:'Centré sur soi',indication:'Besoin intense d\'attention, solitude difficile à supporter, bavardage'},
-  // Hypersensibilité
-  {num:22,name:'Agrimony',fr:'Agrimonie',famille:'Hypersensibilité',couleur:'#D35400',theme:'Torture intérieure masquée',indication:'Cache son anxiété derrière joie et humour, fuit les conflits'},
-  {num:23,name:'Centaury',fr:'Centaurée',famille:'Hypersensibilité',couleur:'#D35400',theme:'Faiblesse de volonté',indication:'Difficulté à dire non, servitude, oubli de soi au profit des autres'},
-  {num:24,name:'Walnut',fr:'Noyer',famille:'Hypersensibilité',couleur:'#D35400',theme:'Transition et protection',indication:'Lors de changements importants, protection contre les influences extérieures'},
-  {num:25,name:'Holly',fr:'Houx',famille:'Hypersensibilité',couleur:'#D35400',theme:'Jalousie et colère',indication:'Jalousie, envie, méfiance, haine sans raison apparente'},
-  // Désespoir
-  {num:26,name:'Larch',fr:'Mélèze',famille:'Désespoir',couleur:'#7F8C8D',theme:'Manque de confiance en soi',indication:'Convaincu d\'échouer avant d\'essayer, sentiment d\'infériorité'},
-  {num:27,name:'Pine',fr:'Pin',famille:'Désespoir',couleur:'#7F8C8D',theme:'Culpabilité et auto-critique',indication:'Se blâme excessivement, s\'excuse constamment, perfectionnisme culpabilisant'},
-  {num:28,name:'Elm',fr:'Orme',famille:'Désespoir',couleur:'#7F8C8D',theme:'Accablement temporaire',indication:'Submergé ponctuellement par ses responsabilités, doute de sa capacité'},
-  {num:29,name:'Sweet Chestnut',fr:'Châtaignier',famille:'Désespoir',couleur:'#7F8C8D',theme:'Désespoir extrême',indication:'Limite extrême de l\'endurance, sentiment que tout est fini, nuit obscure'},
-  {num:30,name:'Star of Bethlehem',fr:'Étoile de Bethléem',famille:'Désespoir',couleur:'#7F8C8D',theme:'Choc et traumatisme',indication:'Séquelles de choc, traumatisme passé ou récent, deuil non résolu'},
-  {num:31,name:'Willow',fr:'Saule',famille:'Désespoir',couleur:'#7F8C8D',theme:'Amertume et rancœur',indication:'Se sent victime du destin, ressentiment, difficulté à pardonner'},
-  {num:32,name:'Oak',fr:'Chêne',famille:'Désespoir',couleur:'#7F8C8D',theme:'Lutte obstinée malgré épuisement',indication:'Continue de lutter sans se ménager, sens du devoir excessif'},
-  {num:33,name:'Crab Apple',fr:'Pommier Sauvage',famille:'Désespoir',couleur:'#7F8C8D',theme:'Sentiment d\'impureté',indication:'Obsession de la propreté, honte du corps, perfectionnisme ritualisé'},
-  // Souci pour autrui
-  {num:34,name:'Chicory',fr:'Chicorée',famille:'Autrui',couleur:'#1E8BC3',theme:'Possessivité et égocentrisme',indication:'Amour possessif, manipulation affective, besoin d\'être nécessaire'},
-  {num:35,name:'Vervain',fr:'Verveine',famille:'Autrui',couleur:'#1E8BC3',theme:'Excès d\'enthousiasme',indication:'Fanatisme, inflexibilité, sur-tension nerveuse, prosélytisme'},
-  {num:36,name:'Vine',fr:'Vigne',famille:'Autrui',couleur:'#1E8BC3',theme:'Autoritarisme et domination',indication:'Dominance, tyrannie bienveillante, certitude absolue d\'avoir raison'},
-  {num:37,name:'Beech',fr:'Hêtre',famille:'Autrui',couleur:'#1E8BC3',theme:'Intolérance et esprit critique',indication:'Intolérance aux défauts des autres, perfectionnisme critique'},
-  {num:38,name:'Rock Water',fr:'Eau de Roche',famille:'Autrui',couleur:'#1E8BC3',theme:'Rigidité et idéaux austères',indication:'Perfectionnisme envers soi-même, ascétisme, idéaux inflexibles'},
-  // Composite
-  {num:39,name:'Rescue Remedy',fr:'Remède d\'Urgence',famille:'Composite',couleur:'#E74C3C',theme:'Urgence émotionnelle',indication:'Choc, panique, stress intense — composite: Rock Rose, Impatiens, Clematis, Star of Bethlehem, Cherry Plum'},
+  /* ── PEUR ──────────────────────────────────────────── */
+  { num:1,  name:'Rock Rose',         fr:'Hélianthème',          famille:'Peur',            theme:'Terreur et panique',                 indication:'Terreur soudaine, cauchemars, crises de panique extrême' },
+  { num:2,  name:'Mimulus',           fr:'Mimule',               famille:'Peur',            theme:'Peur précise et connue',             indication:'Peurs identifiables du quotidien : maladie, mort, accidents, animaux' },
+  { num:3,  name:'Cherry Plum',       fr:'Prunus',               famille:'Peur',            theme:'Peur de perdre le contrôle',         indication:'Crainte de céder à des impulsions, peur de la folie, gestes irrationnels' },
+  { num:4,  name:'Aspen',             fr:'Tremble',              famille:'Peur',            theme:'Peur vague et inexpliquée',          indication:'Pressentiments, appréhensions sans raison connue, frissons, malaise' },
+  { num:5,  name:'Red Chestnut',      fr:'Marronnier Rouge',     famille:'Peur',            theme:'Anxiété pour les autres',            indication:'Inquiétude excessive pour les proches, anticipation des catastrophes' },
+  /* ── INCERTITUDE ────────────────────────────────────── */
+  { num:6,  name:'Cerato',            fr:'Cérato',               famille:'Incertitude',     theme:'Manque de confiance en son jugement',indication:'Doute de soi, besoin constant de validation, influence des avis extérieurs' },
+  { num:7,  name:'Scleranthus',       fr:'Scléranthe',           famille:'Incertitude',     theme:'Indécision entre deux options',      indication:'Hésitation chronique, humeur fluctuante, impossibilité de choisir' },
+  { num:8,  name:'Gentian',           fr:'Gentiane',             famille:'Incertitude',     theme:'Découragement après un obstacle',    indication:'Scepticisme, doute facile, découragement à la moindre difficulté' },
+  { num:9,  name:'Gorse',             fr:'Ajonc',                famille:'Incertitude',     theme:'Désespoir et absence d\'espoir',     indication:'Résignation profonde, sentiment que rien ne peut aider' },
+  { num:10, name:'Hornbeam',          fr:'Charme',               famille:'Incertitude',     theme:'Fatigue mentale et procrastination', indication:'Lassitude au lever, doute de sa capacité à accomplir les tâches' },
+  { num:11, name:'Wild Oat',          fr:'Avoine Sauvage',       famille:'Incertitude',     theme:'Absence de direction de vie',        indication:'Ne trouve pas sa voie, ambitions vagues, insatisfaction profonde' },
+  /* ── PRÉSENT ────────────────────────────────────────── */
+  { num:12, name:'Clematis',          fr:'Clématite',            famille:'Présent',         theme:'Rêverie et détachement du présent',  indication:'Distraction, somnolence, vie dans les rêves plutôt que la réalité' },
+  { num:13, name:'Honeysuckle',       fr:'Chèvrefeuille',        famille:'Présent',         theme:'Nostalgie du passé',                 indication:'Ancré dans le passé, regrets envahissants, incapacité à avancer' },
+  { num:14, name:'Wild Rose',         fr:'Églantier',            famille:'Présent',         theme:'Résignation et apathie',             indication:'Acceptation passive de la vie sans motivation, effort ou intérêt' },
+  { num:15, name:'Olive',             fr:'Olive',                famille:'Présent',         theme:'Épuisement total',                   indication:'Fatigue profonde physique et mentale après longue maladie ou effort' },
+  { num:16, name:'White Chestnut',    fr:'Marronnier Blanc',     famille:'Présent',         theme:'Pensées obsessionnelles',            indication:'Ruminations mentales, pensées intrusives en boucle, dialogue intérieur' },
+  { num:17, name:'Mustard',           fr:'Moutarde',             famille:'Présent',         theme:'Dépression sans cause apparente',    indication:'Mélancolie soudaine sans raison identifiable, nuage sombre' },
+  { num:18, name:'Chestnut Bud',      fr:'Bourgeon de Marronnier',famille:'Présent',        theme:'Répétition des mêmes erreurs',       indication:'Ne tire pas les leçons de ses expériences, manque d\'observation' },
+  /* ── SOLITUDE ───────────────────────────────────────── */
+  { num:19, name:'Water Violet',      fr:'Violette d\'Eau',      famille:'Solitude',        theme:'Fierté et isolement',                indication:'Tend à s\'isoler, difficulté à demander de l\'aide, sentiment de supériorité' },
+  { num:20, name:'Impatiens',         fr:'Impatiente',           famille:'Solitude',        theme:'Impatience et irritabilité',         indication:'Rapidité d\'action, irritation devant la lenteur des autres, tension' },
+  { num:21, name:'Heather',           fr:'Bruyère',              famille:'Solitude',        theme:'Centré sur soi',                     indication:'Besoin intense d\'attention, solitude difficile à vivre, bavardage' },
+  /* ── HYPERSENSIBILITÉ ───────────────────────────────── */
+  { num:22, name:'Agrimony',          fr:'Agrimonie',            famille:'Hypersensibilité',theme:'Torture intérieure masquée',         indication:'Cache son anxiété derrière la joie, fuit les conflits et le bruit' },
+  { num:23, name:'Centaury',          fr:'Centaurée',            famille:'Hypersensibilité',theme:'Faiblesse de volonté',               indication:'Incapable de dire non, servitude, oubli de soi au profit des autres' },
+  { num:24, name:'Walnut',            fr:'Noyer',                famille:'Hypersensibilité',theme:'Protection lors des transitions',    indication:'Changements importants de vie, protection contre influences extérieures' },
+  { num:25, name:'Holly',             fr:'Houx',                 famille:'Hypersensibilité',theme:'Jalousie, envie, haine',             indication:'Jalousie, méfiance, colère profonde ou haine sans raison apparente' },
+  /* ── DÉSESPOIR ──────────────────────────────────────── */
+  { num:26, name:'Larch',             fr:'Mélèze',               famille:'Désespoir',       theme:'Manque de confiance en soi',         indication:'Convaincu d\'échouer avant d\'avoir essayé, sentiment d\'infériorité' },
+  { num:27, name:'Pine',              fr:'Pin',                  famille:'Désespoir',       theme:'Culpabilité et auto-critique',       indication:'Se blâme excessivement, s\'excuse constamment, perfectionnisme douloureux' },
+  { num:28, name:'Elm',               fr:'Orme',                 famille:'Désespoir',       theme:'Accablement temporaire',             indication:'Submergé ponctuellement par ses responsabilités, doute de ses capacités' },
+  { num:29, name:'Sweet Chestnut',    fr:'Châtaignier Doux',     famille:'Désespoir',       theme:'Désespoir extrême',                  indication:'Limite de l\'endurance, sentiment que tout est fini, nuit obscure de l\'âme' },
+  { num:30, name:'Star of Bethlehem', fr:'Étoile de Bethléem',  famille:'Désespoir',       theme:'Choc et traumatisme',                indication:'Séquelles de choc, traumatisme passé ou récent, deuil non résolu' },
+  { num:31, name:'Willow',            fr:'Saule',                famille:'Désespoir',       theme:'Amertume et rancœur',               indication:'Se sent victime du destin, ressentiment, difficulté à pardonner' },
+  { num:32, name:'Oak',               fr:'Chêne',                famille:'Désespoir',       theme:'Lutte obstinée malgré épuisement',  indication:'Continue de lutter sans se ménager, sens excessif du devoir' },
+  { num:33, name:'Crab Apple',        fr:'Pommier Sauvage',      famille:'Désespoir',       theme:'Sentiment d\'impureté',             indication:'Obsession de la propreté, honte du corps, perfectionnisme ritualisé' },
+  /* ── SOUCI POUR AUTRUI ──────────────────────────────── */
+  { num:34, name:'Chicory',           fr:'Chicorée',             famille:'Autrui',          theme:'Possessivité et manipulation',       indication:'Amour possessif, manipulation affective, besoin d\'être indispensable' },
+  { num:35, name:'Vervain',           fr:'Verveine',             famille:'Autrui',          theme:'Excès d\'enthousiasme',              indication:'Fanatisme, inflexibilité, sur-tension nerveuse, prosélytisme' },
+  { num:36, name:'Vine',              fr:'Vigne',                famille:'Autrui',          theme:'Autoritarisme et domination',        indication:'Dominance, tyrannie bienveillante, certitude absolue d\'avoir raison' },
+  { num:37, name:'Beech',             fr:'Hêtre',                famille:'Autrui',          theme:'Intolérance et esprit critique',     indication:'Intolérance aux défauts des autres, perfectionnisme critique, jugement' },
+  { num:38, name:'Rock Water',        fr:'Eau de Roche',         famille:'Autrui',          theme:'Rigidité et idéaux austères',        indication:'Perfectionnisme envers soi-même, ascétisme, idéaux de vie inflexibles' },
+  /* ── COMPOSITE ──────────────────────────────────────── */
+  { num:39, name:'Rescue Remedy',     fr:'Remède d\'Urgence',    famille:'Composite',       theme:'Urgence émotionnelle aiguë',         indication:'Choc, panique, stress intense — composite: Rock Rose, Impatiens, Clematis, Star of Bethlehem, Cherry Plum' },
 ];
 
-/* ═══ FAMILLES ═══════════════════════════════════════════════════════════ */
 const FAMILLES = ['Peur','Incertitude','Présent','Solitude','Hypersensibilité','Désespoir','Autrui','Composite'];
-const FAM_BG = {
-  Peur:'#FDECEA',Incertitude:'#F5EDF8',Présent:'#EAF3FB',Solitude:'#E8F6F3',
-  Hypersensibilité:'#FEF0E7',Désespoir:'#F4F4F4',Autrui:'#EAF4FB',Composite:'#FDECEA',
-};
-const NIV_COLOR = {mel:'#3D5A3E',fond:'#8B5E3C',prio:'#A0622A'};
-const NIV_LABEL = {mel:'Mélange',fond:'Fond',prio:'Priorité'};
 
-/* ═══ QUESTIONS D'ENTRETIEN ══════════════════════════════════════════════ */
+const FAM_STYLE = {
+  Peur:            { bg:'#FDECEA', border:'#E8A09A', color:'#A93226' },
+  Incertitude:     { bg:'#F3ECF8', border:'#C9A8E0', color:'#7D3C98' },
+  Présent:         { bg:'#EAF4FB', border:'#A3C8E8', color:'#1F618D' },
+  Solitude:        { bg:'#E8F6F3', border:'#86C5B8', color:'#117A65' },
+  Hypersensibilité:{ bg:'#FEF0E4', border:'#E8B487', color:'#B9560B' },
+  Désespoir:       { bg:'#F2F3F4', border:'#BFC9CA', color:'#5D6D7E' },
+  Autrui:          { bg:'#EBF5FB', border:'#A9D0E8', color:'#1A6FA8' },
+  Composite:       { bg:'#FDECEA', border:'#E8907A', color:'#CB4335' },
+};
+
+const NIV = {
+  mel:  { color: P.vert,  label: 'Mélange',  desc: 'Composition centrale' },
+  fond: { color: P.terre, label: 'Fond',      desc: 'Pattern profond' },
+  prio: { color: P.ambre, label: 'Priorité',  desc: 'Urgence immédiate' },
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   QUESTIONS D'ENTRETIEN
+═══════════════════════════════════════════════════════════════════════════ */
 const QUESTIONS = [
-  {id:'humeur',label:'État émotionnel',question:'Comment décrivez-vous votre état émotionnel général en ce moment ?',
-   tags:['Anxieux·se','Triste','En colère','Apathique','Épuisé·e','Serein·e','Confus·e','Enthousiaste','Découragé·e','Tendu·e','Déprimé·e','Joyeux·se']},
-  {id:'peurs',label:'Peurs et angoisses',question:'Avez-vous des peurs ou inquiétudes particulières en ce moment ?',
-   tags:['Peur vague','Peur précise','Peur pour les proches','Peur de l\'avenir','Peur du jugement','Peur de perdre contrôle','Panique','Angoisse nocturne','Aucune peur']},
-  {id:'relations',label:'Relations',question:'Comment vivez-vous vos relations avec les autres en ce moment ?',
-   tags:['Isolement','Conflits fréquents','Dépendance affective','Jalousie','Solitude subie','Don excessif de soi','Incompris·e','Harmonie','Relation de contrôle']},
-  {id:'energie',label:'Énergie et vitalité',question:'Comment évaluez-vous votre énergie et votre motivation au quotidien ?',
-   tags:['Épuisé·e total','Fatigue chronique','Procrastination','Motivation fluctuante','Suractivité','Bonne énergie','Léthargie','Nervosité','Fatigue matinale']},
-  {id:'mental',label:'État mental',question:'Avez-vous des pensées récurrentes ou des difficultés de concentration ?',
-   tags:['Ruminations','Indécision','Pensées négatives','Confusion mentale','Nostalgie envahissante','Clarté d\'esprit','Doute de soi','Pensées obsessionnelles','Rêverie excessive']},
-  {id:'vie',label:'Vie et transitions',question:'Y a-t-il des changements ou transitions importants dans votre vie actuellement ?',
-   tags:['Changement majeur','Deuil','Séparation','Nouvelle activité','Manque de sens','Stabilité','En transition','Traumatisme récent','Nouvelle naissance','Renouveau']},
+  { id:'humeur',    label:'État émotionnel',   icon:'◎',
+    question:'Comment décrivez-vous votre état émotionnel général en ce moment ?',
+    tags:['Anxieux·se','Triste','En colère','Apathique','Épuisé·e','Serein·e','Confus·e','Enthousiaste','Découragé·e','Tendu·e','Déprimé·e','Joyeux·se'] },
+  { id:'peurs',     label:'Peurs & angoisses', icon:'◈',
+    question:'Avez-vous des peurs ou inquiétudes particulières en ce moment ?',
+    tags:['Peur vague','Peur précise','Peur pour les proches','Peur de l\'avenir','Peur du jugement','Peur de perdre le contrôle','Panique','Angoisse nocturne','Aucune peur'] },
+  { id:'relations', label:'Relations',          icon:'◉',
+    question:'Comment vivez-vous vos relations avec les autres ?',
+    tags:['Isolement','Conflits fréquents','Dépendance affective','Jalousie','Solitude subie','Don excessif de soi','Incompris·e','Harmonie','Contrôlé·e','Contrôlant·e'] },
+  { id:'energie',   label:'Énergie & vitalité', icon:'◈',
+    question:'Comment évaluez-vous votre énergie et votre motivation au quotidien ?',
+    tags:['Épuisé·e total','Fatigue chronique','Procrastination','Motivation fluctuante','Suractivité','Bonne énergie','Léthargie','Nervosité excessive','Fatigue matinale'] },
+  { id:'mental',    label:'État mental',        icon:'◎',
+    question:'Avez-vous des pensées récurrentes ou des difficultés de concentration ?',
+    tags:['Ruminations','Indécision','Pensées négatives','Confusion mentale','Nostalgie envahissante','Clarté d\'esprit','Doute de soi','Obsessions','Rêverie excessive'] },
+  { id:'vie',       label:'Vie & transitions',  icon:'◉',
+    question:'Y a-t-il des changements importants dans votre vie en ce moment ?',
+    tags:['Changement majeur','Deuil','Séparation','Nouvelle activité','Manque de sens','Stabilité','En transition','Traumatisme récent','Renouveau','Naissance'] },
 ];
 
-/* ═══ COMPOSANT PRINCIPAL ════════════════════════════════════════════════ */
-export default function FicheClientBach({ clientId, clientNom }) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   SVG ICONS
+═══════════════════════════════════════════════════════════════════════════ */
+const Icon = ({ name, size = 16, color = 'currentColor' }) => {
+  const icons = {
+    prev: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15,18 9,12 15,6"/></svg>,
+    next: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9,18 15,12 9,6"/></svg>,
+    plus: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    minus:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    check:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12"/></svg>,
+    save: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg>,
+    pdf:  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>,
+    x:    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    leaf: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 19.11a1 1 0 0 0 .17 1.4 1.07 1.07 0 0 0 1.41-.14C7 18 10 17 12 15.5c0 2.5-1 5-5 7 4.5 0 10-1 13-8-1 2.5-4 4-6 4 2-2 3.5-5 3.5-8.5C17.5 6 17 2 12 2c0 4-2 6.5-5 8C8 7 9.5 4 17 8z"/></svg>,
+    search:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+    filter:<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"/></svg>,
+  };
+  return icons[name] || null;
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPOSANT PRINCIPAL
+═══════════════════════════════════════════════════════════════════════════ */
+export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
   const [step, setStep]           = useState(0);
-  const [selection, setSelection] = useState({});   // {num: 'mel'|'fond'|'prio'}
-  const [doses, setDoses]         = useState({});   // {num: 1-6}
-  const [entretien, setEntretien] = useState({});   // {qid: {tags:[], note:''}}
-  const [proto, setProto]         = useState({duree:3, prises:3, gouttes:4, volume:30});
+  const [selection, setSelection] = useState({});    // { num: 'mel'|'fond'|'prio' }
+  const [doses, setDoses]         = useState({});    // { num: 1-6 }
+  const [entretien, setEntretien] = useState({});    // { qid: { tags:[], note:'' } }
+  const [proto, setProto]         = useState({ duree: 3, prises: 3, gouttes: 4, volume: 30 });
   const [persos, setPersos]       = useState('');
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [search, setSearch]       = useState('');
-  const [famille, setFamille]     = useState('');
+  const [filtreFam, setFiltreFam] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
 
-  /* ── Computed ─────────────────────────────────────────────────────────── */
-  const selected   = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
-  const byNiv      = niv => selected.filter(f => selection[f.num] === niv);
-  const fleursMel  = useMemo(() => byNiv('mel'),  [selected]);  // eslint-disable-line
-  const fleursFond = useMemo(() => byNiv('fond'), [selected]);  // eslint-disable-line
-  const fleursPrio = useMemo(() => byNiv('prio'), [selected]);  // eslint-disable-line
+  /* ── Dérivés ───────────────────────────────────────────────────────────── */
+  const selected = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
+  const byNiv    = useCallback(niv => selected.filter(f => selection[f.num] === niv), [selected, selection]);
+  const fleursMel  = useMemo(() => byNiv('mel'),  [byNiv]);
+  const fleursFond = useMemo(() => byNiv('fond'), [byNiv]);
+  const fleursPrio = useMemo(() => byNiv('prio'), [byNiv]);
 
   const filtered = useMemo(() => FLEURS.filter(f => {
-    const q = search.toLowerCase();
-    const ms = !q || [f.name,f.fr,f.theme,f.indication].some(s => s.toLowerCase().includes(q));
-    const mf = !famille || f.famille === famille;
-    return ms && mf;
-  }), [search, famille]);
+    const q  = search.toLowerCase();
+    const ok = !q || [f.fr, f.name, f.theme, f.indication, f.famille].some(s => s.toLowerCase().includes(q));
+    return ok && (!filtreFam || f.famille === filtreFam);
+  }), [search, filtreFam]);
 
-  /* ── Handlers ─────────────────────────────────────────────────────────── */
-  const toggleSel = (num, niv) => {
+  const entretienComplet = useMemo(() =>
+    Object.keys(entretien).filter(k => entretien[k]?.tags?.length || entretien[k]?.note).length,
+  [entretien]);
+
+  /* ── Handlers ──────────────────────────────────────────────────────────── */
+  const toggleSel = useCallback((num, niv) => {
     setSelection(prev => {
-      if (prev[num] === niv) { const n={...prev}; delete n[num]; return n; }
-      return {...prev,[num]:niv};
+      if (prev[num] === niv) { const n = { ...prev }; delete n[num]; return n; }
+      return { ...prev, [num]: niv };
     });
-    if (!doses[num]) setDoses(p => ({...p,[num]:3}));
-  };
+    setDoses(prev => prev[num] ? prev : { ...prev, [num]: 3 });
+  }, []);
 
-  const adjDose = (num, d) => setDoses(p => ({...p,[num]:Math.max(1,Math.min(6,d))}));
+  const adjDose = useCallback((num, val) =>
+    setDoses(p => ({ ...p, [num]: Math.max(1, Math.min(6, val)) })), []);
 
-  const toggleTag = (qid, tag) => setEntretien(prev => {
-    const cur = prev[qid] || {tags:[],note:''};
-    const tags = cur.tags.includes(tag) ? cur.tags.filter(t=>t!==tag) : [...cur.tags,tag];
-    return {...prev,[qid]:{...cur,tags}};
-  });
+  const toggleTag = useCallback((qid, tag) => setEntretien(prev => {
+    const cur  = prev[qid] || { tags: [], note: '' };
+    const tags = cur.tags.includes(tag) ? cur.tags.filter(t => t !== tag) : [...cur.tags, tag];
+    return { ...prev, [qid]: { ...cur, tags } };
+  }), []);
 
-  const setNote = (qid, note) => setEntretien(prev => {
-    const cur = prev[qid] || {tags:[],note:''};
-    return {...prev,[qid]:{...cur,note}};
-  });
+  const setNote = useCallback((qid, note) => setEntretien(prev => {
+    const cur = prev[qid] || { tags: [], note: '' };
+    return { ...prev, [qid]: { ...cur, note } };
+  }), []);
 
-  /* ── Supabase ──────────────────────────────────────────────────────────── */
+  const adjProto = useCallback((key, delta, min, max) =>
+    setProto(p => ({ ...p, [key]: Math.max(min, Math.min(max, p[key] + delta)) })), []);
+
+  /* ── Sauvegarde Supabase ────────────────────────────────────────────────── */
   const handleSave = async () => {
-    setSaving(true);
+    setSaving(true); setSaveError(''); setSaved(false);
     try {
-      const {error} = await supabase.from('fiches_bach').insert({
-        client_id: clientId,
+      const { error } = await supabase.from('fiches_bach').insert({
+        client_id:  clientId,
         selection, doses, entretien, proto, persos,
         created_at: new Date().toISOString(),
       });
       if (error) throw error;
       setSaved(true);
-    } catch(err) {
-      alert('Erreur sauvegarde : ' + err.message);
+    } catch (err) {
+      setSaveError(err.message || 'Erreur inconnue');
     } finally { setSaving(false); }
   };
 
-  /* ── PDF ───────────────────────────────────────────────────────────────── */
+  /* ── Génération PDF ─────────────────────────────────────────────────────── */
   const genPDF = async (type) => {
-    const {default:jsPDF} = await import('jspdf');
-    const doc = new jsPDF({orientation:'p',unit:'mm',format:'a4'});
-    const W=210, M=20;
-    const colors = {praticien:[61,90,62], client:[160,98,42], ordonnance:[139,94,60]};
-    const [r,g,b] = colors[type];
+    const { default: jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const W = 210, PL = 18, PR = 192;
 
-    // Header band
-    doc.setFillColor(r,g,b);
-    doc.rect(0,0,W,20,'F');
-    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
-    const titles = {praticien:'FICHE PRATICIEN — FLEURS DE BACH',client:'VOTRE MÉLANGE — FLEURS DE BACH',ordonnance:'ORDONNANCE — FLEURS DE BACH'};
-    doc.text(titles[type], M, 13);
+    /* couleurs par type */
+    const palette = {
+      praticien:  { h: [61, 90, 62],   accent: [139, 94, 60]  },
+      client:     { h: [160, 98, 42],  accent: [61, 90, 62]   },
+      ordonnance: { h: [139, 94, 60],  accent: [160, 98, 42]  },
+    }[type];
 
-    let y = 28;
-    const h = (txt,size=11,c=[44,31,14]) => {
-      doc.setFont('helvetica','bold'); doc.setFontSize(size); doc.setTextColor(...c); doc.text(txt,M,y);
+    /* helpers */
+    let y = 0;
+    const setY = v => { y = v; };
+    const addY = v => { y += v; };
+    const needPage = (h = 20) => { if (y + h > 272) { doc.addPage(); setY(22); } };
+
+    const bold = (txt, x, size, rgb) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(size);
+      doc.setTextColor(...rgb); doc.text(txt, x, y);
     };
-    const t = (txt,x=M,size=10,c=[44,31,14]) => {
-      doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(...c);
-      const lines = doc.splitTextToSize(String(txt), W-M-x+M);
-      lines.forEach(l => { doc.text(l,x,y); y+=5; });
+    const norm = (txt, x, size, rgb = [44, 31, 14], maxW = PR - x) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(size);
+      doc.setTextColor(...rgb);
+      const lines = doc.splitTextToSize(String(txt), maxW);
+      lines.forEach(l => { doc.text(l, x, y); addY(4.5); });
     };
-    const hr = () => { doc.setDrawColor(200,189,180); doc.line(M,y,W-M,y); y+=6; };
+    const hr = (light = false) => {
+      addY(2);
+      doc.setDrawColor(...(light ? [220, 213, 204] : [180, 168, 156]));
+      doc.line(PL, y, PR, y);
+      addY(5);
+    };
+    const sectionTitle = (txt) => {
+      needPage(14);
+      doc.setFillColor(...palette.h);
+      doc.roundedRect(PL, y - 4, PR - PL, 9, 1.5, 1.5, 'F');
+      bold(txt, PL + 4, 9, [255, 255, 255]);
+      addY(10);
+    };
 
-    // Client info
-    h(`Client : ${clientNom || '—'}`,12); y+=6;
-    t(`Date : ${new Date().toLocaleDateString('fr-FR')}`,M,9,[155,139,122]); y+=4;
-    hr();
+    /* ─ Bandeau header ─ */
+    doc.setFillColor(...palette.h);
+    doc.rect(0, 0, W, 22, 'F');
+    bold(
+      type === 'praticien' ? 'FICHE PRATICIEN — FLEURS DE BACH'
+      : type === 'client'  ? 'VOTRE MÉLANGE FLEURS DE BACH'
+      :                      'ORDONNANCE — FLEURS DE BACH',
+      PL, 13, [255, 255, 255]
+    );
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Naposolo CRM · Bien-être intégratif', PR, 15, { align: 'right' });
 
-    // Entretien (praticien only)
+    setY(30);
+
+    /* ─ Infos client ─ */
+    bold(`Client : ${clientNom}`, PL, 12, [44, 31, 14]);
+    addY(6);
+    norm(`Date de séance : ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`, PL, 9, [120, 100, 80]);
+    addY(1); hr();
+
+    /* ─ Entretien (praticien) ─ */
     if (type === 'praticien') {
-      h('ENTRETIEN',11,[r,g,b]); y+=7;
+      sectionTitle('ENTRETIEN');
+      let hasEntretien = false;
       QUESTIONS.forEach(q => {
         const e = entretien[q.id];
         if (!e || (!e.tags.length && !e.note)) return;
-        t(`• ${q.label}`,M,10,[139,94,60]); y+=1;
-        if (e.tags.length) t(`  ${e.tags.join(', ')}`,M,9,[100,80,60]);
-        if (e.note) t(`  ${e.note}`,M,9,[120,100,80]);
-        y+=2;
+        hasEntretien = true;
+        needPage(16);
+        bold(`${q.label}`, PL, 9.5, palette.accent);
+        addY(5.5);
+        if (e.tags.length) { norm(`Mots-clés : ${e.tags.join(', ')}`, PL + 3, 8.5, [80, 65, 50]); }
+        if (e.note)        { norm(e.note, PL + 3, 8.5, [110, 90, 70]); }
+        addY(2);
       });
-      hr();
+      if (!hasEntretien) { norm('Aucune note d\'entretien saisie.', PL, 9, [155, 139, 122]); }
+      addY(2); hr();
     }
 
-    // Composition
-    h(type==='client'?'FLEURS SÉLECTIONNÉES':'COMPOSITION',11,[r,g,b]); y+=7;
-    [['prio','Priorité immédiate'],['mel','Mélange'],['fond','Pattern profond']].forEach(([niv,lbl]) => {
-      const fl = selected.filter(f=>selection[f.num]===niv);
+    /* ─ Composition ─ */
+    sectionTitle(type === 'client' ? 'VOS FLEURS SÉLECTIONNÉES' : 'COMPOSITION DU MÉLANGE');
+
+    const orderNiv = [['prio','Priorité immédiate'], ['mel','Mélange principal'], ['fond','Pattern profond (fond)']];
+    orderNiv.forEach(([niv, lbl]) => {
+      const fl = selected.filter(f => selection[f.num] === niv);
       if (!fl.length) return;
-      t(lbl.toUpperCase(),M,9,[155,139,122]); y+=1;
+      needPage(12);
+      bold(lbl.toUpperCase(), PL, 8, [155, 139, 122]);
+      addY(5);
       fl.forEach(f => {
-        const d = doses[f.num]||3;
-        if (type==='client') {
-          t(`  • ${f.fr} (${f.name}) — ${d} gouttes`,M,10);
-          t(`    ${f.theme}`,M,8,[155,139,122]);
+        const d = doses[f.num] || 3;
+        needPage(10);
+        if (type === 'client') {
+          bold(`${f.fr}`, PL + 2, 10, [44, 31, 14]);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+          doc.setTextColor(155, 139, 122);
+          doc.text(`${f.name}`, PL + 2 + doc.getTextWidth(f.fr) + 2, y);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+          doc.setTextColor(...palette.accent);
+          doc.text(`${d} gouttes`, PR, y, { align: 'right' });
+          addY(5.5);
+          norm(f.theme, PL + 4, 8.5, [120, 100, 80]);
         } else {
-          t(`  • N°${f.num} ${f.fr} / ${f.name} — ${d} gtt`,M,10);
+          bold(`N°${String(f.num).padStart(2,'0')} ${f.fr}`, PL + 2, 10, [44, 31, 14]);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+          doc.setTextColor(155, 139, 122);
+          doc.text(`/ ${f.name}`, PL + 2 + doc.getTextWidth(`N°${String(f.num).padStart(2,'0')} ${f.fr}`) + 2, y);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+          doc.setTextColor(...palette.accent);
+          doc.text(`${d} gtt`, PR, y, { align: 'right' });
+          addY(5.5);
         }
+        addY(0.5);
       });
-      y+=3;
+      addY(3);
     });
+
+    if (!selected.length) { norm('Aucune fleur sélectionnée.', PL, 9, [155, 139, 122]); }
+
     hr();
 
-    // Protocole
-    h('PROTOCOLE',11,[r,g,b]); y+=7;
-    t(`Durée du traitement : ${proto.duree} semaine${proto.duree>1?'s':''}`);
-    t(`Prises par jour : ${proto.prises}`);
-    t(`Gouttes par prise : ${proto.gouttes}`);
-    t(`Volume du flacon : ${proto.volume} ml`);
-    if (type!=='ordonnance') {
-      y+=2;
-      t(`Total estimé : ${proto.prises*proto.gouttes*proto.duree*7} gouttes`,M,9,[155,139,122]);
+    /* ─ Protocole ─ */
+    sectionTitle('PROTOCOLE DE TRAITEMENT');
+    const rows = [
+      ['Durée du traitement',   `${proto.duree} semaine${proto.duree > 1 ? 's' : ''}`],
+      ['Prises par jour',       `${proto.prises} prise${proto.prises > 1 ? 's' : ''}`],
+      ['Gouttes par prise',     `${proto.gouttes} gouttes`],
+      ['Volume du flacon',      `${proto.volume} ml`],
+      ['Consommation estimée',  `${proto.prises * proto.gouttes * proto.duree * 7} gouttes au total`],
+    ];
+    rows.forEach(([l, v]) => {
+      needPage(8);
+      norm(l, PL, 9.5, [120, 100, 80]);
+      y -= 4.5;
+      bold(v, PR, 9.5, [44, 31, 14]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setDrawColor(220, 213, 204);
+      doc.line(PL + doc.getStringUnitWidth(l) * 9.5 * 0.352 + 3, y - 1.5, PR - doc.getStringUnitWidth(v) * 9.5 * 0.352 - 1, y - 1.5);
+      addY(6.5);
+    });
+
+    /* ─ Notes praticien ─ */
+    if (persos && type === 'praticien') {
+      addY(3); hr(true);
+      sectionTitle('NOTES & CONSEILS PERSONNALISÉS');
+      norm(persos, PL, 9.5, [44, 31, 14]);
     }
 
-    // Notes (praticien)
-    if (persos && type==='praticien') {
-      y+=4; hr();
-      h('NOTES PERSONNALISÉES',11,[r,g,b]); y+=7;
-      t(persos);
+    /* ─ Footer ─ */
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7.5); doc.setTextColor(180, 168, 156);
+      doc.text(`Naposolo CRM — Document confidentiel`, PL, 290);
+      doc.text(`${i}/${totalPages}`, PR, 290, { align: 'right' });
     }
 
-    // Footer
-    doc.setFontSize(8); doc.setTextColor(155,139,122);
-    doc.text('Naposolo CRM · naposolo.com', M, 287);
-    doc.text(new Date().toLocaleDateString('fr-FR'), W-M, 287, {align:'right'});
-
-    doc.save(`bach_${type}_${(clientNom||'client').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+    const nom = (clientNom || 'client').replace(/\s+/g, '_').toLowerCase();
+    doc.save(`bach_${type}_${nom}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  /* ── Renders par étape ─────────────────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════════════
+     RENDU PAR ÉTAPE
+  ═══════════════════════════════════════════════════════════════════════ */
 
-  const renderStep0 = () => (
+  /* ── Étape 0 : Client ───────────────────────────────────────────────── */
+  const renderClient = () => (
     <div className="fb-anim">
-      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
-        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20}}>
-          <div style={{width:56,height:56,borderRadius:'50%',background:P.vertClair,display:'flex',
-            alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:700,color:P.vert}}>
-            {(clientNom||'C').charAt(0).toUpperCase()}
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 28, border: `1.5px solid ${P.sableF}`, marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 22 }}>
+          <div style={{ width: 60, height: 60, borderRadius: '50%', background: P.vertClair,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24, fontWeight: 800, color: P.vert, fontFamily: 'Lora, Georgia, serif', flexShrink: 0 }}>
+            {clientNom.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div style={{fontSize:22,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>{clientNom||'Client'}</div>
-            <div style={{fontSize:12,color:P.gris,marginTop:2}}>ID : {clientId}</div>
+            <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientNom}</div>
+            <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>ID client · {clientId}</div>
           </div>
         </div>
-        <div style={{background:P.sable,borderRadius:10,padding:16,fontSize:13,color:P.terre,lineHeight:1.7}}>
-          Ce wizard vous guidera en <strong>6 étapes</strong> pour créer un mélange Fleurs de Bach personnalisé.
-          Naviguez librement entre les étapes et sauvegardez à tout moment en étape Synthèse.
+        <div style={{ background: P.sable, borderRadius: 10, padding: '14px 18px', fontSize: 13.5,
+                      color: P.texteS, lineHeight: 1.7, borderLeft: `3px solid ${P.vert}` }}>
+          <strong style={{ color: P.vert }}>Bienvenue dans la Fiche Fleurs de Bach</strong><br/>
+          Ce wizard vous guide en 6 étapes pour composer un mélange personnalisé.
+          Naviguez librement entre les étapes — votre saisie est conservée.
         </div>
       </div>
-      <div style={{background:P.vertClair,borderRadius:12,padding:20,border:'1px solid #C5D9C6'}}>
-        <div style={{fontSize:12,fontWeight:700,color:P.vert,marginBottom:12,textTransform:'uppercase',letterSpacing:'0.08em'}}>Aperçu de la session</div>
-        <div className="fb-grid-stats" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
-          {[
-            {label:'Fleurs sélectionnées',val:`${selected.length}/39`,color:P.vert},
-            {label:'Questions complétées',val:`${Object.keys(entretien).filter(k=>entretien[k]?.tags?.length||entretien[k]?.note).length}/6`,color:P.ambre},
-            {label:'Durée protocole',val:`${proto.duree} sem.`,color:P.terre},
-          ].map(({label,val,color}) => (
-            <div key={label} style={{background:'white',borderRadius:8,padding:14,textAlign:'center'}}>
-              <div style={{fontSize:22,fontWeight:800,color}}>{val}</div>
-              <div style={{fontSize:11,color:P.gris,marginTop:4}}>{label}</div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+        {[
+          { label: 'Fleurs sélectionnées', val: selected.length, total: 39,       color: P.vert  },
+          { label: 'Questions renseignées', val: entretienComplet, total: 6,        color: P.ambre },
+          { label: 'Durée du protocole',    val: `${proto.duree} sem.`, total: null, color: P.terre },
+        ].map(({ label, val, total, color }) => (
+          <div key={label} style={{ background: P.blanc, borderRadius: 12, padding: 18,
+                                    border: `1.5px solid ${P.sableF}`, textAlign: 'center' }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color, fontFamily: 'Lora, Georgia, serif' }}>
+              {val}{total !== null ? <span style={{ fontSize: 14, fontWeight: 500, color: P.grisClair }}>/{total}</span> : ''}
             </div>
-          ))}
-        </div>
+            <div style={{ fontSize: 11, color: P.gris, marginTop: 5, lineHeight: 1.4 }}>{label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 
-  const renderStep1 = () => (
+  /* ── Étape 1 : Entretien ────────────────────────────────────────────── */
+  const renderEntretien = () => (
     <div className="fb-anim">
-      {QUESTIONS.map((q,i) => {
-        const e = entretien[q.id]||{tags:[],note:''};
+      {QUESTIONS.map((q, i) => {
+        const e = entretien[q.id] || { tags: [], note: '' };
+        const hasContent = e.tags.length > 0 || e.note;
         return (
-          <div key={q.id} style={{background:'white',borderRadius:12,padding:20,border:`1.5px solid ${P.sableF}`,marginBottom:14}}>
-            <div style={{display:'flex',alignItems:'flex-start',gap:12,marginBottom:12}}>
-              <span style={{width:26,height:26,borderRadius:'50%',background:P.ambre,color:'white',
-                fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{i+1}</span>
-              <div>
-                <div style={{fontWeight:700,fontSize:14,color:P.texte}}>{q.label}</div>
-                <div style={{fontSize:12,color:P.gris,marginTop:2}}>{q.question}</div>
+          <div key={q.id} style={{ background: P.blanc, borderRadius: 12, padding: '18px 20px',
+                                   border: `1.5px solid ${hasContent ? P.vert + '60' : P.sableF}`,
+                                   marginBottom: 14, transition: 'border-color .2s' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: P.ambre,
+                            color: P.blanc, fontSize: 13, fontWeight: 700, display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {i + 1}
               </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: P.texte }}>{q.label}</div>
+                <div style={{ fontSize: 12, color: P.gris, marginTop: 3, lineHeight: 1.5 }}>{q.question}</div>
+              </div>
+              {hasContent && (
+                <div style={{ marginLeft: 'auto', color: P.vert, flexShrink: 0 }}>
+                  <Icon name="check" size={16} />
+                </div>
+              )}
             </div>
-            <div style={{display:'flex',flexWrap:'wrap',gap:7,marginBottom:12}}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
               {q.tags.map(tag => (
-                <button key={tag} className={`fb-tag${e.tags.includes(tag)?' on':''}`}
-                  onClick={()=>toggleTag(q.id,tag)}>{tag}</button>
+                <button key={tag} className={`fb-tag${e.tags.includes(tag) ? ' on' : ''}`}
+                  onClick={() => toggleTag(q.id, tag)} aria-pressed={e.tags.includes(tag)}>
+                  {tag}
+                </button>
               ))}
             </div>
-            <textarea className="fb-inp fb-ta"
-              placeholder="Notes libres (observations, détails...)"
-              value={e.note||''}
-              onChange={ev=>setNote(q.id,ev.target.value)}
-              style={{height:68}}/>
+            <textarea className="fb-inp fb-ta" rows={2}
+              placeholder="Notes libres (observations, nuances, contexte…)"
+              value={e.note || ''} onChange={ev => setNote(q.id, ev.target.value)}
+              aria-label={`Notes pour ${q.label}`} />
           </div>
         );
       })}
     </div>
   );
 
-  const renderStep2 = () => (
+  /* ── Étape 2 : Fleurs ───────────────────────────────────────────────── */
+  const renderFleurs = () => (
     <div className="fb-anim">
-      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}}>
-        <input className="fb-inp" style={{flex:1,minWidth:180}}
-          placeholder="Rechercher une fleur..."
-          value={search} onChange={e=>setSearch(e.target.value)}/>
-        <select className="fb-inp" style={{width:'auto',cursor:'pointer'}}
-          value={famille} onChange={e=>setFamille(e.target.value)}>
-          <option value="">Toutes les familles</option>
-          {FAMILLES.map(f=><option key={f} value={f}>{f}</option>)}
-        </select>
+      {/* Barre de filtres */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                         color: P.gris, pointerEvents: 'none' }}>
+            <Icon name="search" size={15} />
+          </span>
+          <input className="fb-inp" style={{ paddingLeft: 36 }} placeholder="Rechercher une fleur…"
+            value={search} onChange={e => setSearch(e.target.value)} aria-label="Recherche fleur" />
+        </div>
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                         color: P.gris, pointerEvents: 'none' }}>
+            <Icon name="filter" size={13} />
+          </span>
+          <select className="fb-inp" style={{ paddingLeft: 34, cursor: 'pointer', minWidth: 170 }}
+            value={filtreFam} onChange={e => setFiltreFam(e.target.value)} aria-label="Filtrer par famille">
+            <option value="">Toutes les familles</option>
+            {FAMILLES.map(f => <option key={f} value={f}>{f} ({FLEURS.filter(fl => fl.famille === f).length})</option>)}
+          </select>
+        </div>
       </div>
-      <div style={{display:'flex',gap:8,marginBottom:14,alignItems:'center',flexWrap:'wrap'}}>
-        {['mel','fond','prio'].map(n=>(
-          <span key={n} style={{background:NIV_COLOR[n],color:'white',borderRadius:16,
-            padding:'3px 12px',fontSize:12,fontWeight:700}}>
-            {NIV_LABEL[n]} : {selected.filter(f=>selection[f.num]===n).length}
+
+      {/* Compteurs niveaux */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {Object.entries(NIV).map(([niv, { color, label }]) => (
+          <span key={niv} style={{ background: color, color: P.blanc, borderRadius: 20,
+                                   padding: '4px 13px', fontSize: 12, fontWeight: 700, cursor: 'default' }}>
+            {label} : {selected.filter(f => selection[f.num] === niv).length}
           </span>
         ))}
-        <span style={{marginLeft:'auto',fontSize:12,color:P.gris}}>{filtered.length} fleurs</span>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: P.gris }}>
+          {filtered.length} / {FLEURS.length} fleurs
+        </span>
       </div>
-      <div className="fb-grid-fleurs" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:10}}>
+
+      {/* Grille fleurs */}
+      <div className="fb-fleurs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
         {filtered.map(f => {
           const sel = selection[f.num];
+          const fs  = FAM_STYLE[f.famille] || {};
           return (
-            <div key={f.num} className={`fb-card${sel?' '+sel:''}`} style={{cursor:'default'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:6}}>
-                <div>
-                  <span style={{fontSize:10,fontWeight:700,color:P.gris}}>{f.num}.</span>{' '}
-                  <span style={{fontWeight:700,fontSize:13,color:P.texte}}>{f.fr}</span>
-                  <span style={{fontSize:11,color:P.gris,marginLeft:6,fontStyle:'italic'}}>{f.name}</span>
+            <div key={f.num} className={`fb-fleur${sel ? ' ' + sel : ''}`}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: P.grisClair }}>{String(f.num).padStart(2,'0')}</span>
+                  {' '}
+                  <span style={{ fontWeight: 700, fontSize: 14, color: P.texte }}>{f.fr}</span>
+                  <span style={{ fontSize: 11, color: P.gris, marginLeft: 5, fontStyle: 'italic' }}>{f.name}</span>
                 </div>
-                <span style={{background:FAM_BG[f.famille]||'#f5f5f5',color:f.couleur,
-                  border:`1px solid ${f.couleur}33`,borderRadius:10,padding:'2px 7px',
-                  fontSize:10,fontWeight:700,whiteSpace:'nowrap'}}>{f.famille}</span>
+                <span style={{ background: fs.bg, color: fs.color, border: `1px solid ${fs.border}`,
+                               borderRadius: 10, padding: '2px 8px', fontSize: 9.5, fontWeight: 700,
+                               whiteSpace: 'nowrap', marginLeft: 8, letterSpacing: '.02em', flexShrink: 0 }}>
+                  {f.famille}
+                </span>
               </div>
-              <div style={{fontSize:12,color:P.terre,fontWeight:600,marginBottom:4}}>{f.theme}</div>
-              <div style={{fontSize:11,color:P.gris,lineHeight:1.45,marginBottom:10}}>{f.indication}</div>
-              <div style={{display:'flex',gap:6}}>
-                {['mel','fond','prio'].map(n=>(
-                  <button key={n} className={`fb-sel ${n}${sel===n?' on':''}`}
-                    onClick={()=>toggleSel(f.num,n)}>
-                    {n==='mel'?'Mélange':n==='fond'?'Fond':'Priorité'}
+              <div style={{ fontSize: 12, color: P.terre, fontWeight: 600, marginBottom: 4 }}>{f.theme}</div>
+              <div style={{ fontSize: 11.5, color: P.gris, lineHeight: 1.5, marginBottom: 12 }}>{f.indication}</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {Object.entries(NIV).map(([niv, { label }]) => (
+                  <button key={niv} className={`fb-niv ${niv}${sel === niv ? ' on' : ''}`}
+                    onClick={() => toggleSel(f.num, niv)} aria-pressed={sel === niv}
+                    title={NIV[niv].desc}>
+                    {label}
                   </button>
                 ))}
               </div>
@@ -420,63 +648,97 @@ export default function FicheClientBach({ clientId, clientNom }) {
           );
         })}
       </div>
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 48, color: P.gris }}>
+          <Icon name="search" size={32} color={P.sableFF} />
+          <div style={{ marginTop: 12, fontSize: 14, fontWeight: 600 }}>Aucun résultat</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>Essayez un autre terme ou supprimez le filtre famille</div>
+        </div>
+      )}
     </div>
   );
 
-  const renderStep3 = () => {
+  /* ── Étape 3 : Mélange ──────────────────────────────────────────────── */
+  const renderMelange = () => {
     if (!selected.length) return (
-      <div className="fb-anim" style={{textAlign:'center',padding:60,color:P.gris}}>
-        <div style={{fontSize:38,marginBottom:14}}>🌿</div>
-        <div style={{fontSize:16,fontWeight:700}}>Aucune fleur sélectionnée</div>
-        <div style={{fontSize:13,marginTop:8}}>Retournez à l'étape Fleurs pour faire votre sélection</div>
-        <button className="fb-btn fb-btn-s" style={{marginTop:20}} onClick={()=>setStep(2)}>Sélectionner des fleurs</button>
+      <div className="fb-anim" style={{ textAlign: 'center', padding: '64px 24px', color: P.gris }}>
+        <Icon name="leaf" size={40} color={P.sableFF} />
+        <div style={{ fontSize: 16, fontWeight: 700, marginTop: 14 }}>Aucune fleur sélectionnée</div>
+        <div style={{ fontSize: 13, marginTop: 6 }}>Retournez à l'étape Fleurs pour commencer</div>
+        <button className="fb-btn fb-btn-o" style={{ marginTop: 20 }} onClick={() => setStep(2)}>
+          <Icon name="prev" size={14} /> Retour aux fleurs
+        </button>
       </div>
     );
+
     return (
       <div className="fb-anim">
         {[
-          {niv:'prio',list:fleursPrio,label:'Priorité immédiate',desc:'Adresse les problèmes les plus urgents'},
-          {niv:'mel', list:fleursMel, label:'Mélange principal', desc:'Composition centrale du traitement'},
-          {niv:'fond',list:fleursFond,label:'Pattern profond (fond)',desc:'Travail sur les schémas durables'},
-        ].map(({niv,list,label,desc}) => list.length>0 && (
-          <div key={niv} style={{marginBottom:26}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:12}}>
-              <span style={{width:12,height:12,borderRadius:'50%',background:NIV_COLOR[niv],flexShrink:0}}/>
-              <span style={{fontWeight:700,fontSize:15,color:NIV_COLOR[niv]}}>{label}</span>
-              <span style={{fontSize:12,color:P.gris}}>{desc}</span>
-              <span style={{marginLeft:'auto',fontSize:12,fontWeight:700,color:P.gris}}>{list.length} fleur{list.length>1?'s':''}</span>
+          { niv:'prio', list: fleursPrio, label:'Priorité immédiate', desc:'Adresse les urgences émotionnelles actuelles' },
+          { niv:'mel',  list: fleursMel,  label:'Mélange principal',  desc:'Composition centrale du traitement' },
+          { niv:'fond', list: fleursFond, label:'Pattern profond',     desc:'Travail sur les schémas de fond durables' },
+        ].map(({ niv, list, label, desc }) => list.length > 0 && (
+          <div key={niv} style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: NIV[niv].color, flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <span style={{ fontWeight: 700, fontSize: 15, color: NIV[niv].color }}>{label}</span>
+                <span style={{ fontSize: 12, color: P.gris, marginLeft: 8 }}>{desc}</span>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: P.gris }}>
+                {list.length} fleur{list.length > 1 ? 's' : ''}
+              </span>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {list.map(f => {
-                const d = doses[f.num]||3;
+                const d = doses[f.num] || 3;
                 return (
-                  <div key={f.num} style={{background:'white',borderRadius:10,padding:'12px 16px',
-                    border:`1.5px solid ${NIV_COLOR[niv]}44`,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                    <span style={{fontWeight:700,fontSize:11,color:P.gris,width:18,flexShrink:0}}>{f.num}</span>
-                    <div style={{flex:1,minWidth:160}}>
-                      <span style={{fontWeight:600,fontSize:13,color:P.texte}}>{f.fr}</span>
-                      <span style={{color:P.gris,fontSize:11,marginLeft:6,fontStyle:'italic'}}>{f.name}</span>
-                      <div style={{fontSize:11,color:P.gris,marginTop:2}}>{f.theme}</div>
-                    </div>
-                    {/* Dose adjuster */}
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <button className="fb-circ" onClick={()=>adjDose(f.num,d-1)}>−</button>
-                      <div style={{textAlign:'center',minWidth:38}}>
-                        <div style={{fontWeight:800,fontSize:17,color:NIV_COLOR[niv]}}>{d}</div>
-                        <div style={{fontSize:9,color:P.gris}}>gouttes</div>
+                  <div key={f.num} style={{ background: P.blanc, borderRadius: 10, padding: '13px 16px',
+                                            border: `1.5px solid ${NIV[niv].color}44`,
+                                            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: P.grisClair, width: 22, flexShrink: 0 }}>
+                      {String(f.num).padStart(2,'0')}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 150 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: P.texte }}>
+                        {f.fr}
+                        <span style={{ fontWeight: 400, fontSize: 11, color: P.gris, marginLeft: 6, fontStyle: 'italic' }}>
+                          {f.name}
+                        </span>
                       </div>
-                      <button className="fb-circ" onClick={()=>adjDose(f.num,d+1)}>+</button>
+                      <div style={{ fontSize: 11, color: P.gris, marginTop: 2 }}>{f.theme}</div>
                     </div>
-                    {/* Dots */}
-                    <div style={{display:'flex',gap:3}}>
-                      {[1,2,3,4,5,6].map(i=>(
-                        <div key={i} className="fb-dot" onClick={()=>adjDose(f.num,i)}
-                          style={{background:i<=d?NIV_COLOR[niv]:P.sableF}}/>
+
+                    {/* Compteur doses */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button className="fb-rnd" onClick={() => adjDose(f.num, d - 1)} aria-label="Diminuer dose">
+                        <Icon name="minus" size={13} />
+                      </button>
+                      <div style={{ textAlign: 'center', minWidth: 44 }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: NIV[niv].color, lineHeight: 1 }}>{d}</div>
+                        <div style={{ fontSize: 9, color: P.gris, marginTop: 2 }}>gouttes</div>
+                      </div>
+                      <button className="fb-rnd" onClick={() => adjDose(f.num, d + 1)} aria-label="Augmenter dose">
+                        <Icon name="plus" size={13} />
+                      </button>
+                    </div>
+
+                    {/* Points visuels dose */}
+                    <div style={{ display: 'flex', gap: 4 }} role="group" aria-label={`Dose : ${d} gouttes`}>
+                      {[1,2,3,4,5,6].map(i => (
+                        <div key={i} className="fb-dot" onClick={() => adjDose(f.num, i)}
+                          style={{ background: i <= d ? NIV[niv].color : P.sableFF }}
+                          title={`${i} goutte${i > 1 ? 's' : ''}`} />
                       ))}
                     </div>
-                    <button onClick={()=>toggleSel(f.num,niv)}
-                      style={{width:22,height:22,borderRadius:'50%',border:'none',background:P.sableF,
-                        cursor:'pointer',color:P.gris,fontSize:13,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+
+                    {/* Supprimer */}
+                    <button className="fb-rnd" style={{ borderColor: 'transparent', background: P.sable }}
+                      onClick={() => toggleSel(f.num, niv)} aria-label={`Retirer ${f.fr}`} title="Retirer">
+                      <Icon name="x" size={13} color={P.grisClair} />
+                    </button>
                   </div>
                 );
               })}
@@ -487,157 +749,234 @@ export default function FicheClientBach({ clientId, clientNom }) {
     );
   };
 
-  const renderStep4 = () => (
-    <div className="fb-anim">
-      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
-        <div style={{fontSize:15,fontWeight:700,color:P.texte,marginBottom:20}}>Configuration du protocole</div>
-        <div className="fb-grid-proto" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
-          {[
-            {key:'duree', label:'Durée (semaines)', min:1, max:12, unit:'sem.'},
-            {key:'prises',label:'Prises / jour',    min:1, max:6,  unit:'x/j'},
-            {key:'gouttes',label:'Gouttes / prise', min:1, max:10, unit:'gtt'},
-            {key:'volume',label:'Volume flacon',   min:10,max:100, unit:'ml'},
-          ].map(({key,label,min,max,unit}) => (
-            <div key={key} style={{background:P.sable,borderRadius:10,padding:'14px 12px',textAlign:'center'}}>
-              <div style={{fontSize:12,fontWeight:700,color:P.terre,marginBottom:10}}>{label}</div>
-              <div style={{display:'flex',alignItems:'center',gap:6,justifyContent:'center',marginBottom:6}}>
-                <button className="fb-circ"
-                  onClick={()=>setProto(p=>({...p,[key]:Math.max(min,p[key]-1)}))}>−</button>
-                <input type="number" min={min} max={max} value={proto[key]}
-                  onChange={e=>setProto(p=>({...p,[key]:Math.max(min,Math.min(max,parseInt(e.target.value)||min))}))}
-                  style={{width:58,padding:'6px',borderRadius:8,border:`1.5px solid ${P.sableF}`,
-                    fontSize:18,fontWeight:700,textAlign:'center',fontFamily:'inherit',outline:'none',background:'white'}}/>
-                <button className="fb-circ"
-                  onClick={()=>setProto(p=>({...p,[key]:Math.min(max,p[key]+1)}))}>+</button>
-              </div>
-              <div style={{fontSize:11,color:P.gris}}>{unit}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{background:P.vertClair,borderRadius:10,padding:16,border:'1px solid #C5D9C6'}}>
-          <div style={{fontSize:12,fontWeight:700,color:P.vert,marginBottom:10}}>Résumé du traitement</div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>
-            {[
-              {l:'Durée totale',v:`${proto.duree} semaine${proto.duree>1?'s':''}`},
-              {l:'Total de prises',v:`${proto.prises*proto.duree*7} prises`},
-              {l:'Gouttes par prise',v:`${proto.gouttes} gouttes`},
-              {l:'Consommation estimée',v:`${proto.prises*proto.gouttes*proto.duree*7} gouttes`},
-            ].map(({l,v})=>(
-              <div key={l} style={{background:'white',borderRadius:8,padding:'10px 14px'}}>
-                <div style={{fontSize:11,color:P.gris}}>{l}</div>
-                <div style={{fontSize:15,fontWeight:700,color:P.vert,marginTop:2}}>{v}</div>
+  /* ── Étape 4 : Protocole ────────────────────────────────────────────── */
+  const renderProtocole = () => {
+    const FIELDS = [
+      { key:'duree',   label:'Durée', unit:'semaines', min:1, max:16, hint:'1 à 16 sem.' },
+      { key:'prises',  label:'Prises', unit:'par jour', min:1, max:8,  hint:'1 à 8 fois/j' },
+      { key:'gouttes', label:'Gouttes', unit:'par prise', min:1, max:12, hint:'1 à 12 gtt' },
+      { key:'volume',  label:'Volume', unit:'ml (flacon)', min:10, max:100, hint:'10 à 100 ml' },
+    ];
+    const totalGouttes = proto.prises * proto.gouttes * proto.duree * 7;
+
+    return (
+      <div className="fb-anim">
+        <div style={{ background: P.blanc, borderRadius: 14, padding: 26, border: `1.5px solid ${P.sableF}`, marginBottom: 18 }}>
+          <div className="fb-serif" style={{ fontSize: 17, fontWeight: 600, color: P.texte, marginBottom: 22 }}>
+            Configuration du protocole
+          </div>
+          <div className="fb-proto-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 22 }}>
+            {FIELDS.map(({ key, label, unit, min, max, hint }) => (
+              <div key={key} style={{ background: P.sable, borderRadius: 10, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: P.terre, marginBottom: 12, letterSpacing: '.02em' }}>
+                  {label.toUpperCase()}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                  <button className="fb-rnd" onClick={() => adjProto(key, -1, min, max)} aria-label={`Diminuer ${label}`}>
+                    <Icon name="minus" size={13} />
+                  </button>
+                  <input type="number" min={min} max={max} value={proto[key]}
+                    aria-label={label}
+                    onChange={e => setProto(p => ({ ...p, [key]: Math.max(min, Math.min(max, parseInt(e.target.value) || min)) }))}
+                    style={{ width: 56, padding: '7px 4px', borderRadius: 8, border: `1.5px solid ${P.sableFF}`,
+                             fontSize: 20, fontWeight: 800, textAlign: 'center', fontFamily: 'Lora, Georgia, serif',
+                             color: P.texte, outline: 'none', background: P.blanc }} />
+                  <button className="fb-rnd" onClick={() => adjProto(key, +1, min, max)} aria-label={`Augmenter ${label}`}>
+                    <Icon name="plus" size={13} />
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: P.gris }}>{unit}</div>
+                <div style={{ fontSize: 9.5, color: P.grisClair, marginTop: 3 }}>{hint}</div>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
-        <label style={{display:'block',fontWeight:700,fontSize:14,color:P.texte,marginBottom:10}}>
-          Notes personnalisées
-          <span style={{fontWeight:400,fontSize:12,color:P.gris,marginLeft:8}}>Conseils complémentaires, recommandations...</span>
-        </label>
-        <textarea className="fb-inp fb-ta" style={{height:110}}
-          placeholder="Ex : Prendre les fleurs hors des repas, matin et soir de préférence. Éviter le café 30 min avant/après..."
-          value={persos} onChange={e=>setPersos(e.target.value)}/>
-      </div>
-    </div>
-  );
 
-  const renderStep5 = () => (
-    <div className="fb-anim">
-      {/* Récap composition */}
-      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:16}}>
-        <div style={{fontFamily:'Georgia,serif',fontSize:20,fontWeight:700,color:P.texte,marginBottom:2}}>{clientNom}</div>
-        <div style={{fontSize:12,color:P.gris,marginBottom:18}}>Fiche Fleurs de Bach · {new Date().toLocaleDateString('fr-FR')}</div>
-        <div className="fb-grid-stats" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:20}}>
-          {[
-            {label:'Total fleurs',val:selected.length,color:P.vert},
-            {label:'Priorité',val:fleursPrio.length,color:P.ambre},
-            {label:'Pattern profond',val:fleursFond.length,color:P.terre},
-          ].map(({label,val,color})=>(
-            <div key={label} style={{background:P.sable,borderRadius:8,padding:14,textAlign:'center'}}>
-              <div style={{fontSize:26,fontWeight:800,color}}>{val}</div>
-              <div style={{fontSize:11,color:P.gris,marginTop:4}}>{label}</div>
+          {/* Résumé */}
+          <div style={{ background: P.vertClair, borderRadius: 10, padding: 16, border: `1px solid ${P.vert}30` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: P.vert, marginBottom: 12, letterSpacing: '.04em' }}>
+              RÉSUMÉ DU TRAITEMENT
             </div>
-          ))}
-        </div>
-        {[['prio',fleursPrio,'Priorité immédiate'],['mel',fleursMel,'Mélange'],['fond',fleursFond,'Pattern profond']].map(([niv,list,lbl])=>list.length>0&&(
-          <div key={niv} style={{marginBottom:14}}>
-            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:NIV_COLOR[niv],marginBottom:8}}>{lbl}</div>
-            <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-              {list.map(f=>(
-                <span key={f.num} style={{background:`${NIV_COLOR[niv]}18`,color:NIV_COLOR[niv],
-                  border:`1px solid ${NIV_COLOR[niv]}44`,borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:600}}>
-                  {f.fr} ({doses[f.num]||3} gtt)
-                </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
+              {[
+                { l:'Durée totale',           v:`${proto.duree} semaine${proto.duree > 1 ? 's' : ''}` },
+                { l:'Total de prises',         v:`${proto.prises * proto.duree * 7} prises` },
+                { l:'Gouttes par prise',       v:`${proto.gouttes} gouttes` },
+                { l:'Consommation estimée',    v:`${totalGouttes} gouttes` },
+              ].map(({ l, v }) => (
+                <div key={l} style={{ background: P.blanc, borderRadius: 8, padding: '10px 14px',
+                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: P.gris }}>{l}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: P.vert }}>{v}</span>
+                </div>
               ))}
             </div>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Protocole */}
-      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:16}}>
-        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:14}}>Protocole prescrit</div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
-          {[{l:'Durée',v:`${proto.duree} sem.`},{l:'Prises/j',v:proto.prises},{l:'Gouttes/prise',v:proto.gouttes},{l:'Flacon',v:`${proto.volume}ml`}].map(({l,v})=>(
-            <div key={l} style={{background:P.sable,borderRadius:8,padding:'10px',textAlign:'center'}}>
-              <div style={{fontSize:18,fontWeight:800,color:P.terre}}>{v}</div>
-              <div style={{fontSize:11,color:P.gris,marginTop:3}}>{l}</div>
+        {/* Notes personnalisées */}
+        <div style={{ background: P.blanc, borderRadius: 14, padding: 24, border: `1.5px solid ${P.sableF}` }}>
+          <label htmlFor="fb-persos" style={{ display: 'block', fontWeight: 700, fontSize: 14, color: P.texte, marginBottom: 6 }}>
+            Notes & conseils personnalisés
+          </label>
+          <div style={{ fontSize: 12, color: P.gris, marginBottom: 12 }}>
+            Recommandations spécifiques, mode de prise, précautions, compléments…
+          </div>
+          <textarea id="fb-persos" className="fb-inp fb-ta" style={{ height: 110 }}
+            placeholder="Ex : Prendre les fleurs à jeun, 10 min avant les repas. Diluer dans un verre d'eau si sensible au goût. Maintenir la prise même si amélioration, jusqu'à la fin du protocole…"
+            value={persos} onChange={e => setPersos(e.target.value)} />
+        </div>
+      </div>
+    );
+  };
+
+  /* ── Étape 5 : Synthèse ─────────────────────────────────────────────── */
+  const renderSynthese = () => (
+    <div className="fb-anim">
+      {/* En-tête récap */}
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 26, border: `1.5px solid ${P.sableF}`, marginBottom: 16 }}>
+        <div style={{ borderBottom: `1.5px solid ${P.sableF}`, paddingBottom: 16, marginBottom: 20 }}>
+          <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientNom}</div>
+          <div style={{ fontSize: 12, color: P.gris, marginTop: 4 }}>
+            Fiche Fleurs de Bach · {new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+          </div>
+        </div>
+
+        <div className="fb-synth-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 22 }}>
+          {[
+            { label:'Fleurs au total', val: selected.length, color: P.vert  },
+            { label:'Priorité',        val: fleursPrio.length, color: P.ambre },
+            { label:'Pattern profond', val: fleursFond.length, color: P.terre },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{ background: P.sable, borderRadius: 8, padding: '12px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color, fontFamily: 'Lora, Georgia, serif' }}>{val}</div>
+              <div style={{ fontSize: 11, color: P.gris, marginTop: 4 }}>{label}</div>
             </div>
           ))}
         </div>
-        {persos&&<div style={{marginTop:14,padding:14,background:P.sable,borderRadius:8,fontSize:13,color:P.texte,lineHeight:1.65}}>{persos}</div>}
-      </div>
 
-      {/* Entretien résumé */}
-      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
-        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:14}}>Notes d'entretien</div>
-        {QUESTIONS.map(q=>{
-          const e=entretien[q.id];
-          if(!e||(!e.tags.length&&!e.note)) return null;
-          return(
-            <div key={q.id} style={{marginBottom:12,paddingBottom:12,borderBottom:`1px solid ${P.sableF}`}}>
-              <div style={{fontWeight:600,fontSize:13,color:P.terre,marginBottom:6}}>{q.label}</div>
-              {e.tags.length>0&&(
-                <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:e.note?6:0}}>
-                  {e.tags.map(tag=>(
-                    <span key={tag} style={{background:P.ambreClair,color:P.ambre,borderRadius:12,padding:'2px 9px',fontSize:11,fontWeight:600}}>{tag}</span>
-                  ))}
-                </div>
-              )}
-              {e.note&&<div style={{fontSize:12,color:P.gris,fontStyle:'italic'}}>{e.note}</div>}
+        {/* Chips par niveau */}
+        {[['prio',fleursPrio,'Priorité immédiate'],['mel',fleursMel,'Mélange'],['fond',fleursFond,'Pattern profond']].map(
+          ([niv, list, lbl]) => list.length > 0 && (
+            <div key={niv} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em',
+                            color: NIV[niv].color, marginBottom: 8 }}>{lbl}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {list.map(f => (
+                  <span key={f.num} style={{ background: `${NIV[niv].color}18`, color: NIV[niv].color,
+                                             border: `1px solid ${NIV[niv].color}44`,
+                                             borderRadius: 20, padding: '4px 13px', fontSize: 12.5, fontWeight: 700 }}>
+                    {f.fr}
+                    <span style={{ fontWeight: 500, opacity: .75, marginLeft: 5 }}>
+                      {doses[f.num] || 3} gtt
+                    </span>
+                  </span>
+                ))}
+              </div>
             </div>
-          );
-        })}
-        {!Object.keys(entretien).some(k=>entretien[k]?.tags?.length||entretien[k]?.note)&&(
-          <div style={{color:P.gris,fontSize:13,fontStyle:'italic'}}>Aucune note d'entretien saisie</div>
+          )
+        )}
+
+        {!selected.length && (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: P.gris, fontSize: 13 }}>
+            Aucune fleur sélectionnée — retournez à l'étape Fleurs.
+          </div>
         )}
       </div>
 
-      {/* Actions sauvegarde */}
-      <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap',marginBottom:20}}>
-        <button className="fb-btn fb-btn-p" onClick={handleSave} disabled={saving||saved}>
-          {saving?'Enregistrement...':saved?'✓ Sauvegardé':'Sauvegarder la fiche'}
-        </button>
-        {saved&&<span style={{color:P.vert,fontSize:13,fontWeight:700}}>✓ Enregistrée dans Supabase</span>}
+      {/* Protocole recap */}
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 24, border: `1.5px solid ${P.sableF}`, marginBottom: 16 }}>
+        <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte, marginBottom: 16 }}>Protocole prescrit</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: persos ? 14 : 0 }}>
+          {[
+            { l:'Durée',        v:`${proto.duree} sem.` },
+            { l:'Prises/j',     v: proto.prises },
+            { l:'Gouttes/prise',v: proto.gouttes },
+            { l:'Flacon',       v:`${proto.volume} ml` },
+          ].map(({ l, v }) => (
+            <div key={l} style={{ background: P.sable, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: P.terre, fontFamily: 'Lora, Georgia, serif' }}>{v}</div>
+              <div style={{ fontSize: 11, color: P.gris, marginTop: 3 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        {persos && (
+          <div style={{ background: P.sable, borderRadius: 8, padding: '12px 16px', fontSize: 13, color: P.texteS, lineHeight: 1.65 }}>
+            {persos}
+          </div>
+        )}
       </div>
 
-      {/* PDF */}
-      <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
-        <div style={{fontWeight:700,fontSize:15,color:P.texte,marginBottom:4}}>Générer un PDF</div>
-        <div style={{fontSize:12,color:P.gris,marginBottom:16}}>3 formats disponibles selon l'usage</div>
-        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+      {/* Entretien recap */}
+      {entretienComplet > 0 && (
+        <div style={{ background: P.blanc, borderRadius: 14, padding: 24, border: `1.5px solid ${P.sableF}`, marginBottom: 20 }}>
+          <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte, marginBottom: 16 }}>Notes d'entretien</div>
+          {QUESTIONS.map(q => {
+            const e = entretien[q.id];
+            if (!e || (!e.tags.length && !e.note)) return null;
+            return (
+              <div key={q.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${P.sableF}` }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: P.terre, marginBottom: 7 }}>{q.label}</div>
+                {e.tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: e.note ? 7 : 0 }}>
+                    {e.tags.map(tag => (
+                      <span key={tag} style={{ background: P.ambreClair, color: P.ambre, borderRadius: 12,
+                                               padding: '3px 10px', fontSize: 11.5, fontWeight: 600 }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+                {e.note && <div style={{ fontSize: 12.5, color: P.gris, fontStyle: 'italic', lineHeight: 1.55 }}>{e.note}</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Sauvegarde */}
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 24, border: `1.5px solid ${P.sableF}`, marginBottom: 16 }}>
+        <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte, marginBottom: 14 }}>Enregistrement</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button className="fb-btn fb-btn-v" onClick={handleSave} disabled={saving || saved}
+            aria-busy={saving}>
+            {saved
+              ? <><Icon name="check" size={15} /> Sauvegardé</>
+              : saving
+                ? 'Enregistrement…'
+                : <><Icon name="save" size={15} /> Sauvegarder la fiche</>}
+          </button>
+          {saved && (
+            <span style={{ fontSize: 13, color: P.vert, fontWeight: 600 }}>
+              Fiche enregistrée dans Supabase (table fiches_bach)
+            </span>
+          )}
+          {saveError && (
+            <span style={{ fontSize: 12, color: '#C0392B', padding: '6px 12px', background: '#FDECEA',
+                           borderRadius: 8, border: '1px solid #E8A09A' }}>
+              Erreur : {saveError}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Génération PDF */}
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 24, border: `1.5px solid ${P.sableF}` }}>
+        <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte, marginBottom: 6 }}>Générer un PDF</div>
+        <div style={{ fontSize: 12, color: P.gris, marginBottom: 16 }}>Trois formats adaptés à chaque usage</div>
+        <div className="fb-pdf-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
-            {type:'praticien',label:'Version Praticien',desc:'Complet avec entretien et notes',bg:P.vert},
-            {type:'client',   label:'Version Client',  desc:'Vulgarisé et pédagogique',      bg:P.ambre},
-            {type:'ordonnance',label:'Ordonnance',     desc:'Format officiel simplifié',     bg:P.terre},
-          ].map(({type,label,desc,bg})=>(
-            <button key={type} onClick={()=>genPDF(type)}
-              style={{flex:1,minWidth:150,padding:'14px 16px',borderRadius:10,background:bg,
-                color:'white',border:'none',cursor:'pointer',textAlign:'left',fontFamily:'inherit'}}>
-              <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{label}</div>
-              <div style={{fontSize:11,opacity:.8}}>{desc}</div>
+            { type:'praticien',  label:'Version Praticien', desc:'Complet · entretien + notes',  bg: P.vert  },
+            { type:'client',     label:'Version Client',    desc:'Pédagogique · vulgarisé',       bg: P.ambre },
+            { type:'ordonnance', label:'Ordonnance',        desc:'Format officiel · simplifié',   bg: P.terre },
+          ].map(({ type, label, desc, bg }) => (
+            <button key={type} onClick={() => genPDF(type)}
+              style={{ flex: 1, minWidth: 160, padding: '15px 18px', borderRadius: 10, background: bg,
+                       color: P.blanc, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                       transition: 'opacity .2s', display: 'flex', flexDirection: 'column', gap: 4 }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '.88'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700, fontSize: 13 }}>
+                <Icon name="pdf" size={15} /> {label}
+              </div>
+              <div style={{ fontSize: 11, opacity: .8 }}>{desc}</div>
             </button>
           ))}
         </div>
@@ -645,52 +984,79 @@ export default function FicheClientBach({ clientId, clientNom }) {
     </div>
   );
 
-  const RENDERS = [renderStep0,renderStep1,renderStep2,renderStep3,renderStep4,renderStep5];
+  /* ═══════════════════════════════════════════════════════════════════════
+     RENDU PRINCIPAL
+  ═══════════════════════════════════════════════════════════════════════ */
+  const STEP_CONTENT = [renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese];
 
-  /* ─────────────────────────────────────────────────────────────────────── */
   return (
-    <div className="fb-root">
-      <style>{CSS}</style>
-      <div style={{maxWidth:980,margin:'0 auto',padding:'0 16px 48px'}}>
+    <div className="fb">
+      <style dangerouslySetInnerHTML={{ __html: CSS }} />
+      <div className="fb-scroll" style={{ maxWidth: 1000, margin: '0 auto', padding: '0 16px 56px' }}>
 
-        {/* Header */}
-        <div style={{padding:'28px 0 22px',borderBottom:`1.5px solid ${P.sableF}`,marginBottom:28}}>
-          <div style={{fontFamily:'Georgia,serif',fontSize:26,fontWeight:700,color:P.vert,marginBottom:4}}>
-            Fleurs de Bach
+        {/* ── En-tête ── */}
+        <div style={{ padding: '30px 0 24px', borderBottom: `1.5px solid ${P.sableF}`, marginBottom: 30 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <Icon name="leaf" size={20} color={P.vert} />
+            <h1 className="fb-serif" style={{ margin: 0, fontSize: 26, fontWeight: 700, color: P.vert }}>
+              Fleurs de Bach
+            </h1>
           </div>
-          <div style={{fontSize:13,color:P.gris}}>
-            Fiche personnalisée · <span style={{color:P.texte,fontWeight:700}}>{clientNom}</span>
+          <div style={{ fontSize: 13, color: P.gris, marginLeft: 30 }}>
+            Fiche personnalisée ·{' '}
+            <strong style={{ color: P.texteS }}>{clientNom}</strong>
           </div>
         </div>
 
-        {/* Wizard nav */}
-        <div className="fb-steps" style={{display:'flex',gap:0,marginBottom:32,background:P.sableF,borderRadius:12,padding:4}}>
-          {STEPS.map((s,i)=>{
-            const isActive=i===step, isDone=i<step;
-            return(
-              <button key={s} onClick={()=>setStep(i)} style={{
-                flex:1,padding:'10px 6px',border:'none',cursor:'pointer',borderRadius:8,
-                fontFamily:'inherit',fontSize:12,fontWeight:700,lineHeight:1.3,
-                background:isActive?P.vert:isDone?P.ambreClair:'transparent',
-                color:isActive?'white':isDone?P.ambre:P.gris,transition:'all .2s',
-              }}>
-                <div style={{fontSize:10,marginBottom:2,opacity:.7}}>0{i+1}</div>
-                {s}
+        {/* ── Stepper ── */}
+        <div style={{ display: 'flex', marginBottom: 34, position: 'relative' }}>
+          {STEPS.map((s, i) => {
+            const isActive = i === step;
+            const isDone   = i < step;
+            return (
+              <button key={s} className="fb-step" onClick={() => setStep(i)} aria-current={isActive ? 'step' : undefined}>
+                {/* Ligne connecteur */}
+                {i < STEPS.length - 1 && (
+                  <div className="fb-step-line" style={{ background: i < step ? P.ambre : P.sableFF }} />
+                )}
+                {/* Point */}
+                <div className="fb-step-dot" style={{
+                  background: isActive ? P.vert : isDone ? P.ambre : P.sableFF,
+                  color:      isActive ? P.blanc : isDone ? P.blanc : P.grisClair,
+                  boxShadow:  isActive ? `0 0 0 4px ${P.vertClair}` : 'none',
+                }}>
+                  {isDone ? <Icon name="check" size={13} /> : i + 1}
+                </div>
+                {/* Label */}
+                <div className="fb-step-label" style={{
+                  fontSize: 11, fontWeight: isActive ? 700 : 500,
+                  color: isActive ? P.vert : isDone ? P.ambre : P.grisClair,
+                  whiteSpace: 'nowrap',
+                }}>
+                  {s}
+                </div>
               </button>
             );
           })}
         </div>
 
-        {/* Contenu étape */}
-        {RENDERS[step]?.()}
+        {/* ── Contenu ── */}
+        {STEP_CONTENT[step]?.()}
 
-        {/* Navigation bas */}
-        <div style={{display:'flex',justifyContent:'space-between',marginTop:32,paddingTop:20,borderTop:`1.5px solid ${P.sableF}`}}>
-          <button className="fb-btn fb-btn-s" style={{visibility:step===0?'hidden':'visible'}}
-            onClick={()=>setStep(s=>s-1)}>← Précédent</button>
-          <span style={{fontSize:12,color:P.gris,alignSelf:'center'}}>Étape {step+1} / {STEPS.length}</span>
-          <button className="fb-btn fb-btn-p" style={{visibility:step===STEPS.length-1?'hidden':'visible'}}
-            onClick={()=>setStep(s=>s+1)}>Suivant →</button>
+        {/* ── Navigation ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      marginTop: 34, paddingTop: 22, borderTop: `1.5px solid ${P.sableF}` }}>
+          <button className="fb-btn fb-btn-o" style={{ visibility: step === 0 ? 'hidden' : 'visible' }}
+            onClick={() => setStep(s => s - 1)}>
+            <Icon name="prev" size={14} /> Précédent
+          </button>
+          <span style={{ fontSize: 12, color: P.grisClair }}>
+            {step + 1} / {STEPS.length}
+          </span>
+          <button className="fb-btn fb-btn-v" style={{ visibility: step === STEPS.length - 1 ? 'hidden' : 'visible' }}
+            onClick={() => setStep(s => s + 1)}>
+            Suivant <Icon name="next" size={14} />
+          </button>
         </div>
 
       </div>
