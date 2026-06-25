@@ -93,7 +93,7 @@ const scoreColor = s => s >= 8 ? '#1A7A4A' : s >= 5 ? '#185FA5' : s >= 3 ? '#854
 
 /* ─── Composant principal ─────────────────────────────────────────────── */
 
-export default function FicheClientBach({ client }) {
+export default function FicheClientBach({ clientId, clientNom }) {
   const [activeTab, setActiveTab] = useState('historique')
   const [hist, setHist]           = useState(MOCK_HIST)
   const [step, setStep]           = useState(1)
@@ -109,9 +109,9 @@ export default function FicheClientBach({ client }) {
   const TOTAL = 6
 
   /* Formulaire nouvelle séance */
-  const [nom,          setNom]          = useState(client?.nom || '')
-  const [age,          setAge]          = useState(client?.age || '')
-  const [motif,        setMotif]        = useState(client?.motif || '')
+  const [nom,          setNom]          = useState(clientNom || '')
+  const [age,          setAge]          = useState('')
+  const [motif,        setMotif]        = useState('')
   const [typeSeance,   setTypeSeance]   = useState('1ère séance')
   const [etatsCoches,  setEtatsCoches]  = useState([])
   const [score,        setScore]        = useState(0)
@@ -358,10 +358,10 @@ export default function FicheClientBach({ client }) {
                   ))}
                 </div>
               </div>
-              {client?.id && (
+              {clientId && (
                 <div style={card}>
                   <span style={label}>Historique des séances</span>
-                  <SeanceTimeline clientId={client.id} />
+                  <SeanceTimeline clientId={clientId} />
                 </div>
               )}
             </div>
