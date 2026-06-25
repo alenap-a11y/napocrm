@@ -82,7 +82,7 @@ export default function FicheSeance() {
         <div>
           <h1 style={s.titre}>📋 Fiche séance</h1>
           <p style={s.sousTitre}>
-            {client ? `${client.prenom} ${client.nom}` : "Client inconnu"}
+            {client ? `${client.prenom} ${client.nom}` : seance.prenom ? `${seance.prenom} ${seance.nom}` : "Client inconnu"}
             {" · "}
             <span style={{ textTransform: "capitalize" }}>
               {formatDate(seance.date_seance)}
@@ -98,7 +98,7 @@ export default function FicheSeance() {
         <div style={s.card}>
           <h2 style={s.cardTitre}>📅 Rendez-vous</h2>
           <div style={s.grid}>
-            <InfoLine label="Client"  value={client ? `${client.prenom} ${client.nom}` : "—"} />
+            <InfoLine label="Client"  value={client ? `${client.prenom} ${client.nom}` : seance.prenom ? `${seance.prenom} ${seance.nom}` : "—"} />
             <InfoLine label="Email"   value={client?.email     || "—"} />
             <InfoLine label="Tél."    value={client?.telephone || "—"} />
             <InfoLine label="Date"    value={formatDate(seance.date_seance)} capitalize />
