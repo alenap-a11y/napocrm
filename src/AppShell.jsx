@@ -29,7 +29,13 @@ class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
   static getDerivedStateFromError() { return { hasError: true } }
   componentDidCatch() {
-    window.location.reload()
+    const reloads = parseInt(sessionStorage.getItem('chunk_reloads') || '0')
+    if (reloads < 2) {
+      sessionStorage.setItem('chunk_reloads', reloads + 1)
+      window.location.reload()
+    } else {
+      sessionStorage.removeItem('chunk_reloads')
+    }
   }
   render() {
     if (this.state.hasError) return <div style={{padding:'2rem',color:'#666'}}>Rechargement...</div>
