@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -82,6 +82,7 @@ export default function Clients() {
   const [modalTab, setModalTab] = useState('infos')
 
   const location = useLocation()
+  const navigate = useNavigate()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
@@ -108,6 +109,8 @@ export default function Clients() {
   const [editSeanceForm,  setEditSeanceForm]  = useState(null)
   const [editingDetail,  setEditingDetail]  = useState(false)
   const [editForm,       setEditForm]       = useState(null)
+  const [bachFiches,     setBachFiches]     = useState([])
+  const [loadingBach,    setLoadingBach]    = useState(false)
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
@@ -143,6 +146,16 @@ export default function Clients() {
       }
     }
   }, [location.state, clients])
+
+  useEffect(() => {
+    if (detailTab !== 'bach' || !detail) { setBachFiches([]); return }
+    setLoadingBach(true)
+    supabase.from('fiches_bach')
+      .select('id, created_at, selection, client_info, persos')
+      .eq('client_id', detail.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setBachFiches(data || []); setLoadingBach(false) })
+  }, [detailTab, detail?.id])
 
   async function handleAddSeanceFromFiche() {
     if (!detail) return
@@ -499,7 +512,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18 }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes']].map(([id, label, icon]) => (
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf']].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -709,6 +722,74 @@ export default function Clients() {
                     Aucune note pour ce client
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Onglet BACH ── */}
+            {detailTab === 'bach' && !editingDetail && (
+              <div>
+                <button
+                  onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '11px 18px', marginBottom: 16, borderRadius: 10, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  🌿 Nouvelle séance Bach
+                </button>
+
+                {loadingBach && (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-loader-2" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />Chargement…
+                  </div>
+                )}
+
+                {!loadingBach && bachFiches.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-leaf-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                    Aucune séance Bach enregistrée
+                    <div style={{ marginTop: 14 }}>
+                      <button onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                        style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Démarrer la première séance
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!loadingBach && bachFiches.map((fiche, idx) => {
+                  const nbFleurs   = Object.keys(fiche.selection || {}).length
+                  const ci         = fiche.client_info || {}
+                  const objectif   = ci.notes || fiche.persos || ''
+                  const typeSeance = ci.type_seance || ''
+                  const dateStr    = new Date(fiche.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+                  return (
+                    <div key={fiche.id} style={{ paddingTop: 12, paddingBottom: 12, borderBottom: idx < bachFiches.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3D5A3E', flexShrink: 0, marginTop: 5 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{dateStr}</span>
+                            {ci.heure && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>à {ci.heure}</span>}
+                            <span style={{ fontSize: 11, fontWeight: 600, background: '#EAF0EA', color: '#3D5A3E', padding: '1px 8px', borderRadius: 20 }}>
+                              {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                            </span>
+                            {typeSeance && (
+                              <span style={{ fontSize: 10, fontWeight: 600, background: '#F0EBF8', color: '#7F3FBF', padding: '1px 7px', borderRadius: 20 }}>{typeSeance}</span>
+                            )}
+                          </div>
+                          {objectif && (
+                            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5, fontStyle: 'italic', marginBottom: 6 }}>
+                              {objectif.length > 100 ? objectif.slice(0, 100) + '…' : objectif}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                              style={{ background: 'none', border: '0.5px solid #3D5A3E', borderRadius: 6, cursor: 'pointer', color: '#3D5A3E', fontSize: 11, padding: '3px 8px' }}>
+                              🌿 Recharger
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
 

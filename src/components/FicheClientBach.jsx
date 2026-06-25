@@ -148,7 +148,7 @@ const QUESTIONS = [
 /* ═══ COMPOSANT PRINCIPAL ════════════════════════════════════════════════ */
 export default function FicheClientBach({ clientNom }) {
   const { clientId } = useParams();
-  const [clientInfo, setClientInfo] = useState({ nom: '', prenom: '' });
+  const [clientInfo, setClientInfo] = useState({ nom: '', prenom: '', email: '', tel: '', date_naissance: '', ville: '', specialite: '', notes: '' });
   const [historique, setHistorique] = useState([]);
 
   const [step, setStep]           = useState(0);
@@ -164,14 +164,14 @@ export default function FicheClientBach({ clientNom }) {
 
   useEffect(() => {
     if (!clientId) return;
-    supabase.from('clients').select('nom, prenom').eq('id', clientId).maybeSingle()
+    supabase.from('clients').select('*').eq('id', clientId).maybeSingle()
       .then(({ data }) => { if (data) setClientInfo(data); });
   }, [clientId]);
 
   useEffect(() => {
     if (!clientId) return;
     supabase.from('fiches_bach').select('*').eq('client_id', clientId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => { if (data) setHistorique(data); });
   }, [clientId]);
 
@@ -333,7 +333,9 @@ export default function FicheClientBach({ clientNom }) {
             <div style={{fontSize:22,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>
               {clientInfo.prenom || clientInfo.nom ? `${clientInfo.prenom} ${clientInfo.nom}`.trim() : (clientNom||'Client')}
             </div>
-            <div style={{fontSize:12,color:P.gris,marginTop:2}}>ID : {clientId}</div>
+            <div style={{fontSize:12,color:P.gris,marginTop:2}}>
+              {clientInfo.email || `ID : ${clientId}`}
+            </div>
           </div>
         </div>
         <div style={{background:P.sable,borderRadius:10,padding:16,fontSize:13,color:P.terre,lineHeight:1.7}}>
@@ -665,63 +667,125 @@ export default function FicheClientBach({ clientNom }) {
     </div>
   );
 
-  const renderHistorique = () => (
-    <div className="fb-anim">
-      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
-        <div style={{fontFamily:'Georgia,serif',fontSize:18,fontWeight:700,color:P.vert,marginBottom:20}}>
-          Historique des fiches
-        </div>
-        {historique.length === 0 ? (
-          <div style={{textAlign:'center',padding:'32px 0',color:P.gris,fontSize:14}}>
-            Aucune fiche enregistrée pour ce client.
-          </div>
-        ) : historique.map(fiche => {
-          const nbFleurs = Object.keys(fiche.selection || {}).length;
-          const topFleurs = FLEURS.filter(f => (fiche.selection || {})[f.num]).slice(0, 3);
-          const dateStr = new Date(fiche.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
-          return (
-            <div key={fiche.id} className="fb-card"
-              style={{marginBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center',gap:16}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:700,fontSize:14,color:P.texte,marginBottom:4}}>{dateStr}</div>
-                {fiche.persos && (
-                  <div style={{fontSize:12,color:P.gris,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                    {fiche.persos}
-                  </div>
-                )}
-                <div style={{fontSize:12,color:P.gris,marginBottom:6}}>
-                  {nbFleurs} fleur{nbFleurs > 1 ? 's' : ''} sélectionnée{nbFleurs > 1 ? 's' : ''}
+  const renderHistorique = () => {
+    if (!clientId) return (
+      <div className="fb-anim" style={{textAlign:'center',padding:'64px 24px',color:P.gris}}>
+        <div style={{fontSize:44,marginBottom:16}}>👤</div>
+        <div style={{fontSize:17,fontWeight:700,color:P.texte,marginBottom:8}}>Ouvrez ce module depuis une fiche client</div>
+        <div style={{fontSize:13,color:P.gris}}>Naviguez vers un client, puis cliquez sur "Fleurs de Bach"</div>
+      </div>
+    );
+
+    const fmtD = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '—';
+
+    return (
+      <div className="fb-anim">
+        {/* Carte client */}
+        {clientInfo.nom && (
+          <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:18}}>
+              <div style={{width:48,height:48,borderRadius:'50%',background:P.vertClair,display:'flex',
+                alignItems:'center',justifyContent:'center',fontSize:18,fontWeight:700,color:P.vert,flexShrink:0}}>
+                {(clientInfo.prenom||'?').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{fontSize:18,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>
+                  {clientInfo.prenom} {clientInfo.nom}
                 </div>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {topFleurs.map(f => (
-                    <span key={f.num} style={{fontSize:11,padding:'2px 8px',borderRadius:10,
-                      background:P.ambreClair,color:P.ambre,fontFamily:'inherit'}}>
-                      {f.fr}
-                    </span>
-                  ))}
+                {clientInfo.specialite && (
+                  <span style={{fontSize:11,fontWeight:600,background:P.vertClair,color:P.vert,
+                    borderRadius:20,padding:'2px 10px',marginTop:4,display:'inline-block'}}>
+                    {clientInfo.specialite}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[
+                ['Email',          clientInfo.email || '—'],
+                ['Téléphone',      clientInfo.tel || '—'],
+                ['Date naissance', fmtD(clientInfo.date_naissance)],
+                ['Ville',          clientInfo.ville || '—'],
+              ].map(([label, val]) => (
+                <div key={label} style={{background:P.sable,borderRadius:8,padding:'10px 12px'}}>
+                  <div style={{fontSize:10,fontWeight:700,color:P.gris,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>{label}</div>
+                  <div style={{fontSize:13,color:P.texte}}>{val}</div>
+                </div>
+              ))}
+            </div>
+            {clientInfo.notes && (
+              <div style={{marginTop:8,background:P.sable,borderRadius:8,padding:'10px 12px'}}>
+                <div style={{fontSize:10,fontWeight:700,color:P.gris,textTransform:'uppercase',letterSpacing:'.06em',marginBottom:3}}>Notes</div>
+                <div style={{fontSize:12,color:P.texte,lineHeight:1.6}}>{clientInfo.notes}</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Historique */}
+        <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
+          <div style={{fontFamily:'Georgia,serif',fontSize:16,fontWeight:700,color:P.vert,marginBottom:16}}>
+            Séances précédentes
+          </div>
+          {historique.length === 0 ? (
+            <div style={{textAlign:'center',padding:'24px 0',color:P.gris,fontSize:14}}>
+              Aucune séance enregistrée pour ce client.
+            </div>
+          ) : historique.map((fiche, idx) => {
+            const nbFleurs   = Object.keys(fiche.selection || {}).length;
+            const ci         = fiche.client_info || {};
+            const objectif   = ci.notes || fiche.persos || '';
+            const typeSeance = ci.type_seance || '';
+            const topFleurs  = FLEURS.filter(f => (fiche.selection || {})[f.num]).slice(0, 3);
+            const dateStr    = new Date(fiche.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
+            return (
+              <div key={fiche.id} style={{marginBottom:12,paddingBottom:12,borderBottom:idx<historique.length-1?`1px solid ${P.sableF}`:'none'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:6}}>
+                      <span style={{fontWeight:700,fontSize:13,color:P.texte}}>{dateStr}</span>
+                      {ci.heure && <span style={{fontSize:12,color:P.gris}}>à {ci.heure}</span>}
+                      <span style={{background:P.vertClair,color:P.vert,borderRadius:12,padding:'2px 8px',fontSize:11,fontWeight:700}}>
+                        {nbFleurs} fleur{nbFleurs>1?'s':''}
+                      </span>
+                      {typeSeance && (
+                        <span style={{background:P.sableF,color:P.gris,borderRadius:12,padding:'2px 8px',fontSize:11}}>{typeSeance}</span>
+                      )}
+                    </div>
+                    {objectif && (
+                      <div style={{fontSize:12,color:P.gris,fontStyle:'italic',marginBottom:6,lineHeight:1.5}}>
+                        {objectif.length > 100 ? objectif.slice(0, 100) + '…' : objectif}
+                      </div>
+                    )}
+                    <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+                      {topFleurs.map(f => (
+                        <span key={f.num} style={{fontSize:11,padding:'2px 8px',borderRadius:10,background:P.ambreClair,color:P.ambre}}>{f.fr}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={() => {
+                    setSelection(fiche.selection || {});
+                    setDoses(fiche.doses || {});
+                    setEntretien(fiche.entretien || {});
+                    setProto(fiche.proto || {duree:3,prises:3,gouttes:4,volume:30});
+                    setPersos(fiche.persos || '');
+                    setSaved(false);
+                    setStep(1);
+                  }} style={{
+                    padding:'7px 14px',borderRadius:8,border:`1.5px solid ${P.vert}`,
+                    background:'white',color:P.vert,cursor:'pointer',fontWeight:700,
+                    fontSize:12,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0,
+                  }}>
+                    Recharger cette séance
+                  </button>
                 </div>
               </div>
-              <button onClick={() => {
-                setSelection(fiche.selection || {});
-                setDoses(fiche.doses || {});
-                setEntretien(fiche.entretien || {});
-                setProto(fiche.proto || {duree:3,prises:3,gouttes:4,volume:30});
-                setPersos(fiche.persos || '');
-                setSaved(false);
-                setStep(1);
-              }} style={{
-                padding:'8px 16px',borderRadius:8,border:`1.5px solid ${P.vert}`,
-                background:'white',color:P.vert,cursor:'pointer',fontWeight:700,
-                fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0,
-              }}>
-                Reprendre
-              </button>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const RENDERS = [renderHistorique,renderStep0,renderStep1,renderStep2,renderStep3,renderStep4,renderStep5];
 
