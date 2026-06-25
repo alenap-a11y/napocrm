@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../supabaseClient';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PALETTE & TOKENS
