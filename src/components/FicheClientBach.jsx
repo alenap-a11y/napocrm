@@ -499,6 +499,19 @@ export default function FicheClientBach({ clientNom }) {
     </div>
   );
 
+  const addFleurPerso = () => {
+    if (!persoForm.fr.trim()) return;
+    const newF = { num: `p${Date.now()}`, fr: persoForm.fr, name: persoForm.name||persoForm.fr,
+      theme: persoForm.theme||'Personnalisée', indication: persoForm.indication||'',
+      famille: 'Autre', couleur: '#3D5A3E', isPerso: true };
+    setFleursPerso(prev => [...prev, newF]);
+    setPersoForm({fr:'',name:'',theme:'',indication:'',famille:'Autre'});
+    setShowPersoForm(false);
+  };
+  const removeFleurPerso = (num) => {
+    setFleursPerso(prev => prev.filter(f => f.num !== num));
+    setSelection(prev => { const n = {...prev}; delete n[num]; return n; });
+  };
   const renderStep2 = () => (
     <div className="fb-anim">
       <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap'}}>
