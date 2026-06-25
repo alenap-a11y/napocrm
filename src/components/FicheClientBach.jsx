@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 /* ═══ PALETTE ═══════════════════════════════════════════════════════════ */
@@ -145,7 +146,11 @@ const QUESTIONS = [
 ];
 
 /* ═══ COMPOSANT PRINCIPAL ════════════════════════════════════════════════ */
-export default function FicheClientBach({ clientId, clientNom }) {
+export default function FicheClientBach({ clientNom }) {
+  const { clientId } = useParams();
+  const [clientInfo, setClientInfo] = useState({ nom: '', prenom: '' });
+  const [historique, setHistorique] = useState([]);
+
   const [step, setStep]           = useState(0);
   const [selection, setSelection] = useState({});   // {num: 'mel'|'fond'|'prio'}
   const [doses, setDoses]         = useState({});   // {num: 1-6}
@@ -157,7 +162,20 @@ export default function FicheClientBach({ clientId, clientNom }) {
   const [search, setSearch]       = useState('');
   const [famille, setFamille]     = useState('');
 
-  const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
+  useEffect(() => {
+    if (!clientId) return;
+    supabase.from('clients').select('nom, prenom').eq('id', clientId).maybeSingle()
+      .then(({ data }) => { if (data) setClientInfo(data); });
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    supabase.from('fiches_bach').select('*').eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setHistorique(data); });
+  }, [clientId]);
+
+  const STEPS = ['Historique','Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
 
   /* ── Computed ─────────────────────────────────────────────────────────── */
   const selected   = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
@@ -309,10 +327,12 @@ export default function FicheClientBach({ clientId, clientNom }) {
         <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20}}>
           <div style={{width:56,height:56,borderRadius:'50%',background:P.vertClair,display:'flex',
             alignItems:'center',justifyContent:'center',fontSize:22,fontWeight:700,color:P.vert}}>
-            {(clientNom||'C').charAt(0).toUpperCase()}
+            {(clientInfo.prenom||clientNom||'C').charAt(0).toUpperCase()}
           </div>
           <div>
-            <div style={{fontSize:22,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>{clientNom||'Client'}</div>
+            <div style={{fontSize:22,fontWeight:700,color:P.texte,fontFamily:'Georgia,serif'}}>
+              {clientInfo.prenom || clientInfo.nom ? `${clientInfo.prenom} ${clientInfo.nom}`.trim() : (clientNom||'Client')}
+            </div>
             <div style={{fontSize:12,color:P.gris,marginTop:2}}>ID : {clientId}</div>
           </div>
         </div>
@@ -645,7 +665,65 @@ export default function FicheClientBach({ clientId, clientNom }) {
     </div>
   );
 
-  const RENDERS = [renderStep0,renderStep1,renderStep2,renderStep3,renderStep4,renderStep5];
+  const renderHistorique = () => (
+    <div className="fb-anim">
+      <div style={{background:'white',borderRadius:14,padding:28,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+        <div style={{fontFamily:'Georgia,serif',fontSize:18,fontWeight:700,color:P.vert,marginBottom:20}}>
+          Historique des fiches
+        </div>
+        {historique.length === 0 ? (
+          <div style={{textAlign:'center',padding:'32px 0',color:P.gris,fontSize:14}}>
+            Aucune fiche enregistrée pour ce client.
+          </div>
+        ) : historique.map(fiche => {
+          const nbFleurs = Object.keys(fiche.selection || {}).length;
+          const topFleurs = FLEURS.filter(f => (fiche.selection || {})[f.num]).slice(0, 3);
+          const dateStr = new Date(fiche.created_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'});
+          return (
+            <div key={fiche.id} className="fb-card"
+              style={{marginBottom:12,display:'flex',justifyContent:'space-between',alignItems:'center',gap:16}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:14,color:P.texte,marginBottom:4}}>{dateStr}</div>
+                {fiche.persos && (
+                  <div style={{fontSize:12,color:P.gris,marginBottom:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                    {fiche.persos}
+                  </div>
+                )}
+                <div style={{fontSize:12,color:P.gris,marginBottom:6}}>
+                  {nbFleurs} fleur{nbFleurs > 1 ? 's' : ''} sélectionnée{nbFleurs > 1 ? 's' : ''}
+                </div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {topFleurs.map(f => (
+                    <span key={f.num} style={{fontSize:11,padding:'2px 8px',borderRadius:10,
+                      background:P.ambreClair,color:P.ambre,fontFamily:'inherit'}}>
+                      {f.fr}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => {
+                setSelection(fiche.selection || {});
+                setDoses(fiche.doses || {});
+                setEntretien(fiche.entretien || {});
+                setProto(fiche.proto || {duree:3,prises:3,gouttes:4,volume:30});
+                setPersos(fiche.persos || '');
+                setSaved(false);
+                setStep(1);
+              }} style={{
+                padding:'8px 16px',borderRadius:8,border:`1.5px solid ${P.vert}`,
+                background:'white',color:P.vert,cursor:'pointer',fontWeight:700,
+                fontSize:13,fontFamily:'inherit',whiteSpace:'nowrap',flexShrink:0,
+              }}>
+                Reprendre
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const RENDERS = [renderHistorique,renderStep0,renderStep1,renderStep2,renderStep3,renderStep4,renderStep5];
 
   /* ─────────────────────────────────────────────────────────────────────── */
   return (
@@ -659,7 +737,7 @@ export default function FicheClientBach({ clientId, clientNom }) {
             Fleurs de Bach
           </div>
           <div style={{fontSize:13,color:P.gris}}>
-            Fiche personnalisée · <span style={{color:P.texte,fontWeight:700}}>{clientNom}</span>
+            Fiche personnalisée · <span style={{color:P.texte,fontWeight:700}}>{clientInfo.prenom} {clientInfo.nom}</span>
           </div>
         </div>
 
