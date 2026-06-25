@@ -352,7 +352,7 @@ export default function FicheClients({ userId }) {
               {detail.isNew ? 'Nouveau client' : `${fPrenom} ${fNom}`.trim() || 'Client'}
             </div>
             <button onClick={() => { setDetail(null); setConfirmDel(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#a07848', lineHeight: 1, padding: 0 }} aria-label="Fermer">×</button>
-          </div>
+            <button onClick={() => { setDetail(null); window.location.hash = `/fleurs-de-bach/nouvelle-seance/${detail.id}`; }} style={{ padding: '7px 14px', borderRadius: 8, background: '#3D5A3E', color: 'white', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🌿 Fleurs de Bach</button>
 
           {/* Formulaire */}
           <div style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 9 }}>

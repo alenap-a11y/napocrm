@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -245,7 +246,9 @@ const Icon = ({ name, size = 16, color = 'currentColor' }) => {
 /* ═══════════════════════════════════════════════════════════════════════════
    COMPOSANT PRINCIPAL
 ═══════════════════════════════════════════════════════════════════════════ */
-export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
+export default function FicheClientBach() {
+  const { clientId } = useParams();
+
   const [step, setStep]           = useState(0);
   const [selection, setSelection] = useState({});    // { num: 'mel'|'fond'|'prio' }
   const [doses, setDoses]         = useState({});    // { num: 1-6 }
@@ -257,8 +260,39 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
   const [search, setSearch]       = useState('');
   const [filtreFam, setFiltreFam] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [clientInfo, setClientInfo]     = useState({ nom: '', prenom: '' });
+  const [historique, setHistorique]     = useState([]);
+  const [loadingHisto, setLoadingHisto] = useState(false);
 
-  const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
+  /* ── Fetch nom/prénom client ─────────────────────────────────────────── */
+  useEffect(() => {
+    if (!clientId) return;
+    supabase
+      .from('clients')
+      .select('nom, prenom')
+      .eq('id', clientId)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setClientInfo(data); });
+  }, [clientId]);
+
+  /* ── Fetch historique des séances ───────────────────────────────────── */
+  const fetchHistorique = useCallback(async () => {
+    if (!clientId) return;
+    setLoadingHisto(true);
+    const { data } = await supabase
+      .from('fiches_bach')
+      .select('id, created_at, selection, doses, entretien, proto, persos')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    setHistorique(data || []);
+    setLoadingHisto(false);
+  }, [clientId]);
+
+  useEffect(() => { fetchHistorique(); }, [fetchHistorique]);
+
+  const clientFullName = [clientInfo.prenom, clientInfo.nom].filter(Boolean).join(' ') || 'Client';
+
+  const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse','Historique'];
 
   /* ── Dérivés ───────────────────────────────────────────────────────────── */
   const selected = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
@@ -378,7 +412,7 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
     setY(30);
 
     /* ─ Infos client ─ */
-    bold(`Client : ${clientNom}`, PL, 12, [44, 31, 14]);
+    bold(`Client : ${clientFullName}`, PL, 12, [44, 31, 14]);
     addY(6);
     norm(`Date de séance : ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`, PL, 9, [120, 100, 80]);
     addY(1); hr();
@@ -481,7 +515,7 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
       doc.text(`${i}/${totalPages}`, PR, 290, { align: 'right' });
     }
 
-    const nom = (clientNom || 'client').replace(/\s+/g, '_').toLowerCase();
+    const nom = (clientFullName || 'client').replace(/\s+/g, '_').toLowerCase();
     doc.save(`bach_${type}_${nom}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
@@ -497,10 +531,10 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
           <div style={{ width: 60, height: 60, borderRadius: '50%', background: P.vertClair,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 24, fontWeight: 800, color: P.vert, fontFamily: 'Lora, Georgia, serif', flexShrink: 0 }}>
-            {clientNom.charAt(0).toUpperCase()}
+            {clientFullName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientNom}</div>
+            <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientFullName}</div>
             <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>ID client · {clientId}</div>
           </div>
         </div>
@@ -508,7 +542,7 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
                       color: P.texteS, lineHeight: 1.7, borderLeft: `3px solid ${P.vert}` }}>
           <strong style={{ color: P.vert }}>Bienvenue dans la Fiche Fleurs de Bach</strong><br/>
           Ce wizard vous guide en 6 étapes pour composer un mélange personnalisé.
-          Naviguez librement entre les étapes — votre saisie est conservée.
+          Naviguez librement entre les étapes — votre saisie est conservée. L'étape <strong>Historique</strong> liste toutes les séances passées.
         </div>
       </div>
 
@@ -835,7 +869,7 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
       {/* En-tête récap */}
       <div style={{ background: P.blanc, borderRadius: 14, padding: 26, border: `1.5px solid ${P.sableF}`, marginBottom: 16 }}>
         <div style={{ borderBottom: `1.5px solid ${P.sableF}`, paddingBottom: 16, marginBottom: 20 }}>
-          <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientNom}</div>
+          <div className="fb-serif" style={{ fontSize: 22, fontWeight: 700, color: P.texte }}>{clientFullName}</div>
           <div style={{ fontSize: 12, color: P.gris, marginTop: 4 }}>
             Fiche Fleurs de Bach · {new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
           </div>
@@ -984,10 +1018,148 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
     </div>
   );
 
+  /* ── Étape 6 : Historique ───────────────────────────────────────────── */
+  const rechargerSeance = useCallback((fiche) => {
+    setSelection(fiche.selection || {});
+    setDoses(fiche.doses || {});
+    setEntretien(fiche.entretien || {});
+    setProto(fiche.proto || { duree: 3, prises: 3, gouttes: 4, volume: 30 });
+    setPersos(fiche.persos || '');
+    setSaved(false);
+    setSaveError('');
+    setStep(0);
+  }, []);
+
+  const renderHistorique = () => (
+    <div className="fb-anim">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div>
+          <div className="fb-serif" style={{ fontSize: 18, fontWeight: 700, color: P.texte }}>Séances précédentes</div>
+          <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>{historique.length} fiche{historique.length !== 1 ? 's' : ''} enregistrée{historique.length !== 1 ? 's' : ''}</div>
+        </div>
+        <button className="fb-btn fb-btn-o" onClick={fetchHistorique} disabled={loadingHisto} aria-label="Actualiser l'historique">
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {loadingHisto ? 'Chargement…' : 'Actualiser'}
+        </button>
+      </div>
+
+      {loadingHisto && (
+        <div style={{ textAlign: 'center', padding: 48, color: P.gris }}>
+          <div style={{ fontSize: 13 }}>Chargement de l'historique…</div>
+        </div>
+      )}
+
+      {!loadingHisto && historique.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 56, color: P.gris,
+                      background: P.blanc, borderRadius: 14, border: `1.5px solid ${P.sableF}` }}>
+          <Icon name="leaf" size={36} color={P.sableFF} />
+          <div style={{ fontSize: 15, fontWeight: 700, marginTop: 14 }}>Aucune séance enregistrée</div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>Les fiches sauvegardées apparaîtront ici</div>
+        </div>
+      )}
+
+      {!loadingHisto && historique.map((fiche, idx) => {
+        const date     = new Date(fiche.created_at);
+        const selObj   = fiche.selection || {};
+        const nbFleurs = Object.keys(selObj).length;
+        const nbPrio   = Object.values(selObj).filter(v => v === 'prio').length;
+        const nbMel    = Object.values(selObj).filter(v => v === 'mel').length;
+        const nbFond   = Object.values(selObj).filter(v => v === 'fond').length;
+        const proto_   = fiche.proto || {};
+        const isActive = idx === 0;
+
+        return (
+          <div key={fiche.id} style={{ background: P.blanc, borderRadius: 12,
+                                       border: `1.5px solid ${isActive ? P.vert + '60' : P.sableF}`,
+                                       padding: '18px 20px', marginBottom: 12,
+                                       transition: 'border-color .2s' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+              {/* Date & badge */}
+              <div style={{ minWidth: 110 }}>
+                {isActive && (
+                  <span style={{ display: 'inline-block', background: P.vert, color: P.blanc,
+                                 fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '2px 8px',
+                                 marginBottom: 6, letterSpacing: '.05em' }}>DERNIÈRE</span>
+                )}
+                <div style={{ fontSize: 14, fontWeight: 700, color: P.texte }}>
+                  {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </div>
+                <div style={{ fontSize: 11, color: P.gris, marginTop: 2 }}>
+                  {date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              {/* Stats fleurs */}
+              <div style={{ flex: 1, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: P.texte }}>
+                  {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                </span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {nbPrio > 0 && (
+                    <span style={{ background: P.ambreClair, color: P.ambre, borderRadius: 12,
+                                   padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
+                      {nbPrio} priorité
+                    </span>
+                  )}
+                  {nbMel > 0 && (
+                    <span style={{ background: P.vertClair, color: P.vert, borderRadius: 12,
+                                   padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
+                      {nbMel} mélange
+                    </span>
+                  )}
+                  {nbFond > 0 && (
+                    <span style={{ background: P.terreClair, color: P.terre, borderRadius: 12,
+                                   padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
+                      {nbFond} fond
+                    </span>
+                  )}
+                </div>
+                {proto_.duree && (
+                  <span style={{ fontSize: 11, color: P.gris }}>
+                    · {proto_.duree} sem. · {proto_.prises}×/j · {proto_.gouttes} gtt
+                  </span>
+                )}
+              </div>
+
+              {/* Bouton recharger */}
+              <button className="fb-btn fb-btn-a" style={{ padding: '8px 16px', fontSize: 12 }}
+                onClick={() => rechargerSeance(fiche)}
+                title="Recharger cette séance dans le wizard">
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
+                Recharger
+              </button>
+            </div>
+
+            {/* Noms des fleurs */}
+            {nbFleurs > 0 && (
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {FLEURS.filter(f => selObj[f.num]).map(f => (
+                  <span key={f.num} style={{ background: P.sable, color: P.texteS, borderRadius: 10,
+                                             padding: '2px 9px', fontSize: 11, border: `1px solid ${P.sableFF}` }}>
+                    {f.fr}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   /* ═══════════════════════════════════════════════════════════════════════
      RENDU PRINCIPAL
   ═══════════════════════════════════════════════════════════════════════ */
-  const STEP_CONTENT = [renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese];
+  const STEP_CONTENT = [renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese, renderHistorique];
 
   return (
     <div className="fb">
@@ -1004,7 +1176,7 @@ export default function FicheClientBach({ clientId, clientNom = 'Client' }) {
           </div>
           <div style={{ fontSize: 13, color: P.gris, marginLeft: 30 }}>
             Fiche personnalisée ·{' '}
-            <strong style={{ color: P.texteS }}>{clientNom}</strong>
+            <strong style={{ color: P.texteS }}>{clientFullName}</strong>
           </div>
         </div>
 
