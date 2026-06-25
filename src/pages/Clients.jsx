@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -82,7 +82,6 @@ export default function Clients() {
   const [modalTab, setModalTab] = useState('infos')
 
   const location = useLocation()
-  const navigate = useNavigate()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
@@ -729,7 +728,7 @@ export default function Clients() {
             {detailTab === 'bach' && !editingDetail && (
               <div>
                 <button
-                  onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                  onClick={() => { setDetail(null); window.location.hash = `/fleurs-de-bach/${detail.id}` }}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '11px 18px', marginBottom: 16, borderRadius: 10, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   🌿 Nouvelle séance Bach
                 </button>
@@ -745,7 +744,7 @@ export default function Clients() {
                     <i className="ti ti-leaf-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
                     Aucune séance Bach enregistrée
                     <div style={{ marginTop: 14 }}>
-                      <button onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                      <button onClick={() => { setDetail(null); window.location.hash = `/fleurs-de-bach/${detail.id}` }}
                         style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         Démarrer la première séance
                       </button>
@@ -780,7 +779,7 @@ export default function Clients() {
                             </div>
                           )}
                           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setDetail(null); navigate(`/fleurs-de-bach/${detail.id}`) }}
+                            <button onClick={() => { setDetail(null); window.location.hash = `/fleurs-de-bach/${detail.id}` }}
                               style={{ background: 'none', border: '0.5px solid #3D5A3E', borderRadius: 6, cursor: 'pointer', color: '#3D5A3E', fontSize: 11, padding: '3px 8px' }}>
                               🌿 Recharger
                             </button>
