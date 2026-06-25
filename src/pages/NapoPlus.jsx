@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const MODULES = [
   {
@@ -151,7 +150,7 @@ const STATUS_STYLES = {
 
 export default function NapoPlus() {
   const [activeTab, setActiveTab] = useState("Tous");
-  const navigate = useNavigate();
+
 
   const filtered =
     activeTab === "Tous"
@@ -309,7 +308,7 @@ export default function NapoPlus() {
               }}
             >
               {included.map((mod) => (
-                <ModuleCard key={mod.id} mod={mod} onNavigate={navigate} />
+                <ModuleCard key={mod.id} mod={mod} onNavigate={(path) => { window.location.hash = path }} />
               ))}
             </div>
           </>
@@ -332,7 +331,7 @@ export default function NapoPlus() {
               }}
             >
               {available.map((mod) => (
-                <ModuleCard key={mod.id} mod={mod} onNavigate={navigate} />
+                <ModuleCard key={mod.id} mod={mod} onNavigate={(path) => { window.location.hash = path }} />
               ))}
             </div>
           </>
