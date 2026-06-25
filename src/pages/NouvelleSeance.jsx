@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense, Component } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Html, useGLTF } from '@react-three/drei'
 import { supabase } from '../lib/supabase'
@@ -370,7 +370,6 @@ function BodyMesh({ annots, onAdd, onRemove, tool, color, dotSize, modelHeightRe
 /* ─── Main ───────────────────────────────────────────────── */
 
 export default function NouvelleSeance() {
-  const navigate     = useNavigate()
   const [searchParams] = useSearchParams()
   const orbitRef       = useRef()
   const cameraRef      = useRef(null)
@@ -746,7 +745,7 @@ export default function NouvelleSeance() {
         setSaving(false)
       } else {
         setSaveStatus('ok')
-        setTimeout(() => navigate('/seances'), 1400)
+        setTimeout(() => window.location.hash = '#seances', 1400)
       }
     } catch (err) {
       console.error('Erreur:', err)
@@ -774,7 +773,7 @@ export default function NouvelleSeance() {
       {/* ── Topbar ── */}
       <div style={{ height: 44, background: '#fff', display: 'flex', alignItems: 'center', padding: '0 14px', gap: 10, flexShrink: 0, borderBottom: '1px solid #e5e7eb' }}>
         <button
-          onClick={() => navigate('/seances')}
+          onClick={() => window.location.hash = '#seances'}
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 3, border: '1px solid #e5e7eb', background: 'transparent', color: '#374151', fontSize: 12, cursor: 'pointer' }}
         >
           <i className="ti ti-arrow-left" style={{ fontSize: 13 }} />

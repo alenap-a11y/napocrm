@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function FicheSeance() {
   const { id: seanceId } = useParams();
-  const navigate = useNavigate();
 
   const [seance,  setSeance]  = useState(null);
   const [client,  setClient]  = useState(null);
@@ -70,7 +69,7 @@ export default function FicheSeance() {
   if (!seance) return (
     <div style={s.center}>
       <p style={{ color: "#c00" }}>Séance introuvable.</p>
-      <button onClick={() => navigate("/agenda")} style={s.btnRetour}>← Retour agenda</button>
+      <button onClick={() => window.location.hash = '#agenda'} style={s.btnRetour}>← Retour agenda</button>
     </div>
   );
 
@@ -79,7 +78,7 @@ export default function FicheSeance() {
 
       {/* HEADER */}
       <div style={s.header}>
-        <button onClick={() => navigate("/agenda")} style={s.btnRetour}>← Agenda</button>
+        <button onClick={() => window.location.hash = '#agenda'} style={s.btnRetour}>← Agenda</button>
         <div>
           <h1 style={s.titre}>📋 Fiche séance</h1>
           <p style={s.sousTitre}>
@@ -132,12 +131,12 @@ export default function FicheSeance() {
         {/* ACTIONS */}
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => navigate(`/seances`)}
+            onClick={() => window.location.hash = '#seances'}
             style={{ ...s.btn, background: "#f0f0ec", color: "#333" }}>
             📋 Voir toutes les séances
           </button>
           <button
-            onClick={() => client && navigate(`/clients/${client.id}`)}
+            onClick={() => client && (window.location.hash = `#clients/${client.id}`)}
             style={{ ...s.btn, background: "#2d6a4f", color: "#fff" }}
             disabled={!client}>
             👤 Fiche client

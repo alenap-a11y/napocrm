@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
 import { useSeancesSync } from '../hooks/useSeancesSync'
@@ -67,7 +66,6 @@ function clientName(s) { return `${s.prenom} ${s.nom}`.trim() }
 const fmt = n => `${(parseFloat(n)||0).toFixed(0)} €`
 
 export default function Seances() {
-  const navigate  = useNavigate()
   const importRef = useRef()
 
   const { seances: dbSeances, loading, userId, addSeance, updateSeance, deleteSeance: dbDeleteSeance } = useSeancesSync()
@@ -221,7 +219,7 @@ export default function Seances() {
       {/* En-tête */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.2rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <button onClick={() => navigate('/seances/nouvelle')}
+          <button onClick={() => { window.location.hash = '#seances/nouvelle' }}
             onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
             onMouseDown={() => setBtnActive(true)} onMouseUp={() => setBtnActive(false)}
             style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 22px', borderRadius:10, border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:'#fff', background:'linear-gradient(145deg,#6b9e5e,#4a7a3d)', boxShadow: btnActive ? '0px 0px 0px #2d5a24' : btnHover ? '2px 2px 0px #2d5a24' : '4px 4px 0px #2d5a24', transform: btnActive ? 'translateY(4px)' : btnHover ? 'translateY(2px)' : 'none', transition:'all 0.1s ease' }}>
@@ -603,7 +601,7 @@ export default function Seances() {
                     <button
                       onClick={() => {
                         setDetail(null)
-                        navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}`, openSeance: true } })
+                        window.location.hash = '#clients'
                       }}
                       style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}
                     >
@@ -654,7 +652,7 @@ export default function Seances() {
                   <button
                     onClick={() => {
                       setDetail(null)
-                      navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}` } })
+                      window.location.hash = '#clients'
                     }}
                     style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}
                   >
