@@ -150,6 +150,7 @@ export default function FicheClientBach({ clientNom }) {
   const { clientId } = useParams();
   const [clientInfo, setClientInfo] = useState({ nom: '', prenom: '', email: '', tel: '', date_naissance: '', ville: '', specialite: '', notes: '' });
   const [historique, setHistorique] = useState([]);
+  const [seancesBach, setSeancesBach] = useState([]);
 
   const [step, setStep]           = useState(0);
   const [selection, setSelection] = useState({});   // {num: 'mel'|'fond'|'prio'}
@@ -173,6 +174,16 @@ export default function FicheClientBach({ clientNom }) {
     supabase.from('fiches_bach').select('*').eq('client_id', clientId)
       .order('created_at', { ascending: false }).limit(10)
       .then(({ data }) => { if (data) setHistorique(data); });
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    supabase.from('seances')
+      .select('id, date_seance, heure_seance, duree_minutes, prix_euros, notes')
+      .eq('client_id', clientId)
+      .eq('type_seance', 'Fleurs de Bach')
+      .order('date_seance', { ascending: false })
+      .then(({ data }) => { if (data) setSeancesBach(data); });
   }, [clientId]);
 
   const STEPS = ['Historique','Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
@@ -217,13 +228,42 @@ export default function FicheClientBach({ clientNom }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const {error} = await supabase.from('fiches_bach').insert({
+      const { error } = await supabase.from('fiches_bach').insert({
         client_id: clientId,
         selection, doses, entretien, proto, persos,
         created_at: new Date().toISOString(),
       });
       if (error) throw error;
       setSaved(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id && clientId) {
+        const notesFl = Object.keys(selection)
+          .map(num => FLEURS.find(f => f.num == num)?.fr || `#${num}`)
+          .join(', ');
+        await supabase.from('seances').insert({
+          user_id: user.id,
+          client_id: clientId,
+          prenom: clientInfo.prenom || null,
+          nom: clientInfo.nom || null,
+          email: clientInfo.email || null,
+          date_seance: new Date().toISOString().slice(0, 10),
+          heure_seance: '10:00',
+          type_seance: 'Fleurs de Bach',
+          duree_minutes: 60,
+          prix_euros: 0,
+          tags: 'Fleurs de Bach',
+          notes: notesFl ? `Séance Bach — ${notesFl}` : 'Séance Bach',
+        });
+        setSeancesBach(prev => [{
+          id: Date.now(),
+          date_seance: new Date().toISOString().slice(0, 10),
+          heure_seance: '10:00',
+          duree_minutes: 60,
+          prix_euros: 0,
+          notes: notesFl ? `Séance Bach — ${notesFl}` : 'Séance Bach',
+        }, ...prev]);
+      }
     } catch(err) {
       alert('Erreur sauvegarde : ' + err.message);
     } finally { setSaving(false); }
@@ -722,7 +762,44 @@ export default function FicheClientBach({ clientNom }) {
           </div>
         )}
 
-        {/* Historique */}
+        {/* Séances Supabase */}
+        {seancesBach.length > 0 && (
+          <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`,marginBottom:20}}>
+            <div style={{fontFamily:'Georgia,serif',fontSize:16,fontWeight:700,color:P.ambre,marginBottom:16}}>
+              Séances enregistrées
+            </div>
+            {seancesBach.map((s, idx) => {
+              const dateStr = s.date_seance
+                ? new Date(s.date_seance + 'T00:00:00').toLocaleDateString('fr-FR', {day:'2-digit',month:'long',year:'numeric'})
+                : '—';
+              return (
+                <div key={s.id} style={{paddingBottom:10,marginBottom:10,borderBottom:idx<seancesBach.length-1?`1px solid ${P.sableF}`:'none'}}>
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:4}}>
+                    <span style={{fontWeight:700,fontSize:13,color:P.texte}}>{dateStr}</span>
+                    {s.heure_seance && <span style={{fontSize:12,color:P.gris}}>à {s.heure_seance.slice(0,5)}</span>}
+                    {s.duree_minutes && (
+                      <span style={{background:P.ambreClair,color:P.ambre,borderRadius:12,padding:'2px 8px',fontSize:11,fontWeight:700}}>
+                        {s.duree_minutes} min
+                      </span>
+                    )}
+                    {s.prix_euros > 0 && (
+                      <span style={{background:P.sableF,color:P.gris,borderRadius:12,padding:'2px 8px',fontSize:11}}>
+                        {s.prix_euros} €
+                      </span>
+                    )}
+                  </div>
+                  {s.notes && (
+                    <div style={{fontSize:12,color:P.gris,lineHeight:1.5,fontStyle:'italic'}}>
+                      {s.notes.length > 120 ? s.notes.slice(0, 120) + '…' : s.notes}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Historique fiches Bach */}
         <div style={{background:'white',borderRadius:14,padding:24,border:`1.5px solid ${P.sableF}`}}>
           <div style={{fontFamily:'Georgia,serif',fontSize:16,fontWeight:700,color:P.vert,marginBottom:16}}>
             Séances précédentes
