@@ -11,6 +11,10 @@ export default function FicheSeance() {
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editPrix, setEditPrix] = useState(false);
+  const [prixVal, setPrixVal] = useState('');
+  const [editType, setEditType] = useState(false);
+  const [typeVal, setTypeVal] = useState('');
 
   useEffect(() => {
     if (!seanceId) return;
@@ -24,6 +28,10 @@ export default function FicheSeance() {
       if (s) {
         setSeance(s);
         setNotes(s.notes || "");
+        setPrixVal(s.prix_euros != null ? String(s.prix_euros) : '');
+        setTypeVal(s.type_seance || '');
+        setPrixVal(s.prix_euros != null ? String(s.prix_euros) : '');
+        setTypeVal(s.type_seance || '');
         if (s.client_id) {
           const { data: c } = await supabase
             .from("clients")
@@ -37,6 +45,16 @@ export default function FicheSeance() {
     })();
   }, [seanceId]);
 
+  const savePrix = async () => {
+    await supabase.from("seances").update({ prix_euros: parseFloat(prixVal)||0 }).eq("id", seanceId);
+    setSeance(s => ({...s, prix_euros: parseFloat(prixVal)||0}));
+    setEditPrix(false);
+  };
+  const saveType = async () => {
+    await supabase.from("seances").update({ type_seance: typeVal }).eq("id", seanceId);
+    setSeance(s => ({...s, type_seance: typeVal}));
+    setEditType(false);
+  };
   const saveNotes = useCallback(async (value) => {
     setSaving(true);
     setSaved(false);
@@ -103,7 +121,31 @@ export default function FicheSeance() {
             <InfoLine label="Tél."    value={client?.telephone || "—"} />
             <InfoLine label="Date"    value={formatDate(seance.date_seance)} capitalize />
             <InfoLine label="Heure"   value={seance.heure_seance || "—"} />
-            {seance.type_seance && <InfoLine label="Type"   value={seance.type_seance} />}
+            {editType ? (
+              <div style={{display:'flex',gap:8,alignItems:'center',gridColumn:'1/-1'}}>
+                <select value={typeVal} onChange={e=>setTypeVal(e.target.value)} style={{padding:'6px 10px',borderRadius:6,border:'1px solid #ddd',fontSize:13}}>
+                  {['Sophrologie','Coaching','Naturopathie','Fleurs de Bach','Énergie','Massage','Autre'].map(t=><option key={t}>{t}</option>)}
+                </select>
+                <button onClick={saveType} style={{padding:'5px 12px',background:'#2d6a4f',color:'#fff',border:'none',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer'}}>✓</button>
+                <button onClick={()=>setEditType(false)} style={{padding:'5px 10px',background:'#eee',border:'none',borderRadius:6,fontSize:12,cursor:'pointer'}}>✕</button>
+              </div>
+            ) : (
+              <div style={{cursor:'pointer'}} onClick={()=>setEditType(true)}>
+                <InfoLine label="Type ✏️" value={seance.type_seance||'—'} />
+              </div>
+            )}
+            {editPrix ? (
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <input type="number" value={prixVal} onChange={e=>setPrixVal(e.target.value)} style={{padding:'6px 10px',borderRadius:6,border:'1px solid #ddd',fontSize:13,width:100}} placeholder="0" />
+                <span style={{fontSize:13}}>€</span>
+                <button onClick={savePrix} style={{padding:'5px 12px',background:'#2d6a4f',color:'#fff',border:'none',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer'}}>✓</button>
+                <button onClick={()=>setEditPrix(false)} style={{padding:'5px 10px',background:'#eee',border:'none',borderRadius:6,fontSize:12,cursor:'pointer'}}>✕</button>
+              </div>
+            ) : (
+              <div style={{cursor:'pointer'}} onClick={()=>setEditPrix(true)}>
+                <InfoLine label="Prix ✏️" value={seance.prix_euros != null ? `${seance.prix_euros} €` : '— (cliquer pour ajouter)'} />
+              </div>
+            )}
             {seance.statut      && <InfoLine label="Statut" value={seance.statut} />}
           </div>
         </div>
