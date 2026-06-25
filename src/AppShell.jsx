@@ -453,7 +453,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/agenda"   element={<Agenda />} />
               <Route path="/notes"    element={<Notes />} />
               <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
-              <Route path="/fleurs-de-bach/nouvelle-seance/:clientId?" element={<FicheClientBach />} />
+              <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
               <Route path="/fiscal"    element={<SimulateurFiscal />} />
               <Route path="/napoplus"    element={<NapoPlus />} />

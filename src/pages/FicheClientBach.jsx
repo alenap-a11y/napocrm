@@ -260,7 +260,8 @@ export default function FicheClientBach() {
   const [search, setSearch]       = useState('');
   const [filtreFam, setFiltreFam] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [clientInfo, setClientInfo]         = useState({ nom: '', prenom: '' });
+  const [clientInfo, setClientInfo]         = useState({ nom: '', prenom: '', email: '', tel: '', date_naissance: '', ville: '', specialite: '', notes: '' });
+  const [histoTab, setHistoTab]             = useState('historique');
   const [sessionInfo, setSessionInfo]       = useState({
     heure: '10:00', type_seance: 'Fleurs de Bach', duree: 60, prix: 60,
     tags: '', email: '', notes: '',
@@ -290,7 +291,7 @@ export default function FicheClientBach() {
     if (!clientId) return;
     supabase
       .from('clients')
-      .select('nom, prenom')
+      .select('nom, prenom, email, tel, date_naissance, ville, specialite, notes')
       .eq('id', clientId)
       .maybeSingle()
       .then(({ data }) => { if (data) setClientInfo(data); });
@@ -801,112 +802,259 @@ export default function FicheClientBach() {
   };
 
   /* ── Étape 1 : Historique client ────────────────────────────────────── */
-  const renderHistoClient = () => (
-    <div className="fb-anim">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+  const renderHistoClient = () => {
+    const fmtDate      = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
+    const totalSeances = historique.length;
+    const derniereDate = historique[0] ? new Date(historique[0].created_at) : null;
+    const fleursUniq   = new Set(historique.flatMap(f => Object.keys(f.selection || {})));
+    const prochainRdv  = historique[0]?.client_info?.next;
+
+    const StatC = ({ iconBg, iconColor, iconName, label, value }) => (
+      <div style={{ background: P.blanc, borderRadius: 12, padding: '16px 18px',
+                    border: `1.5px solid ${P.sableF}`, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 10, background: iconBg, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={iconName} size={18} color={iconColor} />
+        </div>
         <div>
-          <div className="fb-serif" style={{ fontSize: 18, fontWeight: 700, color: P.texte }}>
-            Séances précédentes — {clientFullName}
-          </div>
-          <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>
-            {historique.length} séance{historique.length !== 1 ? 's' : ''} enregistrée{historique.length !== 1 ? 's' : ''}
-          </div>
+          <div style={{ fontSize: 11, color: P.gris, marginBottom: 3 }}>{label}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: P.texte, lineHeight: 1 }}>{value}</div>
         </div>
-        <button className="fb-btn fb-btn-o" onClick={fetchHistorique} disabled={loadingHisto}
-          aria-label="Actualiser l'historique">
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-          </svg>
-          {loadingHisto ? 'Chargement…' : 'Actualiser'}
-        </button>
       </div>
+    );
 
-      {loadingHisto && (
-        <div style={{ textAlign: 'center', padding: 48, color: P.gris, fontSize: 13 }}>Chargement…</div>
-      )}
+    return (
+      <div className="fb-anim">
 
-      {!loadingHisto && historique.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 56, background: P.blanc, borderRadius: 14,
-                      border: `1.5px solid ${P.sableF}`, color: P.gris }}>
-          <Icon name="leaf" size={36} color={P.sableFF} />
-          <div style={{ fontSize: 15, fontWeight: 700, marginTop: 14 }}>Première séance avec ce client</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>Les séances sauvegardées apparaîtront ici</div>
-        </div>
-      )}
-
-      {!loadingHisto && historique.map((fiche, idx) => {
-        const date       = new Date(fiche.created_at);
-        const nbFleurs   = Object.keys(fiche.selection || {}).length;
-        const ci         = fiche.client_info || {};
-        const objectif   = ci.notes || fiche.persos || '';
-        const typeSeance = ci.type_seance || '';
-        const tags       = ci.tags ? ci.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
-
-        return (
-          <div key={fiche.id} style={{ background: P.blanc, borderRadius: 12,
-                                       border: `1.5px solid ${idx === 0 ? P.vert + '60' : P.sableF}`,
-                                       padding: '18px 20px', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-              {/* Date */}
-              <div style={{ minWidth: 110 }}>
-                {idx === 0 && (
-                  <span style={{ display: 'inline-block', background: P.vert, color: P.blanc,
-                                 fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '2px 8px',
-                                 marginBottom: 6, letterSpacing: '.05em' }}>DERNIÈRE</span>
-                )}
-                <div style={{ fontSize: 14, fontWeight: 700, color: P.texte }}>
-                  {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                </div>
-                <div style={{ fontSize: 11, color: P.gris, marginTop: 2 }}>
-                  {ci.heure || date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </div>
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 24, paddingBottom: 20, borderBottom: `1.5px solid ${P.sableF}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 12, background: P.vertClair, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="leaf" size={22} color={P.vert} />
+            </div>
+            <div>
+              <div className="fb-serif" style={{ fontSize: 20, fontWeight: 700, color: P.texte }}>
+                Fleurs de Bach
               </div>
-
-              {/* Badges + objectif */}
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: tags.length || objectif ? 8 : 0 }}>
-                  <span style={{ background: P.vertClair, color: P.vert, borderRadius: 12,
-                                 padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
-                    {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
-                  </span>
-                  {typeSeance && (
-                    <span style={{ background: P.sable, color: P.texteS, borderRadius: 12,
-                                   padding: '2px 9px', fontSize: 11, border: `1px solid ${P.sableFF}` }}>
-                      {typeSeance}
-                    </span>
-                  )}
-                  {tags.map(t => (
-                    <span key={t} style={{ background: P.ambreClair, color: P.ambre, borderRadius: 12,
-                                           padding: '2px 9px', fontSize: 11, fontWeight: 600 }}>{t}</span>
-                  ))}
-                </div>
-                {objectif && (
-                  <div style={{ fontSize: 12, color: P.gris, lineHeight: 1.5, fontStyle: 'italic' }}>
-                    {objectif.length > 120 ? objectif.slice(0, 120) + '…' : objectif}
-                  </div>
-                )}
+              <div style={{ fontSize: 12, color: P.gris, marginTop: 2 }}>
+                Séance personnalisée · <strong style={{ color: P.texteS }}>{clientFullName}</strong>
               </div>
-
-              {/* Bouton recharger */}
-              <button className="fb-btn fb-btn-a" style={{ padding: '8px 16px', fontSize: 12 }}
-                onClick={() => rechargerSeance(fiche)}
-                title="Recharger cette séance dans le wizard">
-                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                  <path d="M3 21v-5h5"/>
-                </svg>
-                Recharger cette séance
-              </button>
             </div>
           </div>
-        );
-      })}
-    </div>
-  );
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="fb-btn fb-btn-o" onClick={handleSave} disabled={saving || saved} aria-busy={saving}>
+              <Icon name="save" size={14} />
+              {saved ? 'Sauvegardé' : saving ? 'Enregistrement…' : 'Sauvegarder'}
+            </button>
+            <button className="fb-btn fb-btn-v" onClick={() => setStep(1)}>
+              <Icon name="plus" size={14} /> Nouvelle séance
+            </button>
+          </div>
+        </div>
+
+        {/* ── 4 Stats ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 26 }}>
+          <StatC iconBg={P.vertClair}  iconColor={P.vert}  iconName="leaf"   label="Total séances Bach"
+            value={totalSeances} />
+          <StatC iconBg={P.ambreClair} iconColor={P.ambre} iconName="check"  label="Dernière séance"
+            value={derniereDate ? derniereDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—'} />
+          <StatC iconBg={P.terreClair} iconColor={P.terre} iconName="filter" label="Fleurs utilisées"
+            value={fleursUniq.size || '—'} />
+          <StatC iconBg={P.sableFF}    iconColor={P.gris}  iconName="next"   label="Prochain RDV"
+            value={prochainRdv ? new Date(prochainRdv).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—'} />
+        </div>
+
+        {/* ── Tabs ── */}
+        <div style={{ display: 'flex', borderBottom: `1.5px solid ${P.sableF}`, marginBottom: 24 }}>
+          {[['historique','Historique des fiches'],['nouvelle','Nouvelle séance']].map(([id, label]) => (
+            <button key={id} onClick={() => setHistoTab(id)}
+              style={{ padding: '10px 22px', border: 'none', background: 'none', cursor: 'pointer',
+                       fontFamily: 'inherit', fontSize: 13, fontWeight: histoTab === id ? 700 : 500,
+                       color: histoTab === id ? P.vert : P.gris, transition: 'color .2s',
+                       borderBottom: histoTab === id ? `2.5px solid ${P.vert}` : '2.5px solid transparent',
+                       marginBottom: -1.5 }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Tab : Historique ── */}
+        {histoTab === 'historique' && (
+          <>
+            {/* Carte client lecture seule */}
+            <div style={{ background: P.blanc, borderRadius: 14, padding: '22px 26px',
+                          border: `1.5px solid ${P.sableF}`, marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 18 }}>
+                <div style={{ width: 50, height: 50, borderRadius: '50%', background: P.vertClair, flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 20, fontWeight: 800, color: P.vert,
+                              fontFamily: 'Lora, Georgia, serif' }}>
+                  {clientFullName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="fb-serif" style={{ fontSize: 17, fontWeight: 700, color: P.texte }}>
+                    {clientFullName}
+                  </div>
+                  {clientInfo.specialite && (
+                    <span style={{ fontSize: 11, fontWeight: 600, background: P.vertClair, color: P.vert,
+                                   borderRadius: 20, padding: '2px 10px', marginTop: 5, display: 'inline-block' }}>
+                      {clientInfo.specialite}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                {[
+                  { label: 'Email',           val: clientInfo.email          || '—' },
+                  { label: 'Téléphone',       val: clientInfo.tel            || '—' },
+                  { label: 'Date naissance',  val: fmtDate(clientInfo.date_naissance) },
+                  { label: 'Ville',           val: clientInfo.ville          || '—' },
+                ].map(({ label, val }) => (
+                  <div key={label} style={{ background: P.sable, borderRadius: 8, padding: '10px 14px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: P.gris, textTransform: 'uppercase',
+                                  letterSpacing: '.05em', marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: P.texte, wordBreak: 'break-word' }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              {clientInfo.notes && (
+                <div style={{ marginTop: 10, background: P.sable, borderRadius: 8, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: P.gris, textTransform: 'uppercase',
+                                letterSpacing: '.05em', marginBottom: 4 }}>Notes</div>
+                  <div style={{ fontSize: 12, color: P.texteS, lineHeight: 1.6 }}>{clientInfo.notes}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Titre liste + actualiser */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte }}>
+                Séances précédentes
+              </div>
+              <button className="fb-btn fb-btn-o" style={{ padding: '7px 14px', fontSize: 12 }}
+                onClick={fetchHistorique} disabled={loadingHisto}>
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                {loadingHisto ? 'Chargement…' : 'Actualiser'}
+              </button>
+            </div>
+
+            {loadingHisto && (
+              <div style={{ textAlign: 'center', padding: 48, color: P.gris, fontSize: 13 }}>Chargement…</div>
+            )}
+
+            {!loadingHisto && historique.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 56, background: P.blanc, borderRadius: 14,
+                            border: `1.5px solid ${P.sableF}`, color: P.gris }}>
+                <Icon name="leaf" size={36} color={P.sableFF} />
+                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 14 }}>Première séance avec ce client</div>
+                <div style={{ fontSize: 12, marginTop: 6 }}>Les séances sauvegardées apparaîtront ici</div>
+                <button className="fb-btn fb-btn-v" style={{ marginTop: 20 }} onClick={() => setStep(1)}>
+                  <Icon name="plus" size={14} /> Démarrer la première séance
+                </button>
+              </div>
+            )}
+
+            {!loadingHisto && historique.map((fiche, idx) => {
+              const date       = new Date(fiche.created_at);
+              const nbFleurs   = Object.keys(fiche.selection || {}).length;
+              const ci         = fiche.client_info || {};
+              const objectif   = ci.notes || fiche.persos || '';
+              const typeSeance = ci.type_seance || '';
+              const tags       = ci.tags ? ci.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+              return (
+                <div key={fiche.id} style={{ background: P.blanc, borderRadius: 12,
+                                             border: `1.5px solid ${idx === 0 ? P.vert + '60' : P.sableF}`,
+                                             padding: '18px 20px', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+                    <div style={{ minWidth: 110 }}>
+                      {idx === 0 && (
+                        <span style={{ display: 'inline-block', background: P.vert, color: P.blanc,
+                                       fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '2px 8px',
+                                       marginBottom: 6, letterSpacing: '.05em' }}>DERNIÈRE</span>
+                      )}
+                      <div style={{ fontSize: 14, fontWeight: 700, color: P.texte }}>
+                        {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                      </div>
+                      <div style={{ fontSize: 11, color: P.gris, marginTop: 2 }}>
+                        {ci.heure || date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 140 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: tags.length || objectif ? 8 : 0 }}>
+                        <span style={{ background: P.vertClair, color: P.vert, borderRadius: 12,
+                                       padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
+                          {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                        </span>
+                        {typeSeance && (
+                          <span style={{ background: P.sable, color: P.texteS, borderRadius: 12,
+                                         padding: '2px 9px', fontSize: 11, border: `1px solid ${P.sableFF}` }}>
+                            {typeSeance}
+                          </span>
+                        )}
+                        {tags.map(t => (
+                          <span key={t} style={{ background: P.ambreClair, color: P.ambre, borderRadius: 12,
+                                                 padding: '2px 9px', fontSize: 11, fontWeight: 600 }}>{t}</span>
+                        ))}
+                      </div>
+                      {objectif && (
+                        <div style={{ fontSize: 12, color: P.gris, lineHeight: 1.5, fontStyle: 'italic' }}>
+                          {objectif.length > 120 ? objectif.slice(0, 120) + '…' : objectif}
+                        </div>
+                      )}
+                    </div>
+
+                    <button className="fb-btn fb-btn-a" style={{ padding: '8px 16px', fontSize: 12 }}
+                      onClick={() => rechargerSeance(fiche)}
+                      title="Recharger cette séance dans le wizard">
+                      <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                      </svg>
+                      Recharger cette séance
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        {/* ── Tab : Nouvelle séance ── */}
+        {histoTab === 'nouvelle' && (
+          <div style={{ textAlign: 'center', padding: '56px 24px', background: P.blanc, borderRadius: 14,
+                        border: `1.5px solid ${P.sableF}` }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: P.vertClair,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          margin: '0 auto 18px' }}>
+              <Icon name="leaf" size={28} color={P.vert} />
+            </div>
+            <div className="fb-serif" style={{ fontSize: 18, fontWeight: 700, color: P.texte, marginBottom: 8 }}>
+              Nouvelle séance Fleurs de Bach
+            </div>
+            <div style={{ fontSize: 13, color: P.gris, marginBottom: 26, maxWidth: 420, margin: '0 auto 26px' }}>
+              Démarrez le wizard pour composer un nouveau mélange personnalisé pour {clientFullName}.
+            </div>
+            <button className="fb-btn fb-btn-v" style={{ fontSize: 14, padding: '13px 30px' }}
+              onClick={() => setStep(1)}>
+              <Icon name="next" size={15} /> Démarrer la séance
+            </button>
+          </div>
+        )}
+
+      </div>
+    );
+  };
 
   /* ── Étape 2 : Client ───────────────────────────────────────────────── */
   const renderClient = () => (
