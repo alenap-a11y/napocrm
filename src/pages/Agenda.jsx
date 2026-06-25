@@ -426,7 +426,7 @@ export default function Agenda() {
               </button>
               <button onClick={() => window.location.href = `/seances/${detail.id}/fiche`}
                 style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-                <i className="ti ti-notes" style={{ marginRight: 4 }} aria-hidden="true" />Fiche
+                📋 Séance du jour
               </button>
             </div>
           </div>
