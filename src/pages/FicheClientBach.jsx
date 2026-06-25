@@ -261,6 +261,10 @@ export default function FicheClientBach() {
   const [filtreFam, setFiltreFam] = useState('');
   const [saveError, setSaveError] = useState('');
   const [clientInfo, setClientInfo]         = useState({ nom: '', prenom: '' });
+  const [sessionInfo, setSessionInfo]       = useState({
+    heure: '10:00', type_seance: 'Fleurs de Bach', duree: 60, prix: 60,
+    tags: '', email: '', notes: '',
+  });
   const [historique, setHistorique]         = useState([]);
   const [loadingHisto, setLoadingHisto]     = useState(false);
   const [histoAll, setHistoAll]             = useState([]);
@@ -298,9 +302,10 @@ export default function FicheClientBach() {
     setLoadingHisto(true);
     const { data } = await supabase
       .from('fiches_bach')
-      .select('id, created_at, selection, doses, entretien, proto, persos')
+      .select('id, created_at, selection, doses, entretien, proto, persos, client_info')
       .eq('client_id', clientId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(10);
     setHistorique(data || []);
     setLoadingHisto(false);
   }, [clientId]);
@@ -375,7 +380,7 @@ export default function FicheClientBach() {
 
   const clientFullName = [clientInfo.prenom, clientInfo.nom].filter(Boolean).join(' ') || 'Client';
 
-  const STEPS = ['Historique','Client','Entretien','Fleurs','Perso','Mélange','Protocole','Synthèse','Séances'];
+  const STEPS = ['01 Historique','02 Client','03 Entretien','04 Fleurs','05 Mélange','06 Protocole','07 Synthèse'];
 
   /* ── Fusion Bach + Fleurs perso ─────────────────────────────────────── */
   const allFleurs = useMemo(() => [
@@ -450,6 +455,7 @@ export default function FicheClientBach() {
       const { error } = await supabase.from('fiches_bach').insert({
         client_id:  clientId,
         selection, doses, entretien, proto, persos,
+        client_info: sessionInfo,
         created_at: new Date().toISOString(),
       });
       if (error) throw error;
@@ -794,7 +800,115 @@ export default function FicheClientBach() {
     );
   };
 
-  /* ── Étape 1 : Client ───────────────────────────────────────────────── */
+  /* ── Étape 1 : Historique client ────────────────────────────────────── */
+  const renderHistoClient = () => (
+    <div className="fb-anim">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div>
+          <div className="fb-serif" style={{ fontSize: 18, fontWeight: 700, color: P.texte }}>
+            Séances précédentes — {clientFullName}
+          </div>
+          <div style={{ fontSize: 12, color: P.gris, marginTop: 3 }}>
+            {historique.length} séance{historique.length !== 1 ? 's' : ''} enregistrée{historique.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <button className="fb-btn fb-btn-o" onClick={fetchHistorique} disabled={loadingHisto}
+          aria-label="Actualiser l'historique">
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {loadingHisto ? 'Chargement…' : 'Actualiser'}
+        </button>
+      </div>
+
+      {loadingHisto && (
+        <div style={{ textAlign: 'center', padding: 48, color: P.gris, fontSize: 13 }}>Chargement…</div>
+      )}
+
+      {!loadingHisto && historique.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 56, background: P.blanc, borderRadius: 14,
+                      border: `1.5px solid ${P.sableF}`, color: P.gris }}>
+          <Icon name="leaf" size={36} color={P.sableFF} />
+          <div style={{ fontSize: 15, fontWeight: 700, marginTop: 14 }}>Première séance avec ce client</div>
+          <div style={{ fontSize: 12, marginTop: 6 }}>Les séances sauvegardées apparaîtront ici</div>
+        </div>
+      )}
+
+      {!loadingHisto && historique.map((fiche, idx) => {
+        const date       = new Date(fiche.created_at);
+        const nbFleurs   = Object.keys(fiche.selection || {}).length;
+        const ci         = fiche.client_info || {};
+        const objectif   = ci.notes || fiche.persos || '';
+        const typeSeance = ci.type_seance || '';
+        const tags       = ci.tags ? ci.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        return (
+          <div key={fiche.id} style={{ background: P.blanc, borderRadius: 12,
+                                       border: `1.5px solid ${idx === 0 ? P.vert + '60' : P.sableF}`,
+                                       padding: '18px 20px', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+              {/* Date */}
+              <div style={{ minWidth: 110 }}>
+                {idx === 0 && (
+                  <span style={{ display: 'inline-block', background: P.vert, color: P.blanc,
+                                 fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '2px 8px',
+                                 marginBottom: 6, letterSpacing: '.05em' }}>DERNIÈRE</span>
+                )}
+                <div style={{ fontSize: 14, fontWeight: 700, color: P.texte }}>
+                  {date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </div>
+                <div style={{ fontSize: 11, color: P.gris, marginTop: 2 }}>
+                  {ci.heure || date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              {/* Badges + objectif */}
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: tags.length || objectif ? 8 : 0 }}>
+                  <span style={{ background: P.vertClair, color: P.vert, borderRadius: 12,
+                                 padding: '2px 9px', fontSize: 11, fontWeight: 700 }}>
+                    {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                  </span>
+                  {typeSeance && (
+                    <span style={{ background: P.sable, color: P.texteS, borderRadius: 12,
+                                   padding: '2px 9px', fontSize: 11, border: `1px solid ${P.sableFF}` }}>
+                      {typeSeance}
+                    </span>
+                  )}
+                  {tags.map(t => (
+                    <span key={t} style={{ background: P.ambreClair, color: P.ambre, borderRadius: 12,
+                                           padding: '2px 9px', fontSize: 11, fontWeight: 600 }}>{t}</span>
+                  ))}
+                </div>
+                {objectif && (
+                  <div style={{ fontSize: 12, color: P.gris, lineHeight: 1.5, fontStyle: 'italic' }}>
+                    {objectif.length > 120 ? objectif.slice(0, 120) + '…' : objectif}
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton recharger */}
+              <button className="fb-btn fb-btn-a" style={{ padding: '8px 16px', fontSize: 12 }}
+                onClick={() => rechargerSeance(fiche)}
+                title="Recharger cette séance dans le wizard">
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
+                Recharger cette séance
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  /* ── Étape 2 : Client ───────────────────────────────────────────────── */
   const renderClient = () => (
     <div className="fb-anim">
       <div style={{ background: P.blanc, borderRadius: 14, padding: 28, border: `1.5px solid ${P.sableF}`, marginBottom: 18 }}>
@@ -832,10 +946,57 @@ export default function FicheClientBach() {
           </div>
         ))}
       </div>
+
+      <div style={{ background: P.blanc, borderRadius: 14, padding: 28, border: `1.5px solid ${P.sableF}`, marginTop: 18 }}>
+        <div className="fb-serif" style={{ fontSize: 16, fontWeight: 600, color: P.texte, marginBottom: 18 }}>
+          Informations de séance
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Heure</label>
+            <input type="time" className="fb-inp" value={sessionInfo.heure}
+              onChange={e => setSessionInfo(p => ({ ...p, heure: e.target.value }))} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Type de séance</label>
+            <select className="fb-inp" style={{ cursor: 'pointer' }} value={sessionInfo.type_seance}
+              onChange={e => setSessionInfo(p => ({ ...p, type_seance: e.target.value }))}>
+              {['Sophrologie','Fleurs de Bach','Naturopathie','Coaching','Énergétique','Autre'].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Durée (min)</label>
+            <input type="number" className="fb-inp" min={1} max={480} value={sessionInfo.duree}
+              onChange={e => setSessionInfo(p => ({ ...p, duree: parseInt(e.target.value) || 60 }))} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Prix (€)</label>
+            <input type="number" className="fb-inp" min={0} value={sessionInfo.prix}
+              onChange={e => setSessionInfo(p => ({ ...p, prix: parseFloat(e.target.value) || 0 }))} />
+          </div>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Email</label>
+          <input type="email" className="fb-inp" placeholder="client@exemple.com" value={sessionInfo.email}
+            onChange={e => setSessionInfo(p => ({ ...p, email: e.target.value }))} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Tags (séparés par ,)</label>
+          <input className="fb-inp" placeholder="Stress, Sommeil…" value={sessionInfo.tags}
+            onChange={e => setSessionInfo(p => ({ ...p, tags: e.target.value }))} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: P.texteS, marginBottom: 5 }}>Notes / Observations</label>
+          <textarea className="fb-inp fb-ta" placeholder="Observations, compte-rendu…" value={sessionInfo.notes}
+            onChange={e => setSessionInfo(p => ({ ...p, notes: e.target.value }))} />
+        </div>
+      </div>
     </div>
   );
 
-  /* ── Étape 1 : Entretien ────────────────────────────────────────────── */
+  /* ── Étape 3 : Entretien ────────────────────────────────────────────── */
   const renderEntretien = () => (
     <div className="fb-anim">
       {QUESTIONS.map((q, i) => {
@@ -971,7 +1132,7 @@ export default function FicheClientBach() {
         <Icon name="leaf" size={40} color={P.sableFF} />
         <div style={{ fontSize: 16, fontWeight: 700, marginTop: 14 }}>Aucune fleur sélectionnée</div>
         <div style={{ fontSize: 13, marginTop: 6 }}>Retournez à l'étape Fleurs pour commencer</div>
-        <button className="fb-btn fb-btn-o" style={{ marginTop: 20 }} onClick={() => setStep(2)}>
+        <button className="fb-btn fb-btn-o" style={{ marginTop: 20 }} onClick={() => setStep(3)}>
           <Icon name="prev" size={14} /> Retour aux fleurs
         </button>
       </div>
@@ -1296,9 +1457,20 @@ export default function FicheClientBach() {
     setEntretien(fiche.entretien || {});
     setProto(fiche.proto || { duree: 3, prises: 3, gouttes: 4, volume: 30 });
     setPersos(fiche.persos || '');
+    if (fiche.client_info) {
+      setSessionInfo({
+        heure:       fiche.client_info.heure       || '10:00',
+        type_seance: fiche.client_info.type_seance || 'Fleurs de Bach',
+        duree:       fiche.client_info.duree       || 60,
+        prix:        fiche.client_info.prix        || 60,
+        tags:        fiche.client_info.tags        || '',
+        email:       fiche.client_info.email       || '',
+        notes:       fiche.client_info.notes       || '',
+      });
+    }
     setSaved(false);
     setSaveError('');
-    setStep(1); // retour sur Client (step 0 = Historique global)
+    setStep(1); // retour sur 02 Client
   }, []);
 
   const renderHistorique = () => (
@@ -1648,7 +1820,7 @@ export default function FicheClientBach() {
   /* ═══════════════════════════════════════════════════════════════════════
      RENDU PRINCIPAL
   ═══════════════════════════════════════════════════════════════════════ */
-  const STEP_CONTENT = [renderHistoGlobal, renderClient, renderEntretien, renderFleurs, renderFleursPerso, renderMelange, renderProtocole, renderSynthese, renderHistorique];
+  const STEP_CONTENT = [renderHistoClient, renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese];
 
   return (
     <div className="fb">
