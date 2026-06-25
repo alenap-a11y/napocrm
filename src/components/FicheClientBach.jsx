@@ -225,6 +225,68 @@ export default function FicheClientBach({ clientNom }) {
   });
 
   /* ── Supabase ──────────────────────────────────────────────────────────── */
+  const handlePdfCompteRendu = async () => {
+    const {default:jsPDF} = await import('jspdf');
+    const doc = new jsPDF();
+    const vert = [61,90,62];
+    const ambre = [160,98,42];
+    const gris = [120,100,85];
+    let y = 20;
+    const line = (txt, x=14, size=11, color=[40,31,14], bold=false) => {
+      doc.setFontSize(size); doc.setTextColor(...color);
+      doc.setFont('helvetica', bold?'bold':'normal');
+      doc.text(txt, x, y); y += size*0.5+3;
+    };
+    const sep = () => { doc.setDrawColor(220,210,200); doc.line(14,y,196,y); y+=6; };
+    // Header
+    doc.setFillColor(...vert); doc.rect(0,0,210,28,'F');
+    doc.setFontSize(18); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+    doc.text('Fleurs de Bach — Compte-rendu de séance', 14, 18);
+    y = 36;
+    // Infos client
+    line(`Client : ${clientInfo.prenom||''} ${clientInfo.nom||''}`, 14, 12, vert, true);
+    line(`Date : ${new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`, 14, 11, gris);
+    y += 4; sep();
+    // Fleurs
+    line('FLEURS SÉLECTIONNÉES', 14, 12, ambre, true); y+=2;
+    const niveaux = {mel:'Mélange',fond:'Fond',prio:'Priorité'};
+    Object.entries(selection).forEach(([num, niv]) => {
+      const f = FLEURS.find(fl=>fl.num==num);
+      if(f) line(`• ${f.fr} (n°${f.num}) — ${niveaux[niv]||niv}`, 18, 10, [40,31,14]);
+    });
+    if(Object.keys(selection).length===0) line('Aucune fleur sélectionnée', 18, 10, gris);
+    y+=4; sep();
+    // Protocole
+    line('PROTOCOLE', 14, 12, ambre, true); y+=2;
+    line(`• Durée : ${proto.duree||3} semaines`, 18, 10);
+    line(`• Prises par jour : ${proto.prises||3}`, 18, 10);
+    line(`• Gouttes par prise : ${proto.gouttes||4}`, 18, 10);
+    line(`• Volume du flacon : ${proto.volume||30}ml`, 18, 10);
+    line(`• Dilution : 2 gouttes de chaque fleur dans eau minérale`, 18, 10);
+    y+=4; sep();
+    // Notes entretien
+    line("NOTES D'ENTRETIEN", 14, 12, ambre, true); y+=2;
+    const notesTexte = Object.values(entretien).map(e=>e?.note).filter(Boolean).join(' | ');
+    if(notesTexte) {
+      const lines = doc.splitTextToSize(notesTexte, 170);
+      doc.setFontSize(10); doc.setTextColor(40,31,14); doc.setFont('helvetica','normal');
+      lines.forEach(l => { doc.text(l, 18, y); y+=5; });
+    } else { line('Aucune note saisie', 18, 10, gris); }
+    y+=4; sep();
+    // Synthèse
+    if(persos) {
+      line('SYNTHÈSE / OBSERVATIONS', 14, 12, ambre, true); y+=2;
+      const lines2 = doc.splitTextToSize(persos, 170);
+      doc.setFontSize(10); doc.setTextColor(40,31,14); doc.setFont('helvetica','normal');
+      lines2.forEach(l => { doc.text(l, 18, y); y+=5; });
+      y+=4; sep();
+    }
+    // Footer
+    doc.setFontSize(9); doc.setTextColor(...gris);
+    doc.text('Généré par Naposolo · naposolo.com', 14, 285);
+    doc.save(`bach_compte_rendu_${(clientInfo.nom||'client').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -683,6 +745,9 @@ export default function FicheClientBach({ clientNom }) {
           {saving?'Enregistrement...':saved?'✓ Sauvegardé':'Sauvegarder la fiche'}
         </button>
         {saved&&<span style={{color:P.vert,fontSize:13,fontWeight:700}}>✓ Enregistrée dans Supabase</span>}
+        {saved&&<button className="fb-btn fb-btn-a" onClick={()=>handlePdfCompteRendu()} style={{marginLeft:8}}>📄 PDF compte-rendu</button>}
+        {saved&&<button className="fb-btn fb-btn-a" onClick={()=>handlePdfCompteRendu()} style={{marginLeft:8}}>📄 PDF compte-rendu</button>}
+        {saved&&<button className="fb-btn fb-btn-a" onClick={()=>handlePdfCompteRendu()} style={{marginLeft:8}}>📄 Générer PDF compte-rendu</button>}
       </div>
 
       {/* PDF */}
@@ -875,8 +940,9 @@ export default function FicheClientBach({ clientNom }) {
 
         {/* Header */}
         <div style={{padding:'28px 0 22px',borderBottom:`1.5px solid ${P.sableF}`,marginBottom:28}}>
-          <div style={{fontFamily:'Georgia,serif',fontSize:26,fontWeight:700,color:P.vert,marginBottom:4}}>
-            Fleurs de Bach
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+            <div style={{fontFamily:'Georgia,serif',fontSize:26,fontWeight:700,color:P.vert}}>Fleurs de Bach</div>
+            <button onClick={()=>window.location.href='/fleurs-de-bach'} style={{padding:'8px 18px',background:P.vertClair,color:P.vert,border:`1.5px solid ${P.vert}`,borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>🏠 Accueil Bach</button>
           </div>
           <div style={{fontSize:13,color:P.gris}}>
             Fiche personnalisée · <span style={{color:P.texte,fontWeight:700}}>{clientInfo.prenom} {clientInfo.nom}</span>

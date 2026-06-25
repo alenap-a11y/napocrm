@@ -15,6 +15,7 @@ const Clients = lazy(() => import('./pages/Clients'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Notes = lazy(() => import('./pages/Notes'))
 const FicheClientBach = lazy(() => import('./components/FicheClientBach'))
+const PageBach = lazy(() => import('./pages/PageBach'))
 const SimulateurFiscal = lazy(() => import('./components/SimulateurFiscal'))
 const NapoPlus = lazy(() => import('./pages/NapoPlus'))
 const Factures = lazy(() => import('./pages/Factures'))
@@ -458,7 +459,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/clients"  element={<Clients />} />
               <Route path="/agenda"   element={<Agenda />} />
               <Route path="/notes"    element={<Notes />} />
-              <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
+              <Route path="/fleurs-de-bach"                element={<PageBach />} />
               <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
               <Route path="/fiscal"    element={<SimulateurFiscal />} />
