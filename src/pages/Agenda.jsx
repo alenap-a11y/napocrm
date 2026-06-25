@@ -424,7 +424,7 @@ export default function Agenda() {
                 style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <i className="ti ti-pencil" style={{ marginRight: 4 }} aria-hidden="true" />Modifier
               </button>
-              <button onClick={() => window.location.href = `/clients`}
+              <button onClick={() => window.location.href = `/seances/${detail.id}/fiche`}
                 style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
                 <i className="ti ti-notes" style={{ marginRight: 4 }} aria-hidden="true" />Fiche
               </button>
