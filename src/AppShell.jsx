@@ -28,10 +28,8 @@ const FicheSeance = lazy(() => import('./pages/FicheSeance'))
 class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error) {
-    if (error?.message?.includes('dynamically imported') || error?.message?.includes('Failed to fetch')) {
-      window.location.reload()
-    }
+  componentDidCatch() {
+    window.location.reload()
   }
   render() {
     if (this.state.hasError) return <div style={{padding:'2rem',color:'#666'}}>Rechargement...</div>
@@ -100,7 +98,6 @@ const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C
 
 export default function AppShell({ user, onSignOut }) {
   useActivityTracker()
-  const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
   const [sbVis, setSbVis] = useState(loadSbVis)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
