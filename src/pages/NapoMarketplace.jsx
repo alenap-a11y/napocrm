@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const TABS = ['Tous', 'Intelligence Artificielle', 'Experts', 'Outils']
 
@@ -300,7 +301,7 @@ export default function NapoMarketplace() {
   const [activeExpert, setActiveExpert] = useState('juridique')
   const [suggModal, setSuggModal] = useState(false)
   const [suggText, setSuggText] = useState('')
-
+  const navigate = useNavigate()
 
   function sendSuggestion() {
     if (!suggText.trim()) return
@@ -389,7 +390,7 @@ export default function NapoMarketplace() {
             <SectionHeader icon="ti-robot" color="#534AB7" bg="#EEEDFE" label="Intelligence Artificielle" sub="Des outils IA pensés pour les praticiens du bien-être" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14, marginTop: 18 }}>
               {IA_ITEMS.map(item => (
-                <IACard key={item.id} item={item} onNavigate={(path) => { window.location.hash = path }} />
+                <IACard key={item.id} item={item} onNavigate={navigate} />
               ))}
             </div>
           </section>

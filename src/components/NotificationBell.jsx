@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { useNotifications } from '../hooks/useNotifications';
+import { useNavigate } from 'react-router-dom';
+
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   function handleBellClick() {
     const opening = !open
@@ -24,7 +27,7 @@ export default function NotificationBell() {
             <div
               key={n.id}
               className={n.unread ? 'unread' : 'read'}
-              onClick={() => { markAsRead(n.id); if (n.lien) window.location.hash = n.lien; setOpen(false); }}
+              onClick={() => { markAsRead(n.id); if (n.lien) navigate(n.lien); setOpen(false); }}
             >
               <strong>{n.msg}</strong>
               <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>{n.time}</span>

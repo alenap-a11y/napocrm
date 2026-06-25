@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AdminDashboard from './AdminDashboard'
 import SupabaseStats from './SupabaseStats'
@@ -12,12 +13,13 @@ import AdminNapoPlus from './AdminNapoPlus'
 import AdminMarketplace from './AdminMarketplace'
 
 export default function AdminLayout({ user }) {
+  const navigate = useNavigate()
   const [page, setPage] = useState('dashboard')
   const [decoOpen, setDecoOpen] = useState(false)
 
   async function signOut() {
     await supabase.auth.signOut()
-    window.location.hash = '#/'
+    navigate('/')
   }
 
   const navItems = [
