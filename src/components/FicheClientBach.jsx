@@ -297,7 +297,7 @@ export default function FicheClientBach({ clientNom }) {
     try {
       const { error } = await supabase.from('fiches_bach').insert({
         client_id: clientId,
-        selection, doses, entretien, proto, persos,
+        selection, doses, entretien, proto, persos, fleursPerso,
         created_at: new Date().toISOString(),
       });
       if (error) throw error;
