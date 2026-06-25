@@ -102,6 +102,7 @@ export default function Agenda() {
   const { rdvs, loading, fetchRdvs } = useRendezVousSync()
   const [clientsAll,   setClientsAll]   = useState([])
   const [detail,       setDetail]       = useState(null)
+  const navigate = useNavigate()
   const [selectedDate, setSelectedDate] = useState(todayStr)
 
   const [modal,      setModal]      = useState(false)
@@ -421,8 +422,12 @@ export default function Agenda() {
                 <i className="ti ti-trash" style={{ marginRight: 4 }} aria-hidden="true" />Supprimer
               </button>
               <button onClick={() => openEdit(detail)}
-                style={{ flex: 1, padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <i className="ti ti-pencil" style={{ marginRight: 4 }} aria-hidden="true" />Modifier
+              </button>
+              <button onClick={() => navigate(`/seances/${detail.id}/fiche`)}
+                style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                <i className="ti ti-notes" style={{ marginRight: 4 }} aria-hidden="true" />Fiche
               </button>
             </div>
           </div>
