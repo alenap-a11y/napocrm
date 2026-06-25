@@ -131,12 +131,12 @@ export default function FicheSeance() {
         {/* ACTIONS */}
         <div style={{ display: "flex", gap: 12 }}>
           <button
-            onClick={() => window.location.hash = '#seances'}
+            onClick={() => window.location.href = '/seances'}
             style={{ ...s.btn, background: "#f0f0ec", color: "#333" }}>
             📋 Voir toutes les séances
           </button>
           <button
-            onClick={() => client && (window.location.hash = `#clients/${client.id}`)}
+            onClick={() => client && (window.location.href = `/clients/${client.id}`)}
             style={{ ...s.btn, background: "#2d6a4f", color: "#fff" }}
             disabled={!client}>
             👤 Fiche client
