@@ -249,7 +249,7 @@ const Icon = ({ name, size = 16, color = 'currentColor' }) => {
 export default function FicheClientBach() {
   const { clientId } = useParams();
 
-  const [step, setStep]           = useState(0);
+  const [step, setStep]           = useState(0);  // 0 = Historique global
   const [selection, setSelection] = useState({});    // { num: 'mel'|'fond'|'prio' }
   const [doses, setDoses]         = useState({});    // { num: 1-6 }
   const [entretien, setEntretien] = useState({});    // { qid: { tags:[], note:'' } }
@@ -260,9 +260,26 @@ export default function FicheClientBach() {
   const [search, setSearch]       = useState('');
   const [filtreFam, setFiltreFam] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [clientInfo, setClientInfo]     = useState({ nom: '', prenom: '' });
-  const [historique, setHistorique]     = useState([]);
-  const [loadingHisto, setLoadingHisto] = useState(false);
+  const [clientInfo, setClientInfo]         = useState({ nom: '', prenom: '' });
+  const [historique, setHistorique]         = useState([]);
+  const [loadingHisto, setLoadingHisto]     = useState(false);
+  const [histoAll, setHistoAll]             = useState([]);
+  const [loadingHistoAll, setLoadingHistoAll] = useState(false);
+  const [searchHistoAll, setSearchHistoAll] = useState('');
+  const [userId, setUserId]                 = useState(null);
+  const [fleursPerso, setFleursPerso]       = useState([]);
+  const [loadingPerso, setLoadingPerso]     = useState(false);
+  const [showForm, setShowForm]             = useState(false);
+  const [editingId, setEditingId]           = useState(null);   // null = ajout
+  const [deleteConfirm, setDeleteConfirm]   = useState(null);   // id à confirmer
+  const [savingPerso, setSavingPerso]       = useState(false);
+  const FORM_VIDE = { name:'', fr:'', sys:'Australian Bush', fam:'Incertitude', theme:'', indic:'', couleur:'#3D5A3E' };
+  const [formPerso, setFormPerso]           = useState(FORM_VIDE);
+
+  /* ── userId depuis la session Supabase ─────────────────────────────── */
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data?.user?.id ?? null));
+  }, []);
 
   /* ── Fetch nom/prénom client ─────────────────────────────────────────── */
   useEffect(() => {
@@ -275,7 +292,7 @@ export default function FicheClientBach() {
       .then(({ data }) => { if (data) setClientInfo(data); });
   }, [clientId]);
 
-  /* ── Fetch historique des séances ───────────────────────────────────── */
+  /* ── Fetch historique du client courant ─────────────────────────────── */
   const fetchHistorique = useCallback(async () => {
     if (!clientId) return;
     setLoadingHisto(true);
@@ -290,9 +307,22 @@ export default function FicheClientBach() {
 
   useEffect(() => { fetchHistorique(); }, [fetchHistorique]);
 
+  /* ── Fetch historique global (tous clients) ─────────────────────────── */
+  const fetchHistoAll = useCallback(async () => {
+    setLoadingHistoAll(true);
+    const { data } = await supabase
+      .from('fiches_bach')
+      .select('*, clients(nom, prenom)')
+      .order('updated_at', { ascending: false });
+    setHistoAll(data || []);
+    setLoadingHistoAll(false);
+  }, []);
+
+  useEffect(() => { fetchHistoAll(); }, [fetchHistoAll]);
+
   const clientFullName = [clientInfo.prenom, clientInfo.nom].filter(Boolean).join(' ') || 'Client';
 
-  const STEPS = ['Client','Entretien','Fleurs','Mélange','Protocole','Synthèse','Historique'];
+  const STEPS = ['Historique','Client','Entretien','Fleurs','Mélange','Protocole','Synthèse','Séances'];
 
   /* ── Dérivés ───────────────────────────────────────────────────────────── */
   const selected = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
@@ -354,19 +384,27 @@ export default function FicheClientBach() {
   };
 
   /* ── Génération PDF ─────────────────────────────────────────────────────── */
-  const genPDF = async (type) => {
+  /* override = { clientName, selection, doses, entretien, proto, persos, date } */
+  const genPDF = async (type, override = null) => {
+    const pdfName      = override?.clientName ?? clientFullName;
+    const pdfSel       = override?.selection  ?? selection;
+    const pdfDoses     = override?.doses      ?? doses;
+    const pdfEntretien = override?.entretien  ?? entretien;
+    const pdfProto     = override?.proto      ?? proto;
+    const pdfPersos    = override?.persos     ?? persos;
+    const pdfDate      = override?.date       ? new Date(override.date) : new Date();
+    const pdfSelected  = FLEURS.filter(f => pdfSel[f.num]);
+
     const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const W = 210, PL = 18, PR = 192;
 
-    /* couleurs par type */
     const palette = {
       praticien:  { h: [61, 90, 62],   accent: [139, 94, 60]  },
       client:     { h: [160, 98, 42],  accent: [61, 90, 62]   },
       ordonnance: { h: [139, 94, 60],  accent: [160, 98, 42]  },
     }[type];
 
-    /* helpers */
     let y = 0;
     const setY = v => { y = v; };
     const addY = v => { y += v; };
@@ -408,13 +446,12 @@ export default function FicheClientBach() {
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
     doc.setTextColor(255, 255, 255);
     doc.text('Naposolo CRM · Bien-être intégratif', PR, 15, { align: 'right' });
-
     setY(30);
 
     /* ─ Infos client ─ */
-    bold(`Client : ${clientFullName}`, PL, 12, [44, 31, 14]);
+    bold(`Client : ${pdfName}`, PL, 12, [44, 31, 14]);
     addY(6);
-    norm(`Date de séance : ${new Date().toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`, PL, 9, [120, 100, 80]);
+    norm(`Date de séance : ${pdfDate.toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`, PL, 9, [120, 100, 80]);
     addY(1); hr();
 
     /* ─ Entretien (praticien) ─ */
@@ -422,14 +459,14 @@ export default function FicheClientBach() {
       sectionTitle('ENTRETIEN');
       let hasEntretien = false;
       QUESTIONS.forEach(q => {
-        const e = entretien[q.id];
-        if (!e || (!e.tags.length && !e.note)) return;
+        const e = pdfEntretien[q.id];
+        if (!e || (!e.tags?.length && !e.note)) return;
         hasEntretien = true;
         needPage(16);
         bold(`${q.label}`, PL, 9.5, palette.accent);
         addY(5.5);
-        if (e.tags.length) { norm(`Mots-clés : ${e.tags.join(', ')}`, PL + 3, 8.5, [80, 65, 50]); }
-        if (e.note)        { norm(e.note, PL + 3, 8.5, [110, 90, 70]); }
+        if (e.tags?.length) { norm(`Mots-clés : ${e.tags.join(', ')}`, PL + 3, 8.5, [80, 65, 50]); }
+        if (e.note)         { norm(e.note, PL + 3, 8.5, [110, 90, 70]); }
         addY(2);
       });
       if (!hasEntretien) { norm('Aucune note d\'entretien saisie.', PL, 9, [155, 139, 122]); }
@@ -438,34 +475,29 @@ export default function FicheClientBach() {
 
     /* ─ Composition ─ */
     sectionTitle(type === 'client' ? 'VOS FLEURS SÉLECTIONNÉES' : 'COMPOSITION DU MÉLANGE');
-
-    const orderNiv = [['prio','Priorité immédiate'], ['mel','Mélange principal'], ['fond','Pattern profond (fond)']];
+    const orderNiv = [['prio','Priorité immédiate'],['mel','Mélange principal'],['fond','Pattern profond (fond)']];
     orderNiv.forEach(([niv, lbl]) => {
-      const fl = selected.filter(f => selection[f.num] === niv);
+      const fl = pdfSelected.filter(f => pdfSel[f.num] === niv);
       if (!fl.length) return;
       needPage(12);
       bold(lbl.toUpperCase(), PL, 8, [155, 139, 122]);
       addY(5);
       fl.forEach(f => {
-        const d = doses[f.num] || 3;
+        const d = pdfDoses[f.num] || 3;
         needPage(10);
         if (type === 'client') {
           bold(`${f.fr}`, PL + 2, 10, [44, 31, 14]);
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-          doc.setTextColor(155, 139, 122);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(155, 139, 122);
           doc.text(`${f.name}`, PL + 2 + doc.getTextWidth(f.fr) + 2, y);
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-          doc.setTextColor(...palette.accent);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...palette.accent);
           doc.text(`${d} gouttes`, PR, y, { align: 'right' });
           addY(5.5);
           norm(f.theme, PL + 4, 8.5, [120, 100, 80]);
         } else {
           bold(`N°${String(f.num).padStart(2,'0')} ${f.fr}`, PL + 2, 10, [44, 31, 14]);
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-          doc.setTextColor(155, 139, 122);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(155, 139, 122);
           doc.text(`/ ${f.name}`, PL + 2 + doc.getTextWidth(`N°${String(f.num).padStart(2,'0')} ${f.fr}`) + 2, y);
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
-          doc.setTextColor(...palette.accent);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...palette.accent);
           doc.text(`${d} gtt`, PR, y, { align: 'right' });
           addY(5.5);
         }
@@ -473,37 +505,32 @@ export default function FicheClientBach() {
       });
       addY(3);
     });
-
-    if (!selected.length) { norm('Aucune fleur sélectionnée.', PL, 9, [155, 139, 122]); }
-
+    if (!pdfSelected.length) { norm('Aucune fleur sélectionnée.', PL, 9, [155, 139, 122]); }
     hr();
 
     /* ─ Protocole ─ */
     sectionTitle('PROTOCOLE DE TRAITEMENT');
     const rows = [
-      ['Durée du traitement',   `${proto.duree} semaine${proto.duree > 1 ? 's' : ''}`],
-      ['Prises par jour',       `${proto.prises} prise${proto.prises > 1 ? 's' : ''}`],
-      ['Gouttes par prise',     `${proto.gouttes} gouttes`],
-      ['Volume du flacon',      `${proto.volume} ml`],
-      ['Consommation estimée',  `${proto.prises * proto.gouttes * proto.duree * 7} gouttes au total`],
+      ['Durée du traitement',  `${pdfProto.duree} semaine${pdfProto.duree > 1 ? 's' : ''}`],
+      ['Prises par jour',      `${pdfProto.prises} prise${pdfProto.prises > 1 ? 's' : ''}`],
+      ['Gouttes par prise',    `${pdfProto.gouttes} gouttes`],
+      ['Volume du flacon',     `${pdfProto.volume} ml`],
+      ['Consommation estimée', `${pdfProto.prises * pdfProto.gouttes * pdfProto.duree * 7} gouttes au total`],
     ];
     rows.forEach(([l, v]) => {
       needPage(8);
       norm(l, PL, 9.5, [120, 100, 80]);
       y -= 4.5;
       bold(v, PR, 9.5, [44, 31, 14]);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setDrawColor(220, 213, 204);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setDrawColor(220, 213, 204);
       doc.line(PL + doc.getStringUnitWidth(l) * 9.5 * 0.352 + 3, y - 1.5, PR - doc.getStringUnitWidth(v) * 9.5 * 0.352 - 1, y - 1.5);
       addY(6.5);
     });
 
-    /* ─ Notes praticien ─ */
-    if (persos && type === 'praticien') {
+    if (pdfPersos && type === 'praticien') {
       addY(3); hr(true);
       sectionTitle('NOTES & CONSEILS PERSONNALISÉS');
-      norm(persos, PL, 9.5, [44, 31, 14]);
+      norm(pdfPersos, PL, 9.5, [44, 31, 14]);
     }
 
     /* ─ Footer ─ */
@@ -515,7 +542,7 @@ export default function FicheClientBach() {
       doc.text(`${i}/${totalPages}`, PR, 290, { align: 'right' });
     }
 
-    const nom = (clientFullName || 'client').replace(/\s+/g, '_').toLowerCase();
+    const nom = (pdfName || 'client').replace(/\s+/g, '_').toLowerCase();
     doc.save(`bach_${type}_${nom}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
@@ -523,7 +550,175 @@ export default function FicheClientBach() {
      RENDU PAR ÉTAPE
   ═══════════════════════════════════════════════════════════════════════ */
 
-  /* ── Étape 0 : Client ───────────────────────────────────────────────── */
+  /* ── Étape 0 : Historique global ───────────────────────────────────── */
+  const renderHistoGlobal = () => {
+    const now   = new Date();
+    const mois  = now.getMonth();
+    const annee = now.getFullYear();
+
+    const ceMois = histoAll.filter(f => {
+      const d = new Date(f.updated_at || f.created_at);
+      return d.getMonth() === mois && d.getFullYear() === annee;
+    });
+
+    const scores = histoAll.map(f => Math.min(Object.keys(f.selection || {}).length, 10));
+    const scoreMoyen = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—';
+
+    const q = searchHistoAll.toLowerCase();
+    const fichesFiltrees = histoAll.filter(f => {
+      if (!q) return true;
+      const nom    = [f.clients?.prenom, f.clients?.nom].filter(Boolean).join(' ').toLowerCase();
+      const motif  = (f.client_info?.motif || '').toLowerCase();
+      const fleurs = FLEURS.filter(fl => f.selection?.[fl.num])
+                           .map(fl => fl.fr.toLowerCase() + ' ' + fl.name.toLowerCase())
+                           .join(' ');
+      return nom.includes(q) || motif.includes(q) || fleurs.includes(q);
+    });
+
+    return (
+      <div className="fb-anim">
+        {/* ── 3 stats ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { label: 'Total séances',  val: histoAll.length,  color: P.vert  },
+            { label: 'Ce mois',        val: ceMois.length,    color: P.ambre },
+            { label: 'Score moyen /10',val: scoreMoyen,       color: P.terre },
+          ].map(({ label, val, color }) => (
+            <div key={label} style={{ background: P.blanc, borderRadius: 12, padding: '18px 20px',
+                                      border: `1.5px solid ${P.sableF}`, textAlign: 'center' }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color, fontFamily: 'Lora, Georgia, serif' }}>{val}</div>
+              <div style={{ fontSize: 11, color: P.gris, marginTop: 5 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Barre de recherche ── */}
+        <div style={{ position: 'relative', marginBottom: 16 }}>
+          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
+                         color: P.gris, pointerEvents: 'none' }}>
+            <Icon name="search" size={15} />
+          </span>
+          <input className="fb-inp" style={{ paddingLeft: 38 }}
+            placeholder="Rechercher par client, motif ou fleur…"
+            value={searchHistoAll}
+            onChange={e => setSearchHistoAll(e.target.value)}
+            aria-label="Recherche dans l'historique" />
+        </div>
+
+        {/* ── Compteur résultats + actualiser ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: P.gris }}>
+            {fichesFiltrees.length} fiche{fichesFiltrees.length !== 1 ? 's' : ''}
+            {q ? ` pour « ${searchHistoAll} »` : ''}
+          </span>
+          <button className="fb-btn fb-btn-o" style={{ padding: '7px 14px', fontSize: 12 }}
+            onClick={fetchHistoAll} disabled={loadingHistoAll}>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            {loadingHistoAll ? 'Chargement…' : 'Actualiser'}
+          </button>
+        </div>
+
+        {/* ── Liste des fiches ── */}
+        {loadingHistoAll && (
+          <div style={{ textAlign: 'center', padding: 48, color: P.gris, fontSize: 13 }}>Chargement…</div>
+        )}
+
+        {!loadingHistoAll && fichesFiltrees.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 56, background: P.blanc, borderRadius: 14,
+                        border: `1.5px solid ${P.sableF}`, color: P.gris }}>
+            <Icon name="search" size={32} color={P.sableFF} />
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 12 }}>Aucun résultat</div>
+            <div style={{ fontSize: 12, marginTop: 4 }}>Essayez un autre terme de recherche</div>
+          </div>
+        )}
+
+        {!loadingHistoAll && fichesFiltrees.map(fiche => {
+          const clientName = [fiche.clients?.prenom, fiche.clients?.nom].filter(Boolean).join(' ') || '—';
+          const motif      = fiche.client_info?.motif || '';
+          const date       = new Date(fiche.updated_at || fiche.created_at);
+          const sel        = fiche.selection || {};
+          const nbFleurs   = Object.keys(sel).length;
+          const score      = Math.min(nbFleurs, 10);
+          const fleursListe= FLEURS.filter(f => sel[f.num]);
+          const tags3      = fleursListe.slice(0, 3);
+          const reste      = fleursListe.length - 3;
+
+          return (
+            <div key={fiche.id} style={{ background: P.blanc, borderRadius: 12, padding: '16px 18px',
+                                         border: `1.5px solid ${P.sableF}`, marginBottom: 10,
+                                         display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+
+              {/* Score visuel */}
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: P.sable, flexShrink: 0,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            justifyContent: 'center', border: `1.5px solid ${P.sableFF}` }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: P.vert, lineHeight: 1 }}>{score}</div>
+                <div style={{ fontSize: 8, color: P.gris }}>/ 10</div>
+              </div>
+
+              {/* Infos principales */}
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: P.texte }}>{clientName}</span>
+                  {motif && (
+                    <span style={{ fontSize: 11, color: P.gris, background: P.sable, borderRadius: 8,
+                                   padding: '1px 8px', border: `1px solid ${P.sableFF}` }}>{motif}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: P.gris, marginBottom: 8 }}>
+                  {date.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}
+                  {' · '}
+                  {date.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
+                  {' · '}
+                  {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                </div>
+                {/* Tags fleurs (3 max + reste) */}
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {tags3.map(f => (
+                    <span key={f.num} style={{ background: P.sable, color: P.texteS, borderRadius: 10,
+                                               padding: '2px 8px', fontSize: 11,
+                                               border: `1px solid ${P.sableFF}` }}>{f.fr}</span>
+                  ))}
+                  {reste > 0 && (
+                    <span style={{ background: P.ambreClair, color: P.ambre, borderRadius: 10,
+                                   padding: '2px 8px', fontSize: 11, fontWeight: 700,
+                                   border: `1px solid ${P.ambre}44` }}>+{reste}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Bouton télécharger PDF */}
+              <button
+                title="Télécharger la fiche praticien"
+                aria-label={`Télécharger PDF de ${clientName}`}
+                onClick={() => genPDF('praticien', {
+                  clientName,
+                  selection: fiche.selection || {},
+                  doses:     fiche.doses     || {},
+                  entretien: fiche.entretien || {},
+                  proto:     fiche.proto     || { duree:3, prises:3, gouttes:4, volume:30 },
+                  persos:    fiche.persos    || '',
+                  date:      fiche.updated_at || fiche.created_at,
+                })}
+                style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${P.sableFF}`,
+                         background: P.blanc, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                         justifyContent: 'center', color: P.terre, flexShrink: 0,
+                         transition: 'all .18s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = P.terreClair; e.currentTarget.style.borderColor = P.terre; }}
+                onMouseLeave={e => { e.currentTarget.style.background = P.blanc; e.currentTarget.style.borderColor = P.sableFF; }}>
+                <Icon name="pdf" size={17} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /* ── Étape 1 : Client ───────────────────────────────────────────────── */
   const renderClient = () => (
     <div className="fb-anim">
       <div style={{ background: P.blanc, borderRadius: 14, padding: 28, border: `1.5px solid ${P.sableF}`, marginBottom: 18 }}>
@@ -1027,7 +1222,7 @@ export default function FicheClientBach() {
     setPersos(fiche.persos || '');
     setSaved(false);
     setSaveError('');
-    setStep(0);
+    setStep(1); // retour sur Client (step 0 = Historique global)
   }, []);
 
   const renderHistorique = () => (
@@ -1159,7 +1354,7 @@ export default function FicheClientBach() {
   /* ═══════════════════════════════════════════════════════════════════════
      RENDU PRINCIPAL
   ═══════════════════════════════════════════════════════════════════════ */
-  const STEP_CONTENT = [renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese, renderHistorique];
+  const STEP_CONTENT = [renderHistoGlobal, renderClient, renderEntretien, renderFleurs, renderMelange, renderProtocole, renderSynthese, renderHistorique];
 
   return (
     <div className="fb">
