@@ -713,7 +713,7 @@ export default function FicheClientBach({ clientNom }) {
         <div style={{fontSize:44,marginBottom:16}}>👤</div>
         <div style={{fontSize:17,fontWeight:700,color:P.texte,marginBottom:8}}>Ouvrez ce module depuis une fiche client</div>
         <div style={{fontSize:13,color:P.gris}}>Naviguez vers un client, puis cliquez sur "Fleurs de Bach"</div>
-        <button onClick={() => { window.location.hash = '#clients' }} style={{marginTop:20,padding:'10px 24px',background:P.vert,color:'white',border:'none',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer'}}>Voir mes clients →</button>
+        <button onClick={() => { window.location.href = '/clients' }} style={{marginTop:20,padding:'10px 24px',background:P.vert,color:'white',border:'none',borderRadius:10,fontSize:14,fontWeight:600,cursor:'pointer'}}>Voir mes clients →</button>
       </div>
     );
 
