@@ -194,7 +194,7 @@ export default function FicheClientBach({ clientNom }) {
   const STEPS = ['Historique','Client','Entretien','Fleurs','Mélange','Protocole','Synthèse'];
 
   /* ── Computed ─────────────────────────────────────────────────────────── */
-  const selected   = useMemo(() => FLEURS.filter(f => selection[f.num]), [selection]);
+  const selected   = useMemo(() => [...FLEURS, ...fleursPerso].filter(f => selection[f.num]), [selection, fleursPerso]);
   const byNiv      = niv => selected.filter(f => selection[f.num] === niv);
   const fleursMel  = useMemo(() => byNiv('mel'),  [selected]);  // eslint-disable-line
   const fleursFond = useMemo(() => byNiv('fond'), [selected]);  // eslint-disable-line
