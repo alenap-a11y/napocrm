@@ -410,7 +410,7 @@ export default function Agenda() {
             {detail.notes && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>Notes</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, background: 'var(--color-background-primary)', padding: '10px 12px', borderRadius: 8 }}>{detail.notes}</div>
+                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.6, background: 'var(--color-background-primary)', padding: '10px 12px', borderRadius: 8 }} dangerouslySetInnerHTML={{__html: detail.notes}} />
               </div>
             )}
             <SeanceNotesPreview seanceId={detail.id} />
@@ -424,7 +424,7 @@ export default function Agenda() {
                 style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <i className="ti ti-pencil" style={{ marginRight: 4 }} aria-hidden="true" />Modifier
               </button>
-              <button onClick={() => window.location.hash = `#seances/${detail.id}/fiche`}
+              <button onClick={() => window.location.href = `/clients`}
                 style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
                 <i className="ti ti-notes" style={{ marginRight: 4 }} aria-hidden="true" />Fiche
               </button>
