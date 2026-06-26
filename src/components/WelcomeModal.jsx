@@ -7,24 +7,37 @@ export default function WelcomeModal({ user }) {
   const [cms, setCms] = useState({
     onboarding_title: { value: 'Bienvenue sur Naposolo !' },
     onboarding_subtitle: { value: 'Votre espace de gestion bien-etre est pret.' },
-    onboarding_body: { value: `Commencez par ajouter votre premier client. On s'occupe du reste. 🌿` },
-    onboarding_cta: { value: "C'est parti ! →" },
+    onboarding_body: { value: `Commencez par ajouter votre premier client. On s\'occupe du reste. 🌿` },
+    onboarding_cta: { value: "C\'est parti ! →" },
   })
 
   useEffect(() => {
-    const key = "naposolo_welcomed"
-    if (localStorage.getItem(key)) return
+    if (!user?.id) return
 
-    supabase.from('landing_content')
-      .select('published, days_active')
-      .eq('key', 'onboarding_settings')
-      .single()
-      .then(({ data: settings }) => {
-        const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
-        const today = DAYS[new Date().getDay()]
-        const active = !settings || (settings.published && (settings.days_active ?? []).includes(today))
-        if (active) setShow(true)
-      })
+    async function checkAndShow() {
+      // Vérifie si déjà vu en base
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('welcomed_at')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.welcomed_at) return
+
+      // Vérifie paramètres CMS
+      const { data: settings } = await supabase
+        .from('landing_content')
+        .select('published, days_active')
+        .eq('key', 'onboarding_settings')
+        .single()
+
+      const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
+      const today = DAYS[new Date().getDay()]
+      const active = !settings || (settings.published && (settings.days_active ?? []).includes(today))
+      if (active) setShow(true)
+    }
+
+    checkAndShow()
 
     supabase.from('landing_content')
       .select('key, value, color, font_size, font_family')
@@ -42,8 +55,12 @@ export default function WelcomeModal({ user }) {
       .then(({ data }) => { if (data) setItems(data) })
   }, [user])
 
-  function dismiss() {
-    localStorage.setItem("naposolo_welcomed", "1")
+  async function dismiss() {
+    if (user?.id) {
+      await supabase
+        .from('profiles')
+        .upsert({ id: user.id, welcomed_at: new Date().toISOString() })
+    }
     setShow(false)
   }
 
