@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import AppShell from './AppShell'
 import LoginPage from './pages/LoginPage'
+import SetPassword from './pages/SetPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
 import { supabase } from './lib/supabase'
@@ -20,6 +21,13 @@ export default function App() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
+      if (event === 'SIGNED_IN') {
+        const params = new URLSearchParams(window.location.hash.replace('#', '?'))
+        if (params.get('type') === 'invite') {
+          window.location.replace('/set-password')
+          return
+        }
+      }
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -36,6 +44,7 @@ export default function App() {
   }
   if (loading) return null
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
+  if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
   if (location.pathname.startsWith('/admin')) return <AdminLayout user={user} onSignOut={signOut} />
   return <AppShell user={user} onSignOut={signOut} />
