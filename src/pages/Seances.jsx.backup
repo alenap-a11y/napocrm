@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
+import { useSeancesSync } from '../hooks/useSeancesSync'
 
 function toCSV(seances) {
   const header = 'Prénom,Nom,Type,Date,Heure,Durée (min),Prix (€),Tags,Notes'
@@ -34,7 +34,7 @@ function parseCSV(text) {
   }).filter(s => s.prenom || s.nom)
 }
 
-const TYPES = ['Tous','Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre']
+const TYPES = ['Tous','Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre']
 const MOIS  = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
@@ -50,25 +50,27 @@ const TYPE_COLOR = {
 
 function fmtDate(d) {
   if (!d) return '—'
-  const [y,m,j] = d.split('-')
-  return `${j} ${MOIS[parseInt(m)-1]} ${y}`
+  const clean = d.slice(0, 10)
+  const [y,m,j] = clean.split('-')
+  return `${parseInt(j)} ${MOIS[parseInt(m)-1]} ${y}`
 }
 
 function fmtDateCourt(d) {
   if (!d) return '—'
-  const [y,m,j] = d.split('-')
-  return `${j} ${MOIS_COURT[parseInt(m)-1]} ${y}`
+  const clean = d.slice(0, 10)
+  const [y,m,j] = clean.split('-')
+  return `${parseInt(j)} ${MOIS_COURT[parseInt(m)-1]} ${y}`
 }
 
 function clientName(s) { return `${s.prenom} ${s.nom}`.trim() }
 const fmt = n => `${(parseFloat(n)||0).toFixed(0)} €`
 
 export default function Seances() {
-  const navigate  = useNavigate()
   const importRef = useRef()
 
-  const [seances,       setSeances]       = useState([])
-  const [loading,       setLoading]       = useState(true)
+  const { seances: dbSeances, loading, userId, addSeance, updateSeance, deleteSeance: dbDeleteSeance } = useSeancesSync()
+  const [localSeances, setLocalSeances] = useState([])
+  const seances = [...dbSeances, ...localSeances]
   const [search,        setSearch]        = useState('')
   const [filterType,    setFilterType]    = useState('Tous')
   const [filterMois,    setFilterMois]    = useState('tous')
@@ -91,31 +93,10 @@ export default function Seances() {
     prenom:'', nom:'', email:'', type_seance:'Sophrologie',
     date_seance: new Date().toISOString().slice(0,10),
     heure_seance:'10:00', duree_minutes:'60', prix_euros:'', tags:'', notes:'',
+    fleurs_bach: [],
   }
   const [form,    setForm]    = useState(EMPTY_FORM)
   const [formMsg, setFormMsg] = useState('')
-
-  useEffect(() => {
-    async function load() {
-      const { data, error } = await supabase
-        .from('seances').select('*').order('date_seance', { ascending: false })
-      if (error) console.error(error.message)
-      else setSeances(data || [])
-      setLoading(false)
-    }
-    load()
-
-    const channel = supabase
-      .channel('seances-global')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'seances'
-      }, () => load())
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [])
 
   useEffect(() => {
     async function loadClients() {
@@ -131,14 +112,29 @@ export default function Seances() {
     loadClients()
   }, [])
 
+  // Numérotation séances par client
+  const seanceNumMap = {}
+  const clientCountMap = {}
+  ;[...seances].sort((a,b) => (a.date_seance||'').localeCompare(b.date_seance||'')).forEach(s => {
+    const cid = s.client_id
+    clientCountMap[cid] = (clientCountMap[cid] || 0) + 1
+    seanceNumMap[s.id] = clientCountMap[cid]
+  })
+
   const moisDispos = [...new Set(seances.map(s => s.date_seance?.slice(0,7)).filter(Boolean))].sort().reverse()
 
-  const filtered = seances.filter(s => {
+  const filteredRaw = seances.filter(s => {
     const q = search.toLowerCase()
     const matchSearch = !q || clientName(s).toLowerCase().includes(q) || (s.type_seance||'').toLowerCase().includes(q) || (s.notes||'').toLowerCase().includes(q)
     const matchType = filterType === 'Tous' || s.type_seance === filterType
     const matchMois = filterMois === 'tous' || (s.date_seance||'').startsWith(filterMois)
     return matchSearch && matchType && matchMois
+  })
+  const filtered = [...filteredRaw].sort((a,b) => {
+    const na = clientName(a).toLowerCase()
+    const nb = clientName(b).toLowerCase()
+    if (na !== nb) return na.localeCompare(nb)
+    return (a.date_seance||'').localeCompare(b.date_seance||'')
   })
 
   const currentMonth = new Date().toISOString().slice(0,7)
@@ -149,12 +145,12 @@ export default function Seances() {
   async function handleSave() {
     setSaving(true); setSaveMsg('')
     try {
-      const { data:{user} } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const toUpsert = seances.filter(s => typeof s.id==='string').map(s => ({...s, user_id:user.id}))
+      if (!userId) throw new Error('Non connecté')
+      const toUpsert = localSeances.map(s => ({...s, user_id: userId}))
       if (!toUpsert.length) { setSaveMsg('Aucune séance à synchroniser.'); setSaving(false); return }
       const { error } = await supabase.from('seances').upsert(toUpsert, { onConflict:'id' })
       if (error) throw error
+      setLocalSeances([])
       setSaveMsg('✓ Synchronisation effectuée')
     } catch(e) { setSaveMsg(`✗ Erreur : ${e.message}`) }
     setSaving(false)
@@ -167,7 +163,7 @@ export default function Seances() {
     reader.onload = ev => {
       const imported = parseCSV(ev.target.result)
       if (!imported.length) { setImportMsg('Fichier invalide.'); return }
-      setSeances(prev => [...imported, ...prev])
+      setLocalSeances(prev => [...imported, ...prev])
       setImportMsg(`✓ ${imported.length} séance(s) importée(s).`)
       setTimeout(() => setImportMsg(''), 3000)
     }
@@ -176,8 +172,8 @@ export default function Seances() {
   }
 
   async function deleteSeance(id) {
-    if (typeof id === 'string') await supabase.from('seances').delete().eq('id', id)
-    setSeances(prev => prev.filter(s => s.id !== id))
+    await dbDeleteSeance(id)
+    setLocalSeances(prev => prev.filter(s => s.id !== id))
     setDetail(null)
   }
 
@@ -194,15 +190,12 @@ export default function Seances() {
   async function saveEditDetail() {
     const parsedTags = editForm.tags.split(',').map(t=>t.trim()).filter(Boolean)
     const updated = { ...detail, ...editForm, prix_euros: parseFloat(editForm.prix_euros)||0, duree_minutes: parseInt(editForm.duree_minutes)||60, tags: parsedTags }
-    if (typeof detail.id === 'string') {
-      await supabase.from('seances').update({
-        prenom: updated.prenom, nom: updated.nom, type_seance: updated.type_seance,
-        date_seance: updated.date_seance, heure_seance: updated.heure_seance,
-        duree_minutes: updated.duree_minutes, prix_euros: updated.prix_euros,
-        tags: parsedTags, notes: updated.notes,
-      }).eq('id', detail.id)
-    }
-    setSeances(prev => prev.map(s => s.id===detail.id ? updated : s))
+    await updateSeance(detail.id, {
+      prenom: updated.prenom, nom: updated.nom, type_seance: updated.type_seance,
+      date_seance: updated.date_seance, heure_seance: updated.heure_seance,
+      duree_minutes: updated.duree_minutes, prix_euros: updated.prix_euros,
+      tags: parsedTags, notes: updated.notes,
+    })
     setDetail(updated)
     setEditingDetail(false)
     insertNotif({ msg:`Séance modifiée — ${updated.prenom} ${updated.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
@@ -226,7 +219,7 @@ export default function Seances() {
       {/* En-tête */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.2rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <button onClick={() => navigate('/seances/nouvelle')}
+          <button onClick={() => { window.location.hash = '#seances/nouvelle' }}
             onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
             onMouseDown={() => setBtnActive(true)} onMouseUp={() => setBtnActive(false)}
             style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 22px', borderRadius:10, border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:'#fff', background:'linear-gradient(145deg,#6b9e5e,#4a7a3d)', boxShadow: btnActive ? '0px 0px 0px #2d5a24' : btnHover ? '2px 2px 0px #2d5a24' : '4px 4px 0px #2d5a24', transform: btnActive ? 'translateY(4px)' : btnHover ? 'translateY(2px)' : 'none', transition:'all 0.1s ease' }}>
@@ -303,7 +296,10 @@ export default function Seances() {
                   onMouseEnter={e => e.currentTarget.style.background='var(--color-background-primary)'}
                   onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                   <div>
-                    <div style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{clientName(s)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{clientName(s)}</div>
+                      {seanceNumMap[s.id] && <span style={{ fontSize:9, fontWeight:700, background:'var(--color-accent)', color:'#fff', padding:'1px 6px', borderRadius:10, flexShrink:0 }}>#{seanceNumMap[s.id]}</span>}
+                    </div>
                     {s.heure_seance && <div style={{ fontSize:11, color:'var(--color-text-secondary)' }}>{s.heure_seance}</div>}
                   </div>
                   <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{fmtDate(s.date_seance)}</div>
@@ -405,20 +401,14 @@ export default function Seances() {
                 if (!form.prenom.trim()||!form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
                 if (!form.date_seance) { setFormMsg('Date requise.'); return }
                 const parsedTags = form.tags.split(',').map(t=>t.trim()).filter(Boolean)
-                try {
-                  const { data:{user} } = await supabase.auth.getUser()
-                  if (!user) throw new Error('Non connecté')
-                  const { data, error } = await supabase.from('seances').insert({
-                    user_id: user.id, client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
-                    type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
-                    duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
-                    tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
-                  }).select().single()
-                  if (error) throw error
-                  setSeances(prev => [data,...prev])
-                } catch {
-                  setSeances(prev => [{...form, id:Date.now(), duree_minutes:parseInt(form.duree_minutes)||60, prix_euros:parseFloat(form.prix_euros)||0, tags:parsedTags},...prev])
-                }
+                const { error } = await addSeance({
+                  client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
+                  type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
+                  duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
+                  tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
+                  fleurs_bach: form.fleurs_bach?.length ? form.fleurs_bach : null,
+                })
+                if (error) { setFormMsg(`✗ Erreur : ${error.message||error}`); return }
                 insertNotif({ msg:`Nouvelle séance — ${form.prenom} ${form.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
                 setForm(EMPTY_FORM); setClientSelectionne(null); setClientSearch(''); setFormMsg('✓ Séance ajoutée.')
                 setTimeout(() => { setFormMsg(''); setActiveTab('historique') }, 1500)
@@ -531,6 +521,7 @@ export default function Seances() {
                   <MField label="Durée (min)"> <input type="number" value={editForm.duree_minutes} onChange={e=>setEditForm(f=>({...f,duree_minutes:e.target.value}))} min={1} style={mInp} /></MField>
                   <MField label="Prix (€)">    <input type="number" value={editForm.prix_euros}    onChange={e=>setEditForm(f=>({...f,prix_euros:e.target.value}))}    min={0} style={mInp} /></MField>
                   <MField label="Tags" style={{ gridColumn:'1/-1' }}><input value={editForm.tags} onChange={e=>setEditForm(f=>({...f,tags:e.target.value}))} placeholder="Stress, Sommeil…" style={mInp} /></MField>
+                  <MField label="Notes" style={{ gridColumn:'1/-1' }}><textarea value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))} placeholder="Observations, compte-rendu…" rows={4} style={{ ...mInp, resize:'vertical', fontFamily:'inherit' }} /></MField>
                 </div>
               ) : (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:16 }}>
@@ -554,6 +545,23 @@ export default function Seances() {
               )
             )}
 
+            {detailTab==='infos' && !editingDetail && detail.zones_corps && detail.zones_corps.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Zones annotées</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {(Array.isArray(detail.zones_corps) ? detail.zones_corps : []).map(z => (
+                    <span key={z} style={{ fontSize:11, fontWeight:500, background:'#FBEAF0', color:'#993556', padding:'3px 10px', borderRadius:20 }}>{z}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {detailTab==='infos' && !editingDetail && detail.schema_image && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Schéma corporel</div>
+                <img src={detail.schema_image} alt="Schéma 3D" style={{ width:'100%', borderRadius:8, border:'0.5px solid var(--color-border-tertiary)', background:'#f5ede0' }} />
+              </div>
+            )}
             {/* ── Onglet HISTORIQUE (autres séances du même client) ── */}
             {detailTab==='historique' && !editingDetail && (() => {
               const autresSeances = seances.filter(s =>
@@ -594,7 +602,8 @@ export default function Seances() {
                     <button
                       onClick={() => {
                         setDetail(null)
-                        navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}`, openSeance: true } })
+                        sessionStorage.setItem('napo_nav_state', JSON.stringify({ searchClient: `${detail.prenom} ${detail.nom}`, openSeance: true }))
+                        window.location.hash = '#clients'
                       }}
                       style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:600, cursor:'pointer' }}
                     >
@@ -645,7 +654,8 @@ export default function Seances() {
                   <button
                     onClick={() => {
                       setDetail(null)
-                      navigate('/clients', { state: { searchClient: `${detail.prenom} ${detail.nom}` } })
+                      sessionStorage.setItem('napo_nav_state', JSON.stringify({ searchClient: `${detail.prenom} ${detail.nom}` }))
+                      window.location.hash = '#clients'
                     }}
                     style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}
                   >

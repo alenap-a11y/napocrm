@@ -68,6 +68,14 @@ export default function FicheClients({ userId }) {
   const [search, setSearch]         = useState('')
   const [loading, setLoading]       = useState(true)
 
+  const [napoNavState, setNapoNavState] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('napo_nav_state')
+      if (raw) { sessionStorage.removeItem('napo_nav_state'); return JSON.parse(raw) }
+    } catch {}
+    return null
+  })
+
   /* Panel détail */
   const [detail, setDetail]             = useState(null)   // null | clientObj | { isNew:true }
   const [detailSeances, setDetailSeances] = useState([])
@@ -95,6 +103,18 @@ export default function FicheClients({ userId }) {
   /* ── Chargement ── */
   useEffect(() => { fetchAll() }, [userId])
 
+  useEffect(() => {
+    if (!napoNavState?.searchClient) return
+    setSearch(napoNavState.searchClient)
+    if (napoNavState.openSeance && clients.length > 0) {
+      const match = clients.find(c =>
+        `${c.prenom} ${c.nom}`.toLowerCase() === napoNavState.searchClient.toLowerCase()
+      )
+      if (match) openDetail(match)
+      setNapoNavState(null)
+    }
+  }, [napoNavState, clients])
+
   async function fetchAll() {
     if (!userId) return   // ne pas lancer de requête sans user_id
     setLoading(true)
@@ -107,6 +127,12 @@ export default function FicheClients({ userId }) {
     setClients(resClients.data || [])
     setSeancesAll(resSeances.data || [])
     setLoading(false)
+    const openId = sessionStorage.getItem('napo_open_client')
+    if (openId) {
+      sessionStorage.removeItem('napo_open_client')
+      const target = (resClients.data || []).find(c => c.id === openId)
+      if (target) setDetail(target)
+    }
   }
 
   /* ── Historique séances détaillé ── */

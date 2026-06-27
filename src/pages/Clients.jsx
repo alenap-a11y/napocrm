@@ -90,6 +90,11 @@ export default function Clients() {
     if (stored) sessionStorage.removeItem('napo_nav_state')
     return stored
   })
+  const [napoOpenClientId] = useState(() => {
+    const id = sessionStorage.getItem('napo_open_client')
+    if (id) sessionStorage.removeItem('napo_open_client')
+    return id || null
+  })
 
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
@@ -136,6 +141,12 @@ export default function Clients() {
 
   const actifs       = clients.filter(c => c.statut === 'actif').length
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
+
+  useEffect(() => {
+    if (!napoOpenClientId || clients.length === 0) return
+    const target = clients.find(c => c.id === napoOpenClientId)
+    if (target) openDetail(target)
+  }, [napoOpenClientId, clients])
 
   useEffect(() => {
     const state = napoNavState || location.state

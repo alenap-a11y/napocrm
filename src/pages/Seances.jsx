@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
 import { useSeancesSync } from '../hooks/useSeancesSync'
@@ -66,6 +67,7 @@ function clientName(s) { return `${s.prenom} ${s.nom}`.trim() }
 const fmt = n => `${(parseFloat(n)||0).toFixed(0)} €`
 
 export default function Seances() {
+  const navigate = useNavigate()
   const importRef = useRef()
 
   const { seances: dbSeances, loading, userId, addSeance, updateSeance, deleteSeance: dbDeleteSeance } = useSeancesSync()
@@ -537,7 +539,14 @@ export default function Seances() {
                       <i className={`ti ${icon}`} style={{ fontSize:14, color:'var(--color-accent)', marginTop:1 }} />
                       <div>
                         <div style={{ fontSize:10, fontWeight:600, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.05em' }}>{label}</div>
-                        <div style={{ fontSize:13, color:'var(--color-text-primary)', marginTop:2 }}>{val}</div>
+                        {label === 'Client' && detail.client_id ? (
+                          <div
+                            onClick={() => { sessionStorage.setItem('napo_open_client', detail.client_id); setDetail(null); navigate('/clients'); }}
+                            style={{ fontSize:13, color:'var(--color-accent)', marginTop:2, cursor:'pointer', textDecoration:'underline' }}
+                          >{val}</div>
+                        ) : (
+                          <div style={{ fontSize:13, color:'var(--color-text-primary)', marginTop:2 }}>{val}</div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -652,11 +661,7 @@ export default function Seances() {
                     <i className="ti ti-download" />
                   </button>
                   <button
-                    onClick={() => {
-                      setDetail(null)
-                      sessionStorage.setItem('napo_nav_state', JSON.stringify({ searchClient: `${detail.prenom} ${detail.nom}` }))
-                      window.location.hash = '#clients'
-                    }}
+                    onClick={() => { sessionStorage.setItem('napo_open_client', detail.client_id); setDetail(null); navigate('/clients'); }}
                     style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}
                   >
                     <i className="ti ti-user" style={{ fontSize:13 }} />Fiche client
