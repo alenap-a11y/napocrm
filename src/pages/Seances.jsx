@@ -221,7 +221,7 @@ export default function Seances() {
       {/* En-tête */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.2rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <button onClick={() => { window.location.hash = '#seances/nouvelle' }}
+          <button onClick={() => navigate('/seances/nouvelle')}
             onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
             onMouseDown={() => setBtnActive(true)} onMouseUp={() => setBtnActive(false)}
             style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 22px', borderRadius:10, border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:'#fff', background:'linear-gradient(145deg,#6b9e5e,#4a7a3d)', boxShadow: btnActive ? '0px 0px 0px #2d5a24' : btnHover ? '2px 2px 0px #2d5a24' : '4px 4px 0px #2d5a24', transform: btnActive ? 'translateY(4px)' : btnHover ? 'translateY(2px)' : 'none', transition:'all 0.1s ease' }}>
