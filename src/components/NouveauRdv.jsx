@@ -46,7 +46,7 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
   const [clientId,   setClientId]   = useState(prefillClientId || '')
   const [date,       setDate]       = useState(prefillDate || todayStr)
   const [heure,      setHeure]      = useState('09:00')
-  const [typeSeance, setTypeSeance] = useState('Sophrologie')
+  const [typeSeance, setTypeSeance] = useState('Sophrologue')
   const [statut,     setStatut]     = useState('planifié')
   const [notes,      setNotes]      = useState('')
   const [duree,      setDuree]      = useState(60)
@@ -215,6 +215,24 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
       <div>
         <label style={lbl}>Type de séance</label>
         <select value={typeSeance} onChange={e => setTypeSeance(e.target.value)} style={inp}>
+          <option>Aromathérapeute</option>
+          <option>Astrologue</option>
+          <option>Cartomancienne</option>
+          <option>Coach bien-être</option>
+          <option>Coach yoga</option>
+          <option>Energéticien</option>
+          <option>Fleurs de Bach</option>
+          <option>Hypnothérapeute</option>
+          <option>Magnétiseur</option>
+          <option>Médium</option>
+          <option>Naturopathe</option>
+          <option>Ostéopathe</option>
+          <option>Praticien massage</option>
+          <option>Psychologue</option>
+          <option>Réflexologue</option>
+          <option>Reiki</option>
+          <option>Sophrologue</option>
+          <option>Autre</option>
           {TYPES_SEANCE.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>

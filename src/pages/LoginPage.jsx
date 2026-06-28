@@ -278,14 +278,22 @@ export default function LoginPage() {
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Votre métier</label>
                     <select value={betaMetier} onChange={e => setBetaMetier(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
                       <option value="">Sélectionnez...</option>
-                      <option>Sophrologue</option>
-                      <option>Naturopathe</option>
+                      <option>Aromathérapeute</option>
+                      <option>Astrologue</option>
+                      <option>Cartomancienne</option>
                       <option>Coach bien-être</option>
-                      <option>Énergéticien</option>
-                      <option>Ostéopathe</option>
-                      <option>Psychologue</option>
+                      <option>Coach yoga</option>
+                      <option>Energéticien</option>
                       <option>Hypnothérapeute</option>
+                      <option>Magnétiseur</option>
+                      <option>Médium</option>
+                      <option>Naturopathe</option>
+                      <option>Ostéopathe</option>
+                      <option>Praticien massage</option>
+                      <option>Psychologue</option>
                       <option>Réflexologue</option>
+                      <option>Reiki</option>
+                      <option>Sophrologue</option>
                       <option>Autre praticien</option>
                     </select>
                   </div>

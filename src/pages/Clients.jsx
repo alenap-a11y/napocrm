@@ -16,13 +16,24 @@ const STATUT_STYLE = {
 }
 
 const SPEC_COLOR = {
-  'Sophrologie':    { bg: '#E6F1FB', color: '#185FA5' },
-  'Coaching':       { bg: '#EEEDFE', color: '#534AB7' },
-  'Naturopathie':   { bg: '#E1F5EE', color: '#0F6E56' },
-  'Fleurs de Bach': { bg: '#F0EBF8', color: '#7F3FBF' },
-  'Énergie':        { bg: '#FBEAF0', color: '#993556' },
-  'Massage':        { bg: '#FAEEDA', color: '#854F0B' },
-  'Autre':          { bg: '#F5F5F5', color: '#6B7280' },
+  'Aromathérapeute':  { bg: '#FEF3E2', color: '#A05A00' },
+  'Astrologue':       { bg: '#EEEDFE', color: '#534AB7' },
+  'Cartomancienne':   { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Coach bien-être':  { bg: '#E6F1FB', color: '#185FA5' },
+  'Coach yoga':       { bg: '#E1F5EE', color: '#0F6E56' },
+  'Energéticien':     { bg: '#FBEAF0', color: '#993556' },
+  'Fleurs de Bach':   { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Hypnothérapeute':  { bg: '#E6F1FB', color: '#185FA5' },
+  'Magnétiseur':      { bg: '#FAEEDA', color: '#854F0B' },
+  'Médium':           { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Naturopathe':      { bg: '#E1F5EE', color: '#0F6E56' },
+  'Ostéopathe':       { bg: '#E6F1FB', color: '#185FA5' },
+  'Praticien massage':{ bg: '#FAEEDA', color: '#854F0B' },
+  'Psychologue':      { bg: '#EEEDFE', color: '#534AB7' },
+  'Réflexologue':     { bg: '#E1F5EE', color: '#0F6E56' },
+  'Reiki':            { bg: '#FBEAF0', color: '#993556' },
+  'Sophrologue':      { bg: '#E6F1FB', color: '#185FA5' },
+  'Autre':            { bg: '#F5F5F5', color: '#6B7280' },
 }
 
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
@@ -125,7 +136,7 @@ export default function Clients() {
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
 
-  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', notes: '' }
+  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologue', ville: '', statut: 'actif', notes: '' }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
@@ -413,6 +424,24 @@ export default function Clients() {
               <Field label="Ville"><input value={form.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
               <Field label="Spécialité">
                 <select value={form.specialite} onChange={f('specialite')} style={inp}>
+                  <option>Aromathérapeute</option>
+                  <option>Astrologue</option>
+                  <option>Cartomancienne</option>
+                  <option>Coach bien-être</option>
+                  <option>Coach yoga</option>
+                  <option>Energéticien</option>
+                  <option>Fleurs de Bach</option>
+                  <option>Hypnothérapeute</option>
+                  <option>Magnétiseur</option>
+                  <option>Médium</option>
+                  <option>Naturopathe</option>
+                  <option>Ostéopathe</option>
+                  <option>Praticien massage</option>
+                  <option>Psychologue</option>
+                  <option>Réflexologue</option>
+                  <option>Reiki</option>
+                  <option>Sophrologue</option>
+                  <option>Autre</option>
                   {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
@@ -504,6 +533,24 @@ export default function Clients() {
                       {editingDetail ? (
                         <>
                           <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
+                          <option>Aromathérapeute</option>
+                          <option>Astrologue</option>
+                          <option>Cartomancienne</option>
+                          <option>Coach bien-être</option>
+                          <option>Coach yoga</option>
+                          <option>Energéticien</option>
+                          <option>Fleurs de Bach</option>
+                          <option>Hypnothérapeute</option>
+                          <option>Magnétiseur</option>
+                          <option>Médium</option>
+                          <option>Naturopathe</option>
+                          <option>Ostéopathe</option>
+                          <option>Praticien massage</option>
+                          <option>Psychologue</option>
+                          <option>Réflexologue</option>
+                          <option>Reiki</option>
+                          <option>Sophrologue</option>
+                          <option>Autre</option>
                             {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                           <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
