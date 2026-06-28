@@ -51,7 +51,7 @@ export default function App() {
     return <AgendaPublic slug={slug} />
   }
   if (loading) return null
-  if (isRecovery) return <ResetPassword onDone={() => { setIsRecovery(false); window.location.replace('/board') }} />
+  if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
   if (location.pathname.startsWith('/napo-cockpit-7X')) {
