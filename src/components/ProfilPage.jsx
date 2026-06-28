@@ -96,7 +96,7 @@ export default function ProfilPage({ accent, onSignOut }) {
         id: user.id, prenom: draft.prenom, nom: draft.nom,
         tel: draft.tel, ville: draft.ville, siret: draft.siret,
         activite: draft.activite, agenda_public: draft.agenda_public,
-        slug: draft.slug, avatar_url: profil.avatar_url,
+        slug: draft.slug || null, avatar_url: profil.avatar_url,
         metier: draft.metier, adresse_rdv: draft.adresse_rdv,
         ville_rdv: draft.ville_rdv, code_postal: draft.code_postal,
         maps_url: draft.maps_url, tel_urgence: draft.tel_urgence,
