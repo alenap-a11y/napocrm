@@ -165,15 +165,11 @@ export default function Agenda() {
   const fcEvents = rdvs.filter(rdv => rdv.date_rdv && !isNaN(new Date(rdv.date_rdv).getTime())).map(rdv => {
     const start = new Date(rdv.date_rdv)
     const end   = new Date(start.getTime() + (rdv.duree_minutes || 60) * 60000)
-    const color = eventColor(rdv)
     return {
       id: rdv.id,
       title: rdvClientName(rdv),
       start: rdv.date_rdv,
       end: end.toISOString(),
-      backgroundColor: color,
-      borderColor: color,
-      textColor: '#fff',
       extendedProps: { rdv, statut: rdv.statut, client_nom: rdvClientName(rdv) },
     }
   })
@@ -658,7 +654,7 @@ export default function Agenda() {
                   backgroundColor: arg.event.extendedProps.statut === 'confirmé'
                     ? '#7C9A7E'
                     : arg.event.extendedProps.statut === 'annulé'
-                    ? '#9E9E9E'
+                    ? '#8E9BAA'
                     : '#C9A84C',
                   borderRadius: '4px',
                   padding: '2px 4px',
