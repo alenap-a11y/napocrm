@@ -97,7 +97,6 @@ export default function FicheSeance() {
 
       {/* HEADER */}
       <div style={s.header}>
-        <button onClick={() => window.location.hash = '#agenda'} style={s.btnRetour}>← Agenda</button>
         <button
           onClick={() => navigate('/agenda')}
           style={{position:'absolute',top:'16px',right:'16px',background:'#4BBFCE',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 16px',fontSize:'13px',fontWeight:'600',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}}
