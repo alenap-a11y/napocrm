@@ -9,7 +9,7 @@ const inpStyle = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '' }
+const EMPTY = { prenom: '', nom: '', tel: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '' }
 
 export default function ProfilPage({ accent, onSignOut }) {
   const [user,            setUser]            = useState(null)
@@ -37,7 +37,7 @@ export default function ProfilPage({ accent, onSignOut }) {
         setProfil({
           prenom:        p?.prenom        || u.user_metadata?.prenom || '',
           nom:           p?.nom           || '',
-          telephone:     p?.telephone     || '',
+          tel:           p?.tel           || '',
           ville:         p?.ville         || '',
           siret:         p?.siret         || '',
           activite:      p?.activite      || '',
@@ -94,7 +94,7 @@ export default function ProfilPage({ accent, onSignOut }) {
     try {
       const { error } = await supabase.from('profiles').upsert({
         id: user.id, prenom: draft.prenom, nom: draft.nom,
-        telephone: draft.telephone, ville: draft.ville, siret: draft.siret,
+        tel: draft.tel, ville: draft.ville, siret: draft.siret,
         activite: draft.activite, agenda_public: draft.agenda_public,
         slug: draft.slug, avatar_url: profil.avatar_url,
         metier: draft.metier, adresse_rdv: draft.adresse_rdv,
@@ -184,7 +184,7 @@ export default function ProfilPage({ accent, onSignOut }) {
               <div className="pf-field-val" style={{ fontSize: 11, padding: '5px 0' }}>{user?.email}</div>
               <div style={{ fontSize: 9, color: 'var(--color-text-secondary)', marginTop: 2 }}>Non modifiable ici — lié au compte</div>
             </div>
-            <div className="pf-field"><div className="pf-field-lbl">Téléphone</div><input value={draft.telephone} onChange={d('telephone')} type="tel" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Téléphone</div><input value={draft.tel} onChange={d('tel')} type="tel" style={inpStyle} /></div>
             <div className="pf-field"><div className="pf-field-lbl">Ville</div><input value={draft.ville} onChange={d('ville')} style={inpStyle} /></div>
             <div className="pf-field"><div className="pf-field-lbl">Membre depuis</div><div className="pf-field-val" style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>{membreSince}</div></div>
             <div className="pf-field"><div className="pf-field-lbl">SIRET</div><input value={draft.siret} onChange={d('siret')} style={inpStyle} /></div>
@@ -201,7 +201,7 @@ export default function ProfilPage({ accent, onSignOut }) {
         ) : (
           [
             { lbl: 'Email',         val: user?.email },
-            { lbl: 'Téléphone',     val: profil.telephone || '—' },
+            { lbl: 'Téléphone',     val: profil.tel || '—' },
             { lbl: 'Ville',         val: profil.ville ? `${profil.ville}, France` : '—' },
             { lbl: 'Membre depuis', val: membreSince },
             { lbl: 'SIRET',         val: profil.siret        || '—' },
