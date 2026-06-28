@@ -46,6 +46,9 @@ export default function App() {
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
-  if (location.pathname.startsWith('/admin')) return <AdminLayout user={user} onSignOut={signOut} />
+  if (location.pathname.startsWith('/admin')) {
+    if (user?.email !== 'alessandrellisebastien@gmail.com') return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
+    return <AdminLayout user={user} onSignOut={signOut} />
+  }
   return <AppShell user={user} onSignOut={signOut} />
 }
