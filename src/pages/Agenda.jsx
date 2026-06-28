@@ -164,7 +164,7 @@ export default function Agenda() {
   /* ── Événements FullCalendar ── */
   const fcEvents = rdvs.filter(rdv => rdv.date_rdv && !isNaN(new Date(rdv.date_rdv).getTime())).map(rdv => {
     const start = new Date(rdv.date_rdv)
-    const end   = new Date(start.getTime() + 60 * 60 * 1000)
+    const end   = new Date(start.getTime() + (rdv.duree_minutes || 60) * 60000)
     const color = eventColor(rdv)
     return {
       id: rdv.id,
@@ -174,7 +174,7 @@ export default function Agenda() {
       backgroundColor: color,
       borderColor: color,
       textColor: '#fff',
-      extendedProps: { rdv },
+      extendedProps: { rdv, statut: rdv.statut, client_nom: rdvClientName(rdv) },
     }
   })
 
@@ -653,6 +653,25 @@ export default function Agenda() {
                 openCreate(ds)
               }}
               datesSet={info => setFcTitle(info.view.title)}
+              eventContent={(arg) => (
+                <div style={{
+                  backgroundColor: arg.event.extendedProps.statut === 'confirmé'
+                    ? '#7C9A7E'
+                    : arg.event.extendedProps.statut === 'annulé'
+                    ? '#9E9E9E'
+                    : '#C9A84C',
+                  borderRadius: '4px',
+                  padding: '2px 4px',
+                  fontSize: '11px',
+                  color: 'white',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
+                }}>
+                  {arg.event.start.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}
+                  {' — '}
+                  {arg.event.extendedProps.client_nom || 'Sans client'}
+                </div>
+              )}
               dayCellContent={info => (
                 <>
                   <span>{info.dayNumberText}</span>
