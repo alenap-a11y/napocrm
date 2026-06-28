@@ -289,12 +289,13 @@ export default function AppShell({ user, onSignOut }) {
       </div>
 
       <div className="body">
-        <SideBar
+        {!isMobile && <SideBar
           accent={accent} bgCol={bgCol}
           activePanel={activePanel} setActivePanel={setActivePanel}
           username={username}
           items={sbItems.filter(i => sbVis[i.id] !== false)} setItems={setSbItems}
-        />
+        />}
+        {isMobile && <BottomNav accent={accent} />}
 
         {/* Panel Perso */}
         <div className={`side-panel${activePanel === 'perso' ? ' open' : ''}`}>

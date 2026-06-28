@@ -1,8 +1,13 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
+import { useActivityTracker } from './hooks/useActivityTracker'
+import { useIsMobile } from './hooks/useIsMobile'
+import WelcomeModal from './components/WelcomeModal'
+import NapoAssistant from './components/NapoAssistant'
+import BottomNav from './components/BottomNav'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -12,6 +17,7 @@ const Clients = lazy(() => import('./pages/Clients'))
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Notes = lazy(() => import('./pages/Notes'))
 const FicheClientBach = lazy(() => import('./components/FicheClientBach'))
+const PageBach = lazy(() => import('./pages/PageBach'))
 const SimulateurFiscal = lazy(() => import('./components/SimulateurFiscal'))
 const NapoPlus = lazy(() => import('./pages/NapoPlus'))
 const Factures = lazy(() => import('./pages/Factures'))
@@ -19,6 +25,26 @@ const FAQ = lazy(() => import('./pages/FAQ'))
 const Aide = lazy(() => import('./pages/Aide'))
 const NewsNapo = lazy(() => import('./pages/NewsNapo'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const FicheSeance = lazy(() => import('./pages/FicheSeance'))
+
+class ChunkErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false } }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch() {
+    const reloads = parseInt(sessionStorage.getItem('chunk_reloads') || '0')
+    if (reloads < 2) {
+      sessionStorage.setItem('chunk_reloads', reloads + 1)
+      window.location.reload()
+    } else {
+      sessionStorage.removeItem('chunk_reloads')
+    }
+  }
+  render() {
+    if (this.state.hasError) return <div style={{padding:'2rem',color:'#666'}}>Rechargement...</div>
+    return this.props.children
+  }
+}
 
 const ALL_SB_ITEMS = [
   { id: 'board',    label: 'Board',    icon: 'ti-layout-dashboard', to: '/board'    },
@@ -27,8 +53,8 @@ const ALL_SB_ITEMS = [
   { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
-  { id: 'factures', label: 'Factures', icon: 'ti-file',             to: '/factures'  },
-  { id: 'fiscal',   label: 'Fiscal',   icon: 'ti-calculator',       to: '/fiscal'    },
+  { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
+  { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
   { id: 'napoplus',      label: 'Napo+',        icon: 'ti-sparkles',        to: '/napoplus'       },
   { id: 'marketplace',   label: 'Marketplace',  icon: 'ti-building-store',  to: '/marketplace'    },
 ]
@@ -47,6 +73,16 @@ function loadSbItems() {
     ALL_SB_ITEMS.filter(i => !resultIds.has(i.id)).forEach(i => result.push(i))
     return result
   } catch { return ALL_SB_ITEMS }
+}
+
+const SB_VIS_KEY = 'napo_sb_vis_v1'
+
+function loadSbVis() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SB_VIS_KEY))
+    if (saved && typeof saved === 'object') return saved
+  } catch {}
+  return { factures: false, fiscal: false }
 }
 
 const DEFAULT_TB_ITEMS = [
@@ -70,24 +106,22 @@ const ACCENT_SWATCHES = ['#B8961E', '#534AB7', '#0F6E56', '#993C1D', '#185FA5', 
 const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C2C2A']
 
 export default function AppShell({ user, onSignOut }) {
+  useActivityTracker()
+  const isMobile = useIsMobile()
   const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
+  const [sbVis, setSbVis] = useState(loadSbVis)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
   const [curView, setCurView] = useState('dash')
-  const [accent, setAccent] = useState('#B8961E')
-  const [bgCol, setBgCol] = useState('#1E1A4E')
-  const [widgets, setWidgets] = useState(DEFAULT_WIDGETS)
+  const [accent, setAccent] = useState(() => localStorage.getItem('napo_accent') || '#B8961E')
+  const [bgCol, setBgCol] = useState(() => localStorage.getItem('napo_bgcol') || '#1E1A4E')
+  const [widgets, setWidgets] = useState(() => {
+    const saved = localStorage.getItem('napo_widgets')
+    return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
+  })
   const [activePanel, setActivePanel] = useState(null)
-  const [notifOpen, setNotifOpen] = useState(false)
-  const [notifDot, setNotifDot] = useState(true)
-  const [notifs, setNotifs] = useState([
-    { id: 1, unread: true, bg: '#E6F1FB', icon: 'ti-user-plus', iconColor: '#185FA5', msg: 'Nouveau client — Anne Bernard', time: 'Il y a 12 min' },
-    { id: 2, unread: true, bg: '#FAEEDA', icon: 'ti-clock', iconColor: '#854F0B', msg: 'Rappel — Marie Joubert demain 10h', time: 'Il y a 1h' },
-    { id: 3, unread: true, bg: '#EAF3DE', icon: 'ti-check', iconColor: '#3B6D11', msg: 'Facture #0042 payée — Sophie Caron', time: 'Il y a 3h' },
-    { id: 4, unread: false, bg: '#EEEDFE', icon: 'ti-mail', iconColor: '#534AB7', msg: 'Message de Pierre Laurent', time: 'Hier' },
-  ])
   const [searchOpen, setSearchOpen] = useState(false)
   const [decoOpen, setDecoOpen] = useState(false)
   const [username, setUsername] = useState(() => {
@@ -95,6 +129,8 @@ export default function AppShell({ user, onSignOut }) {
     return user?.user_metadata?.prenom || user?.email?.split('@')[0] || 'Utilisateur'
   })
   const [fs, setFs] = useState(() => parseInt(localStorage.getItem('napo_font_size') || '100', 10))
+  const [userId,     setUserId]     = useState(null)
+  const [prefsLoaded,setPrefsLoaded]= useState(false)
   const searchInputRef = useRef(null)
   const sbDragSrc = useRef(null)
   const tbDragSrc = useRef(null)
@@ -112,23 +148,8 @@ export default function AppShell({ user, onSignOut }) {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus()
   }, [searchOpen])
 
-  useEffect(() => {
-    function handler(e) {
-      if (!e.target.closest('#notif-drop') && !e.target.closest('.tb-icon[data-notif]')) {
-        setNotifOpen(false)
-      }
-    }
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [])
-
   function navigate(view) {
     setCurView(view)
-  }
-
-  function clearNotifs() {
-    setNotifs(n => n.map(x => ({ ...x, unread: false })))
-    setNotifDot(false)
   }
 
   function addSbItem(id) {
@@ -139,6 +160,10 @@ export default function AppShell({ user, onSignOut }) {
 
   function removeSbItem(id) {
     setSbItems(prev => prev.length <= 1 ? prev : prev.filter(i => i.id !== id))
+  }
+
+  function toggleSbVis(id) {
+    setSbVis(prev => ({ ...prev, [id]: prev[id] === false }))
   }
 
   function toggleTbVis(idx) {
@@ -187,11 +212,42 @@ export default function AppShell({ user, onSignOut }) {
 
   useEffect(() => {
     document.documentElement.style.setProperty('--color-accent', accent)
+    localStorage.setItem('napo_accent', accent)
   }, [accent])
+
+  useEffect(() => {
+    localStorage.setItem('napo_bgcol', bgCol)
+  }, [bgCol])
+
+  useEffect(() => {
+    localStorage.setItem('napo_widgets', JSON.stringify(widgets))
+  }, [widgets])
 
   useEffect(() => {
     localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
   }, [sbItems])
+
+  useEffect(() => {
+    localStorage.setItem(SB_VIS_KEY, JSON.stringify(sbVis))
+  }, [sbVis])
+
+  // Sauvegarde auto Supabase (debounce 1s)
+  useEffect(() => {
+    if (!userId || !prefsLoaded) return
+    const timer = setTimeout(async () => {
+      try {
+        await supabase.from('profiles').update({
+          preferences: {
+            accent, bgCol, fs,
+            widgets,
+            sbItems: sbItems.map(i => i.id),
+            sbVis,
+          }
+        }).eq('id', userId)
+      } catch(e) { console.warn('savePrefs:', e) }
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [accent, bgCol, fs, widgets, sbItems, sbVis, userId, prefsLoaded])
 
   return (
     <div className="app" id="app">
@@ -200,32 +256,10 @@ export default function AppShell({ user, onSignOut }) {
         tbActif={tbActif} setTbActif={setTbActif}
         accent={accent}
         username={username} initials={username.charAt(0).toUpperCase()}
-        notifOpen={notifOpen} setNotifOpen={setNotifOpen}
-        notifDot={notifDot} setNotifDot={setNotifDot}
         searchOpen={searchOpen} setSearchOpen={setSearchOpen}
         decoOpen={decoOpen} setDecoOpen={setDecoOpen}
         onNavigate={id => routerNavigate(`/${id}`)}
       />
-
-      {/* Notifications dropdown */}
-      <div className={`notif-drop${notifOpen ? ' open' : ''}`} id="notif-drop">
-        <div className="nd-head">
-          <span className="nd-title">Notifications</span>
-          <button className="nd-clear" onClick={clearNotifs}>Tout marquer lu</button>
-        </div>
-        {notifs.map(n => (
-          <div key={n.id} className={`nd-item${n.unread ? ' unread' : ''}`}>
-            <div className="nd-ico" style={{ background: n.bg }}>
-              <i className={`ti ${n.icon}`} style={{ color: n.iconColor }} aria-hidden="true" />
-            </div>
-            <div className="nd-body">
-              <div className="nd-msg">{n.msg}</div>
-              <div className="nd-time">{n.time}</div>
-            </div>
-            {n.unread && <div className="nd-dot" />}
-          </div>
-        ))}
-      </div>
 
       {/* Search overlay */}
       <div className={`search-overlay${searchOpen ? ' open' : ''}`}>
@@ -259,7 +293,7 @@ export default function AppShell({ user, onSignOut }) {
           accent={accent} bgCol={bgCol}
           activePanel={activePanel} setActivePanel={setActivePanel}
           username={username}
-          items={sbItems} setItems={setSbItems}
+          items={sbItems.filter(i => sbVis[i.id] !== false)} setItems={setSbItems}
         />
 
         {/* Panel Perso */}
@@ -274,14 +308,20 @@ export default function AppShell({ user, onSignOut }) {
             </button>
           </div>
           <div className="panel-body">
-            <div className="pl">Sidebar — glisse pour réordonner</div>
+            <div className="pl">Sidebar — glisse + œil pour masquer</div>
             {sbItems.map((item, idx) => (
               <DragRow
                 key={item.id}
                 icon={item.icon} label={item.label} accent={accent}
                 onDragStart={() => { sbDragSrc.current = idx }}
                 onDrop={() => { if (sbDragSrc.current !== null && sbDragSrc.current !== idx) { sbPanelDrop(sbDragSrc.current, idx); sbDragSrc.current = null } }}
-                action={<button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(item.id)}><i className="ti ti-trash" /></button>}
+                action={
+                  (item.id === 'factures' || item.id === 'fiscal')
+                    ? <button aria-label={sbVis[item.id] !== false ? `Masquer ${item.label}` : `Afficher ${item.label}`} onClick={() => toggleSbVis(item.id)}>
+                        <i className={`ti ${sbVis[item.id] !== false ? 'ti-eye' : 'ti-eye-off'}`} />
+                      </button>
+                    : <button aria-label={`Supprimer ${item.label}`} onClick={() => removeSbItem(item.id)}><i className="ti ti-trash" /></button>
+                }
               />
             ))}
             {ALL_SB_ITEMS.filter(i => !sbItems.find(s => s.id === i.id)).length > 0 && (
@@ -412,17 +452,18 @@ export default function AppShell({ user, onSignOut }) {
         </div>
 
         <main className="main">
-          <Suspense fallback={null}>
+          <ChunkErrorBoundary><Suspense fallback={<div style={{padding:'2rem',color:'#666'}}>Chargement...</div>}>
             <Routes>
               <Route path="/"         element={<Navigate to="/board" replace />} />
               <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} onNavigate={routerNavigate} />} />
               <Route path="/seances/nouvelle" element={<NouvelleSeance />} />
+              <Route path="/seances/:id/fiche" element={<FicheSeance />} />
               <Route path="/seances"          element={<Seances />} />
               <Route path="/clients"  element={<Clients />} />
               <Route path="/agenda"   element={<Agenda />} />
               <Route path="/notes"    element={<Notes />} />
-              <Route path="/fleurs-de-bach"                element={<FicheClientBach />} />
-              <Route path="/fleurs-de-bach/nouvelle-seance" element={<FicheClientBach />} />
+              <Route path="/fleurs-de-bach"                element={<PageBach />} />
+              <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
               <Route path="/fiscal"    element={<SimulateurFiscal />} />
               <Route path="/napoplus"    element={<NapoPlus />} />
@@ -431,10 +472,14 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/faq"      element={<FAQ />} />
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </Suspense>
+          </Suspense></ChunkErrorBoundary>
         </main>
       </div>
+      <WelcomeModal user={user} />
+      <NapoAssistant />
+      {isMobile && <BottomNav accent={accent} />}
     </div>
   )
 }
