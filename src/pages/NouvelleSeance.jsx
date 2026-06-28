@@ -745,7 +745,7 @@ export default function NouvelleSeance() {
         setSaving(false)
       } else {
         setSaveStatus('ok')
-        if (payload.email) {
+        console.log('EMAIL PAYLOAD:', payload.email); if (payload.email) {
           try {
             const { data: { session } } = await supabase.auth.getSession()
             const { data: profile } = await supabase.from('profiles').select('prenom').eq('id', user.id).single()
