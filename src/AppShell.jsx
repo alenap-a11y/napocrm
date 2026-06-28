@@ -4,8 +4,10 @@ import TopBar from './components/TopBar'
 import SideBar from './components/SideBar'
 import { supabase } from './lib/supabase'
 import { useActivityTracker } from './hooks/useActivityTracker'
+import { useIsMobile } from './hooks/useIsMobile'
 import WelcomeModal from './components/WelcomeModal'
 import NapoAssistant from './components/NapoAssistant'
+import BottomNav from './components/BottomNav'
 
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
@@ -105,6 +107,7 @@ const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C
 
 export default function AppShell({ user, onSignOut }) {
   useActivityTracker()
+  const isMobile = useIsMobile()
   const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
   const [sbVis, setSbVis] = useState(loadSbVis)
@@ -476,6 +479,7 @@ export default function AppShell({ user, onSignOut }) {
       </div>
       <WelcomeModal user={user} />
       <NapoAssistant />
+      {isMobile && <BottomNav accent={accent} />}
     </div>
   )
 }
