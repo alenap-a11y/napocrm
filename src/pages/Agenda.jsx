@@ -608,6 +608,20 @@ export default function Agenda() {
           {/* Vue année custom */}
           {view === 'annee' && YearView}
 
+          {/* Légende statuts */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '8px 0', marginBottom: '8px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'Confirmé', color: '#7C9A7E' },
+              { label: 'Planifié', color: '#C9A84C' },
+              { label: 'Annulé',   color: '#8E9BAA' },
+            ].map(({ label, color }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#666' }}>
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                {label}
+              </span>
+            ))}
+          </div>
+
           {/* FullCalendar — toujours monté, masqué en vue année */}
           <div style={{ flex: 1, display: view !== 'annee' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
             <FullCalendar
