@@ -91,6 +91,7 @@ export default function WelcomeModal({ user }) {
         <p style={{lineHeight:'1.6',marginBottom:'8px',...sty('onboarding_subtitle')}}>
           {get('onboarding_subtitle')}
         </p>
+        <hr style={{border:'none',borderTop:'1px solid #f1f5f9',margin:'12px 0'}} />
         <p style={{lineHeight:'1.6',marginBottom:'16px',...sty('onboarding_body')}}>
           {get('onboarding_body')}
         </p>
