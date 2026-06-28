@@ -13,6 +13,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [adminLoading, setAdminLoading] = useState(true)
   const location = useLocation()
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function App() {
         const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single()
         setIsAdmin(data?.role === 'admin')
       }
+      setAdminLoading(false)
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -53,6 +55,7 @@ export default function App() {
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
   if (location.pathname.startsWith('/napo-cockpit-7X')) {
+    if (adminLoading) return null
     if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
     return <AdminLayout user={user} onSignOut={signOut} />
   }
