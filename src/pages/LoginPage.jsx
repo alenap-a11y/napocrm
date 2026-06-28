@@ -265,7 +265,14 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Mot de passe *</label>
-                    <input type="password" value={betaPassword} onChange={e => setBetaPassword(e.target.value)} placeholder="Minimum 8 caractères" style={inputStyle} />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input type="text" value={betaPassword} onChange={e => setBetaPassword(e.target.value)} placeholder="Minimum 8 caractères" style={{ ...inputStyle, flex: 1 }} />
+                      <button type="button" onClick={() => setBetaPassword(Math.random().toString(36).slice(2,10).toUpperCase() + Math.random().toString(36).slice(2,5) + '!9')}
+                        style={{ padding: '0 10px', borderRadius: 8, border: '0.5px solid #4BBFCE', background: '#f0f9ff', color: '#0369A1', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        🎲 Générer
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>Notez ce mot de passe — il vous servira pour vous connecter.</div>
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Votre métier</label>
