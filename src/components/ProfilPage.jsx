@@ -9,7 +9,7 @@ const inpStyle = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '' }
+const EMPTY = { prenom: '', nom: '', telephone: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '' }
 
 export default function ProfilPage({ accent, onSignOut }) {
   const [user,            setUser]            = useState(null)
@@ -30,7 +30,7 @@ export default function ProfilPage({ accent, onSignOut }) {
         if (!u) return
         setUser(u)
         const [{ data: p }, { count: nbClients }, { count: nbSeances }] = await Promise.all([
-          supabase.from('profils').select('*').eq('id', u.id).single(),
+          supabase.from('profiles').select('*').eq('id', u.id).single(),
           supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', u.id),
           supabase.from('seances').select('*', { count: 'exact', head: true }).eq('user_id', u.id),
         ])
@@ -44,6 +44,14 @@ export default function ProfilPage({ accent, onSignOut }) {
           agenda_public: p?.agenda_public || false,
           slug:          p?.slug          || '',
           avatar_url:    p?.avatar_url    || '',
+          metier:        p?.metier        || '',
+          adresse_rdv:   p?.adresse_rdv   || '',
+          ville_rdv:     p?.ville_rdv     || '',
+          code_postal:   p?.code_postal   || '',
+          maps_url:      p?.maps_url      || '',
+          tel_urgence:   p?.tel_urgence   || '',
+          bio:           p?.bio           || '',
+          email_contact: p?.email_contact || '',
         })
         const moisActif = Math.max(1, Math.floor(
           (new Date() - new Date(u.created_at)) / (1000 * 60 * 60 * 24 * 30)
@@ -66,7 +74,7 @@ export default function ProfilPage({ accent, onSignOut }) {
       if (upErr) throw upErr
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
       const url = data.publicUrl + '?t=' + Date.now()
-      await supabase.from('profils').update({ avatar_url: url }).eq('id', user.id)
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
       setProfil(p => ({ ...p, avatar_url: url }))
     } catch (err) { console.error('Upload avatar :', err.message) }
     setUploadingAvatar(false)
@@ -84,11 +92,15 @@ export default function ProfilPage({ accent, onSignOut }) {
   async function save() {
     setSaving(true); setSaveMsg('')
     try {
-      const { error } = await supabase.from('profils').upsert({
+      const { error } = await supabase.from('profiles').upsert({
         id: user.id, prenom: draft.prenom, nom: draft.nom,
         telephone: draft.telephone, ville: draft.ville, siret: draft.siret,
         activite: draft.activite, agenda_public: draft.agenda_public,
         slug: draft.slug, avatar_url: profil.avatar_url,
+        metier: draft.metier, adresse_rdv: draft.adresse_rdv,
+        ville_rdv: draft.ville_rdv, code_postal: draft.code_postal,
+        maps_url: draft.maps_url, tel_urgence: draft.tel_urgence,
+        bio: draft.bio, email_contact: draft.email_contact,
       }, { onConflict: 'id' })
       if (error) throw error
       setProfil({ ...draft, avatar_url: profil.avatar_url })
@@ -177,6 +189,14 @@ export default function ProfilPage({ accent, onSignOut }) {
             <div className="pf-field"><div className="pf-field-lbl">Membre depuis</div><div className="pf-field-val" style={{ color: 'var(--color-text-secondary)', fontSize: 11 }}>{membreSince}</div></div>
             <div className="pf-field"><div className="pf-field-lbl">SIRET</div><input value={draft.siret} onChange={d('siret')} style={inpStyle} /></div>
             <div className="pf-field"><div className="pf-field-lbl">Activité</div><input value={draft.activite} onChange={d('activite')} style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Métier</div><input value={draft.metier} onChange={d('metier')} placeholder="Sophrologue, Naturopathe..." style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Email contact</div><input value={draft.email_contact} onChange={d('email_contact')} type="email" placeholder="contact@exemple.com" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Tél. urgence</div><input value={draft.tel_urgence} onChange={d('tel_urgence')} type="tel" placeholder="06 xx xx xx xx" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Adresse RDV</div><input value={draft.adresse_rdv} onChange={d('adresse_rdv')} placeholder="12 rue de la Paix" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Ville RDV</div><input value={draft.ville_rdv} onChange={d('ville_rdv')} placeholder="Nancy" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Code postal</div><input value={draft.code_postal} onChange={d('code_postal')} placeholder="54000" style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Lien Maps</div><input value={draft.maps_url} onChange={d('maps_url')} placeholder="https://maps.google.com/..." style={inpStyle} /></div>
+            <div className="pf-field"><div className="pf-field-lbl">Bio</div><textarea value={draft.bio} onChange={d('bio')} placeholder="Présentation courte..." rows={3} style={{ ...inpStyle, resize: 'vertical' }} /></div>
           </>
         ) : (
           [
@@ -184,8 +204,16 @@ export default function ProfilPage({ accent, onSignOut }) {
             { lbl: 'Téléphone',     val: profil.telephone || '—' },
             { lbl: 'Ville',         val: profil.ville ? `${profil.ville}, France` : '—' },
             { lbl: 'Membre depuis', val: membreSince },
-            { lbl: 'SIRET',         val: profil.siret    || '—' },
-            { lbl: 'Activité',      val: profil.activite || '—' },
+            { lbl: 'SIRET',         val: profil.siret        || '—' },
+            { lbl: 'Activité',      val: profil.activite     || '—' },
+            { lbl: 'Métier',        val: profil.metier       || '—' },
+            { lbl: 'Email contact', val: profil.email_contact|| '—' },
+            { lbl: 'Tél. urgence',  val: profil.tel_urgence  || '—' },
+            { lbl: 'Adresse RDV',   val: profil.adresse_rdv  || '—' },
+            { lbl: 'Ville RDV',     val: profil.ville_rdv    || '—' },
+            { lbl: 'Code postal',   val: profil.code_postal  || '—' },
+            { lbl: 'Lien Maps',     val: profil.maps_url     || '—' },
+            { lbl: 'Bio',           val: profil.bio          || '—' },
           ].map(f => (
             <div className="pf-field" key={f.lbl}>
               <div className="pf-field-lbl">{f.lbl}</div>
@@ -204,7 +232,7 @@ export default function ProfilPage({ accent, onSignOut }) {
               {profil.agenda_public ? '🟢 Actif — vos clients peuvent réserver en ligne' : '⚫ Désactivé — invisible du public'}
             </div>
           </div>
-          <button onClick={async () => { const newVal = !profil.agenda_public; setProfil(p => ({ ...p, agenda_public: newVal })); await supabase.from('profils').update({ agenda_public: newVal }).eq('id', user.id) }}
+          <button onClick={async () => { const newVal = !profil.agenda_public; setProfil(p => ({ ...p, agenda_public: newVal })); await supabase.from('profiles').update({ agenda_public: newVal }).eq('id', user.id) }}
             style={{ padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0, background: profil.agenda_public ? '#E24B4A' : '#0F6E56', color: '#fff' }}>
             {profil.agenda_public ? 'Désactiver' : '✦ Activer mon agenda'}
           </button>
@@ -214,7 +242,7 @@ export default function ProfilPage({ accent, onSignOut }) {
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Votre lien public</div>
             <div style={{ display: 'flex', gap: 0, marginBottom: 10 }}>
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', padding: '7px 10px', background: 'var(--color-background-primary)', borderRadius: '6px 0 0 6px', border: '0.5px solid var(--color-border-tertiary)', whiteSpace: 'nowrap' }}>naposolo.com/rdv/</div>
-              <input value={profil.slug || ''} onChange={async e => { const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'); setProfil(p => ({ ...p, slug })); setDraft(p => ({ ...p, slug })); await supabase.from('profils').update({ slug }).eq('id', user.id) }}
+              <input value={profil.slug || ''} onChange={async e => { const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'); setProfil(p => ({ ...p, slug })); setDraft(p => ({ ...p, slug })); await supabase.from('profiles').update({ slug }).eq('id', user.id) }}
                 placeholder="prenom-nom"
                 style={{ fontSize: 11, padding: '7px 10px', border: '0.5px solid var(--color-border-tertiary)', borderLeft: 'none', borderRadius: '0 6px 6px 0', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', flex: 1, outline: 'none' }} />
             </div>
