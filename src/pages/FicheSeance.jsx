@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 export default function FicheSeance() {
   const { id: seanceId } = useParams();
+  const navigate = useNavigate();
 
   const [seance,  setSeance]  = useState(null);
   const [client,  setClient]  = useState(null);
@@ -97,6 +98,12 @@ export default function FicheSeance() {
       {/* HEADER */}
       <div style={s.header}>
         <button onClick={() => window.location.hash = '#agenda'} style={s.btnRetour}>← Agenda</button>
+        <button
+          onClick={() => navigate('/agenda')}
+          style={{position:'absolute',top:'16px',right:'16px',background:'#4BBFCE',color:'#fff',border:'none',borderRadius:'8px',padding:'8px 16px',fontSize:'13px',fontWeight:'600',cursor:'pointer',display:'flex',alignItems:'center',gap:'6px'}}
+        >
+          <i className="ti ti-calendar" style={{fontSize:'15px'}} /> Agenda
+        </button>
         <div>
           <h1 style={s.titre}>📋 Fiche séance</h1>
           <p style={s.sousTitre}>
@@ -209,7 +216,7 @@ function InfoLine({ label, value, capitalize }) {
 
 const s = {
   page:    { minHeight: "100vh", background: "#f5f5f0", fontFamily: "'DM Sans', sans-serif" },
-  header:  { background: "#1a3a2a", padding: "20px 32px", display: "flex", alignItems: "center", gap: 24 },
+  header:  { background: "#1a3a2a", padding: "20px 32px", display: "flex", alignItems: "center", gap: 24, position: "relative" },
   titre:   { margin: 0, fontSize: 20, fontWeight: 700, color: "#fff" },
   sousTitre: { margin: "4px 0 0", fontSize: 14, color: "#a8c5b5" },
   btnRetour: { background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, whiteSpace: "nowrap" },
