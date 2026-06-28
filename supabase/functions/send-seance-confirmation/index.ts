@@ -18,6 +18,17 @@ serve(async (req) => {
 
   const date = new Date(date_seance).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
+  const dateObj = new Date(date_seance)
+  const jour = String(dateObj.getDate()).padStart(2,'0')
+  const mois = String(dateObj.getMonth()+1).padStart(2,'0')
+  const annee = dateObj.getFullYear()
+  const heureH = heure_seance ? heure_seance.split(':')[0] : '09'
+  const heureM = heure_seance ? heure_seance.split(':')[1] : '00'
+  const dateICS = `${annee}${mois}${jour}`
+  const heureICS = `T${heureH}${heureM}00`
+  const heureICSFin = `T${String(parseInt(heureH)+1).padStart(2,'0')}${heureM}00`
+  const praticienEmailEncode = encodeURIComponent(praticien || '')
+
   const html = `
 <!DOCTYPE html>
 <html lang="fr">
@@ -28,7 +39,7 @@ serve(async (req) => {
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
         <tr><td style="background:#111827;padding:32px 40px;text-align:center;">
           <div style="font-size:22px;font-weight:700;color:#ffffff;">Napo<span style="color:#4BBFCE;">solo</span></div>
-          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;letter-spacing:1px;text-transform:uppercase;">Votre espace praticien</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;letter-spacing:1px;text-transform:uppercase;">Votre confirmation de séance</div>
         </td></tr>
         <tr><td align="center" style="padding:40px 40px 0;">
           <div style="width:64px;height:64px;background:#4BBFCE18;border-radius:50%;text-align:center;line-height:64px;font-size:28px;">📅</div>
@@ -44,6 +55,13 @@ serve(async (req) => {
               <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">🕐 Heure</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${heure_seance || '—'}</td></tr>
               <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">⏱ Durée</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${duree_minutes || '—'} min</td></tr>
               <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">🌿 Type</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${type_seance || '—'}</td></tr>
+              <tr><td colspan="2" style="padding-top:12px;text-align:center;">
+  <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=RDV+${encodeURIComponent(praticien)}&dates=${dateICS}${heureICS}/${dateICS}${heureICSFin}&details=RDV+avec+${encodeURIComponent(praticien)}"
+     target="_blank"
+     style="display:inline-block;margin-top:8px;padding:8px 20px;background:#4285F4;color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
+    📆 Ajouter à Google Calendar
+  </a>
+</td></tr>
             </table>
           </div>
         </td></tr>

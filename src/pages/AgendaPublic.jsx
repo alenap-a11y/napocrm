@@ -121,6 +121,9 @@ export default function AgendaPublic({ slug }) {
           praticien: profil.prenom + ' ' + profil.nom,
           date: formatDateLong(selectedSlot.date),
           heure: selectedSlot.heure,
+          praticien_tel: profil.tel || profil.telephone || '',
+          praticien_email: profil.email_contact || profil.email || '',
+          praticien_adresse: [profil.adresse_rdv, profil.ville_rdv, profil.code_postal].filter(Boolean).join(', ') || '',
         })
       })
     } catch(e) {
