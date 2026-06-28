@@ -745,6 +745,22 @@ export default function NouvelleSeance() {
         setSaving(false)
       } else {
         setSaveStatus('ok')
+        if (payload.email) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const { data: profile } = await supabase.from('profiles').select('prenom').eq('id', user.id).single()
+            await fetch('https://jzwwqngbgcdeyiqrvtle.supabase.co/functions/v1/send-seance-confirmation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                email: payload.email, prenom: payload.prenom, nom: payload.nom,
+                date_seance: payload.date_seance, heure_seance: payload.heure_seance,
+                duree_minutes: payload.duree_minutes, type_seance: payload.type_seance,
+                praticien: profile?.prenom || 'Votre praticien',
+              })
+            })
+          } catch(e) { console.warn('Email confirmation:', e) }
+        }
         setTimeout(() => window.location.hash = '#seances', 1400)
       }
     } catch (err) {
