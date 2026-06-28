@@ -12,11 +12,17 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isRecovery, setIsRecovery] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const location = useLocation()
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const u = session?.user ?? null
+      setUser(u)
+      if (u) {
+        const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single()
+        setIsAdmin(data?.role === 'admin')
+      }
       setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -47,7 +53,7 @@ export default function App() {
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
   if (location.pathname.startsWith('/admin')) {
-    if (user?.email !== 'alessandrellisebastien@gmail.com') return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
+    if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
     return <AdminLayout user={user} onSignOut={signOut} />
   }
   return <AppShell user={user} onSignOut={signOut} />
