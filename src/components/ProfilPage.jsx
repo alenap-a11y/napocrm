@@ -142,8 +142,8 @@ export default function ProfilPage({ accent, onSignOut }) {
         <div style={{ flex: 1 }}>
           {editing ? (
             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-              <input value={draft.prenom} onChange={d('prenom')} placeholder="Prénom" style={{ ...inpStyle, fontSize: 14, fontWeight: 500 }} />
-              <input value={draft.nom}    onChange={d('nom')}    placeholder="Nom"    style={{ ...inpStyle, fontSize: 14, fontWeight: 500 }} />
+              <input value={draft.prenom} onChange={d('prenom')} placeholder="Prénom" style={{ ...inpStyle, fontSize: 14, fontWeight: 500, color: draft.prenom ? 'var(--color-text-primary)' : '#9ca3af' }} />
+              <input value={draft.nom}    onChange={d('nom')}    placeholder="Nom"    style={{ ...inpStyle, fontSize: 14, fontWeight: 500, color: draft.prenom ? 'var(--color-text-primary)' : '#9ca3af' }} />
             </div>
           ) : (
             {editingName ? (
