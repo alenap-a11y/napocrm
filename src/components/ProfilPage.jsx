@@ -21,7 +21,6 @@ export default function ProfilPage({ accent, onSignOut }) {
   const [saving,          setSaving]          = useState(false)
   const [saveMsg,         setSaveMsg]         = useState('')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [editingName,     setEditingName]     = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -142,38 +141,11 @@ export default function ProfilPage({ accent, onSignOut }) {
         <div style={{ flex: 1 }}>
           {editing ? (
             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-              <input value={draft.prenom} onChange={d('prenom')} placeholder="Prénom" style={{ ...inpStyle, fontSize: 14, fontWeight: 500, color: draft.prenom ? 'var(--color-text-primary)' : '#9ca3af' }} />
-              <input value={draft.nom}    onChange={d('nom')}    placeholder="Nom"    style={{ ...inpStyle, fontSize: 14, fontWeight: 500, color: draft.prenom ? 'var(--color-text-primary)' : '#9ca3af' }} />
+              <input value={draft.prenom} onChange={d('prenom')} placeholder="Prénom" style={{ ...inpStyle, fontSize: 14, fontWeight: 500 }} />
+              <input value={draft.nom}    onChange={d('nom')}    placeholder="Nom"    style={{ ...inpStyle, fontSize: 14, fontWeight: 500 }} />
             </div>
           ) : (
-            {editingName ? (
-              <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                <input
-                  autoFocus
-                  value={draft.prenom}
-                  onChange={d('prenom')}
-                  placeholder="Prénom"
-                  style={{...inpStyle, fontSize:14, fontWeight:500, width:90}}
-                  onBlur={() => { setEditingName(false); save() }}
-                  onKeyDown={e => { if(e.key==='Enter'){ setEditingName(false); save() } if(e.key==='Escape') setEditingName(false) }}
-                />
-                <input
-                  value={draft.nom}
-                  onChange={d('nom')}
-                  placeholder="Nom"
-                  style={{...inpStyle, fontSize:14, fontWeight:500, width:90}}
-                  onBlur={() => { setEditingName(false); save() }}
-                  onKeyDown={e => { if(e.key==='Enter'){ setEditingName(false); save() } if(e.key==='Escape') setEditingName(false) }}
-                />
-              </div>
-            ) : (
-              <div className="pf-name" onDoubleClick={() => { setDraft({...profil}); setEditingName(true) }} title="Double-cliquer pour modifier" style={{cursor:'pointer'}}>
-                <span style={{borderBottom:'1px dashed #9ca3af'}}>
-                  {profil.prenom || '—'} {profil.nom || '—'}
-                </span>
-                <i className="ti ti-pencil" style={{fontSize:'12px', color:'#9ca3af', marginLeft:'4px'}} />
-              </div>
-            )}
+            <div className="pf-name">{profil.prenom} {profil.nom}</div>
           )}
           <div className="pf-role">
             {editing ? (
