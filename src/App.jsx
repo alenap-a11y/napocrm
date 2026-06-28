@@ -52,7 +52,7 @@ export default function App() {
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
-  if (location.pathname.startsWith('/admin')) {
+  if (location.pathname.startsWith('/napo-cockpit-7X')) {
     if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
     return <AdminLayout user={user} onSignOut={signOut} />
   }
