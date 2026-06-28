@@ -37,7 +37,7 @@ serve(async (req) => {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E8;padding:40px 0;">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
-        <tr><td style="background:#111827;padding:32px 40px;text-align:center;">
+        <tr><td style="background:#4BBFCE;padding:32px 40px;text-align:center;">
           <div style="font-size:22px;font-weight:700;color:#ffffff;">Napo<span style="color:#4BBFCE;">solo</span></div>
           <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;letter-spacing:1px;text-transform:uppercase;">Votre confirmation de séance</div>
         </td></tr>
@@ -46,7 +46,7 @@ serve(async (req) => {
         </td></tr>
         <tr><td style="padding:24px 40px 0;text-align:center;">
           <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111827;">Votre séance est confirmée !</h1>
-          <p style="margin:0;font-size:15px;color:#4B5563;line-height:1.6;">Bonjour ${prenom || ''} ${nom || ''},</p>
+          <p style="margin:0;font-size:15px;color:#4B5563;line-height:1.6;">Bonjour ${prenom ? prenom.charAt(0).toUpperCase() + prenom.slice(1).toLowerCase() : ''} ${nom ? nom.charAt(0).toUpperCase() + nom.slice(1).toLowerCase() : ''},</p>
         </td></tr>
         <tr><td style="padding:24px 40px;">
           <div style="background:#F0F9FF;border-radius:12px;padding:20px;border:0.5px solid #BAE6FD;">
@@ -56,7 +56,7 @@ serve(async (req) => {
               <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">⏱ Durée</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${duree_minutes || '—'} min</td></tr>
               <tr><td style="padding:6px 0;font-size:13px;color:#6b7280;">🌿 Type</td><td style="padding:6px 0;font-size:13px;font-weight:600;color:#111827;text-align:right;">${type_seance || '—'}</td></tr>
               <tr><td colspan="2" style="padding-top:12px;text-align:center;">
-  <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=RDV+${encodeURIComponent(praticien)}&dates=${dateICS}${heureICS}/${dateICS}${heureICSFin}&details=RDV+avec+${encodeURIComponent(praticien)}"
+  <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=RDV%20${encodeURIComponent(type_seance || 'Séance')}%20—%20${praticienEmailEncode}&dates=${dateICS}${heureICS}/${dateICS}${heureICSFin}&details=RDV%20avec%20${praticienEmailEncode}%0A%0A📞%20${encodeURIComponent(praticien_tel || '')}%0A✉️%20${encodeURIComponent(praticien_email || '')}%0A📍%20${encodeURIComponent(praticien_adresse || '')}&location=${encodeURIComponent(praticien_adresse || '')}"
      target="_blank"
      style="display:inline-block;margin-top:8px;padding:8px 20px;background:#4285F4;color:#fff;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
     📆 Ajouter à Google Calendar
