@@ -29,12 +29,18 @@ export default function LoginPage() {
   const [remember,     setRemember]     = useState(false)
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState('')
-  const [magicSent,    setMagicSent]    = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
   const [resetEmail,   setResetEmail]   = useState('')
   const [resetSent,    setResetSent]    = useState(false)
   const [resetError,   setResetError]   = useState('')
   const [resetLoading, setResetLoading] = useState(false)
+  const [betaOpen,     setBetaOpen]     = useState(false)
+  const [betaPrenom,   setBetaPrenom]   = useState('')
+  const [betaEmail,    setBetaEmail]    = useState('')
+  const [betaMetier,   setBetaMetier]   = useState('')
+  const [betaLoading,  setBetaLoading]  = useState(false)
+  const [betaSent,     setBetaSent]     = useState(false)
+  const [betaError,    setBetaError]    = useState('')
 
   useEffect(() => {
     // Charger textes CMS
@@ -82,16 +88,27 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  async function handleMagicLink() {
-    if (!email.trim()) { setError('Entrez votre email pour recevoir un lien magique.'); return }
-    setLoading(true); setError('')
+
+  async function handleBeta() {
+    if (!betaPrenom.trim() || !betaEmail.trim()) { setBetaError('Prénom et email requis.'); return }
+    setBetaLoading(true); setBetaError('')
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + '/dashboard' } })
-      if (error) throw error
-      setMagicSent(true)
-    } catch (e) { setError('Erreur: ' + e.message) }
-    setLoading(false)
+      const { error } = await supabase.from('beta_inscriptions').insert({
+        prenom: betaPrenom.trim(),
+        email: betaEmail.trim(),
+        metier: betaMetier.trim() || null
+      })
+      if (error) {
+        if (error.code === '23505') setBetaError('Cet email est déjà inscrit.')
+        else throw error
+      } else {
+        setBetaSent(true)
+      }
+    } catch(e) { setBetaError('Erreur: ' + e.message) }
+    setBetaLoading(false)
   }
+
+  function closeBeta() { setBetaOpen(false); setBetaPrenom(''); setBetaEmail(''); setBetaMetier(''); setBetaSent(false); setBetaError('') }
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh' }}>
@@ -136,13 +153,7 @@ export default function LoginPage() {
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Connexion</div>
             <div style={{ fontSize: 13, color: '#9ca3af' }}>Accédez à votre espace Naposolo</div>
           </div>
-          {magicSent ? (
-            <div style={{ padding: '16px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
-              <i className="ti ti-mail-check" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />
-              Lien magique envoyé à <strong>{email}</strong>.<br />Vérifiez votre boîte mail.
-              <button onClick={() => setMagicSent(false)} style={{ marginTop: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Réessayer</button>
-            </div>
-          ) : (
+          (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {error && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}</div>}
               <div>
@@ -153,26 +164,16 @@ export default function LoginPage() {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Mot de passe</label>
                 <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>
-                  <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ accentColor: '#0EA5E9', width: 14, height: 14, cursor: 'pointer' }} />
-                  Se souvenir de moi
-                </label>
-                <button type="button" onClick={() => { setResetOpen(true); setResetEmail(email) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0EA5E9', fontWeight: 500 }}>Mot de passe oublié ?</button>
-              </div>
-              <button type="submit" disabled={loading} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', minHeight: 44, background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
-                {loading ? 'Connexion…' : 'Se connecter'}
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
-                <span style={{ fontSize: 11, color: '#9ca3af' }}>ou</span>
+                <span style={{ fontSize: 11, color: '#9ca3af' }}>Pas encore de compte ?</span>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
               </div>
-              <button type="button" disabled={loading} onClick={handleMagicLink} style={{ width: '100%', padding: '10px', borderRadius: 9, border: '0.5px solid rgba(14,165,233,0.4)', background: '#f0f9ff', color: '#0369A1', fontSize: 14, fontWeight: 600, minHeight: 44, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                <i className="ti ti-wand" style={{ fontSize: 15 }} />Lien magique
+              <button type="button" onClick={() => setBetaOpen(true)} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 700, minHeight: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l\'alpha 🚀
               </button>
             </form>
-          )}
+          )
         </div>
       </section>
 
@@ -211,6 +212,65 @@ export default function LoginPage() {
         </div>
         <span style={{ fontSize: 13, color: '#9ca3af', ...cs('footer_city') }}>Fait avec ❤️ à {cms.footer_city}</span>
       </footer>
+
+      {/* MODAL BETA */}
+      {betaOpen && (
+        <div onClick={e => e.target === e.currentTarget && closeBeta()} style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420, boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>🚀 Rejoindre l\'alpha</div>
+                <div style={{ fontSize: 13, color: '#9ca3af' }}>Accès gratuit · Places limitées</div>
+              </div>
+              <button onClick={closeBeta} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            {betaSent ? (
+              <div style={{ padding: '20px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
+                <i className="ti ti-check" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                <strong>Inscription enregistrée !</strong><br/>
+                Nous vous contacterons très bientôt.<br/>
+                <em style={{ fontSize: 12, color: '#5a8a3a' }}>"Les petits font les grands !"</em>
+                <button onClick={closeBeta} style={{ marginTop: 12, display: 'block', margin: '12px auto 0', background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Fermer</button>
+              </div>
+            ) : (
+              <>
+                {betaError && <div style={{ padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13, marginBottom: 14 }}>{betaError}</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Prénom *</label>
+                    <input type="text" autoFocus value={betaPrenom} onChange={e => setBetaPrenom(e.target.value)} placeholder="Votre prénom" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email *</label>
+                    <input type="email" value={betaEmail} onChange={e => setBetaEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Votre métier</label>
+                    <select value={betaMetier} onChange={e => setBetaMetier(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                      <option value="">Sélectionnez...</option>
+                      <option>Sophrologue</option>
+                      <option>Naturopathe</option>
+                      <option>Coach bien-être</option>
+                      <option>Énergéticien</option>
+                      <option>Ostéopathe</option>
+                      <option>Psychologue</option>
+                      <option>Hypnothérapeute</option>
+                      <option>Réflexologue</option>
+                      <option>Autre praticien</option>
+                    </select>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                    <button onClick={closeBeta} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>Annuler</button>
+                    <button onClick={handleBeta} disabled={betaLoading} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: betaLoading ? '#7dd3fc' : 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: betaLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}>
+                      {betaLoading ? 'Inscription...' : "Je rejoins l\'alpha 🚀"}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAL RESET */}
       {resetOpen && (
