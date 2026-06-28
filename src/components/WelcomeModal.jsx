@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export default function WelcomeModal({ user }) {
   const [show, setShow] = useState(false)
+  const [profile, setProfile] = useState(null)
   const [items, setItems] = useState([])
   const [cms, setCms] = useState({
     onboarding_title: { value: 'Bienvenue sur Naposolo !' },
@@ -18,11 +19,18 @@ export default function WelcomeModal({ user }) {
       // Vérifie si déjà vu en base
       const { data: profile } = await supabase
         .from('profiles')
-        .select('welcomed_at')
+        .select('onboarding_count, onboarding_last_seen')
         .eq('id', user.id)
         .single()
 
-      if (profile?.welcomed_at) return
+      const count = profile?.onboarding_count || 0
+      const lastSeen = profile?.onboarding_last_seen
+      const today = new Date().toISOString().slice(0, 10)
+      const alreadySeenToday = lastSeen?.slice(0, 10) === today
+
+      if (count >= 7 || alreadySeenToday) return
+
+      setProfile(profile)
 
       // Vérifie paramètres CMS
       const { data: settings } = await supabase
@@ -59,7 +67,11 @@ export default function WelcomeModal({ user }) {
     if (user?.id) {
       await supabase
         .from('profiles')
-        .upsert({ id: user.id, welcomed_at: new Date().toISOString() })
+        .update({
+          onboarding_count: (profile?.onboarding_count || 0) + 1,
+          onboarding_last_seen: new Date().toISOString()
+        })
+        .eq('id', user.id)
     }
     setShow(false)
   }
