@@ -153,7 +153,6 @@ export default function LoginPage() {
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Connexion</div>
             <div style={{ fontSize: 13, color: '#9ca3af' }}>Accédez à votre espace Naposolo</div>
           </div>
-          (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {error && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}</div>}
               <div>
@@ -164,6 +163,16 @@ export default function LoginPage() {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Mot de passe</label>
                 <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>
+                  <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ accentColor: '#0EA5E9', width: 14, height: 14, cursor: 'pointer' }} />
+                  Se souvenir de moi
+                </label>
+                <button type="button" onClick={() => { setResetOpen(true); setResetEmail(email) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#0EA5E9', fontWeight: 500 }}>Mot de passe oublié ?</button>
+              </div>
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', minHeight: 44, background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Connexion…' : 'Se connecter'}
+              </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
                 <span style={{ fontSize: 11, color: '#9ca3af' }}>Pas encore de compte ?</span>
@@ -173,7 +182,6 @@ export default function LoginPage() {
                 <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l\'alpha 🚀
               </button>
             </form>
-          )
         </div>
       </section>
 
