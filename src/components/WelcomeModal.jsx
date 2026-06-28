@@ -40,8 +40,8 @@ export default function WelcomeModal({ user }) {
         .single()
 
       const DAYS = ['dim','lun','mar','mer','jeu','ven','sam']
-      const today = DAYS[new Date().getDay()]
-      const active = !settings || (settings.published && (settings.days_active ?? []).includes(today))
+      const todayDay = DAYS[new Date().getDay()]
+      const active = !settings || (settings.published && (settings.days_active ?? []).includes(todayDay))
       if (active) setShow(true)
     }
 
