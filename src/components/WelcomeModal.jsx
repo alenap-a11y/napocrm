@@ -92,9 +92,9 @@ export default function WelcomeModal({ user }) {
           {get('onboarding_subtitle')}
         </p>
         <hr style={{border:'none',borderTop:'1px solid #f1f5f9',margin:'12px 0'}} />
-        <p style={{lineHeight:'1.6',marginBottom:'16px',...sty('onboarding_body')}}>
-          {get('onboarding_body')}
-        </p>
+        <div style={{lineHeight:'1.6',marginBottom:'16px',textAlign:'left',...sty('onboarding_body')}}
+          dangerouslySetInnerHTML={{__html: get('onboarding_body')}}
+        />
         {items.length > 0 && (
           <div style={{display:'flex',flexDirection:'column',gap:'8px',marginBottom:'20px',textAlign:'left'}}>
             {items.map(item => (
