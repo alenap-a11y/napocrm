@@ -41,6 +41,7 @@ export default function LoginPage() {
   const [betaLoading,  setBetaLoading]  = useState(false)
   const [betaSent,     setBetaSent]     = useState(false)
   const [betaError,    setBetaError]    = useState('')
+  const [betaPassword, setBetaPassword] = useState('')
 
   useEffect(() => {
     // Charger textes CMS
@@ -91,24 +92,33 @@ export default function LoginPage() {
 
   async function handleBeta() {
     if (!betaPrenom.trim() || !betaEmail.trim()) { setBetaError('Prénom et email requis.'); return }
+    if (!betaPassword || betaPassword.length < 8) { setBetaError('Mot de passe minimum 8 caractères.'); return }
     setBetaLoading(true); setBetaError('')
     try {
-      const { error } = await supabase.from('beta_inscriptions').insert({
-        prenom: betaPrenom.trim(),
+      const { error } = await supabase.auth.signUp({
         email: betaEmail.trim(),
-        metier: betaMetier.trim() || null
+        password: betaPassword,
+        options: {
+          data: { prenom: betaPrenom.trim(), metier: betaMetier.trim() || null },
+          emailRedirectTo: 'https://naposolo.com'
+        }
       })
       if (error) {
-        if (error.code === '23505') setBetaError('Cet email est déjà inscrit.')
+        if (error.message.includes('already registered')) setBetaError('Cet email est déjà inscrit.')
         else throw error
       } else {
+        await supabase.from('beta_inscriptions').insert({
+          prenom: betaPrenom.trim(),
+          email: betaEmail.trim(),
+          metier: betaMetier.trim() || null
+        }).maybeSingle()
         setBetaSent(true)
       }
     } catch(e) { setBetaError('Erreur: ' + e.message) }
     setBetaLoading(false)
   }
 
-  function closeBeta() { setBetaOpen(false); setBetaPrenom(''); setBetaEmail(''); setBetaMetier(''); setBetaSent(false); setBetaError('') }
+  function closeBeta() { setBetaOpen(false); setBetaPrenom(''); setBetaEmail(''); setBetaMetier(''); setBetaPassword(''); setBetaSent(false); setBetaError('') }
 
   return (
     <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh' }}>
@@ -179,7 +189,7 @@ export default function LoginPage() {
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
               </div>
               <button type="button" onClick={() => setBetaOpen(true)} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 700, minHeight: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l\'alpha 🚀
+                <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l'alpha 🚀
               </button>
             </form>
         </div>
@@ -227,16 +237,17 @@ export default function LoginPage() {
           <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420, boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
               <div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>🚀 Rejoindre l\'alpha</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 4 }}>🚀 Rejoindre l'alpha</div>
                 <div style={{ fontSize: 13, color: '#9ca3af' }}>Accès gratuit · Places limitées</div>
               </div>
               <button onClick={closeBeta} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }}>×</button>
             </div>
             {betaSent ? (
               <div style={{ padding: '20px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
-                <i className="ti ti-check" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
-                <strong>Inscription enregistrée !</strong><br/>
-                Nous vous contacterons très bientôt.<br/>
+                <i className="ti ti-mail-check" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                <strong>Compte créé !</strong><br/>
+                Un email de confirmation vous a été envoyé à <strong>{betaEmail}</strong>.<br/>
+                Cliquez sur le lien pour activer votre compte.<br/>
                 <em style={{ fontSize: 12, color: '#5a8a3a' }}>"Les petits font les grands !"</em>
                 <button onClick={closeBeta} style={{ marginTop: 12, display: 'block', margin: '12px auto 0', background: 'none', border: 'none', cursor: 'pointer', color: '#0F6E56', fontSize: 12, textDecoration: 'underline' }}>Fermer</button>
               </div>
@@ -251,6 +262,10 @@ export default function LoginPage() {
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email *</label>
                     <input type="email" value={betaEmail} onChange={e => setBetaEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Mot de passe *</label>
+                    <input type="password" value={betaPassword} onChange={e => setBetaPassword(e.target.value)} placeholder="Minimum 8 caractères" style={inputStyle} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Votre métier</label>
@@ -270,7 +285,7 @@ export default function LoginPage() {
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     <button onClick={closeBeta} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>Annuler</button>
                     <button onClick={handleBeta} disabled={betaLoading} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: betaLoading ? '#7dd3fc' : 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: betaLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}>
-                      {betaLoading ? 'Inscription...' : "Je rejoins l\'alpha 🚀"}
+                      {betaLoading ? 'Inscription...' : "Je rejoins l'alpha 🚀"}
                     </button>
                   </div>
                 </div>
