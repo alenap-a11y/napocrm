@@ -137,11 +137,11 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
           const { data: clientData } = await supabase.from("clients").select("email, prenom, nom").eq("id", client.id).single()
           if (clientData?.email) {
             const { data: { session } } = await supabase.auth.getSession()
-            const { data: profile } = await supabase.from("profiles").select("prenom").eq("id", user.id).single()
+            const { data: profile } = await supabase.from("profiles").select("prenom, tel, email_contact, adresse_rdv, ville_rdv, code_postal").eq("id", user.id).single()
             await fetch("https://jzwwqngbgcdeyiqrvtle.supabase.co/functions/v1/send-seance-confirmation", {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-              body: JSON.stringify({ email: clientData.email, prenom: clientData.prenom, nom: clientData.nom, date_seance: date, heure_seance: heure, duree_minutes: parseInt(duree, 10) || 60, type_seance: typeSeance, praticien: profile?.prenom || "Votre praticien" })
+              body: JSON.stringify({ email: clientData.email, prenom: clientData.prenom, nom: clientData.nom, date_seance: date, heure_seance: heure, duree_minutes: parseInt(duree, 10) || 60, type_seance: typeSeance, praticien: profile?.prenom || "Votre praticien", praticien_tel: profile?.tel || '', praticien_email: profile?.email_contact || profile?.email || '', praticien_adresse: [profile?.adresse_rdv, profile?.ville_rdv, profile?.code_postal].filter(Boolean).join(', ') || '' })
             })
           }
         } catch(e) { console.warn("Email confirmation RDV:", e) }
