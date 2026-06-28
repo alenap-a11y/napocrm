@@ -185,7 +185,7 @@ export default function FicheSeance() {
             📋 Voir toutes les séances
           </button>
           <button
-            onClick={() => client && (window.location.href = `/clients/${client.id}`)}
+            onClick={() => client && navigate(`/clients/${client.id}`)}
             style={{ ...s.btn, background: "#2d6a4f", color: "#fff" }}
             disabled={!client}>
             👤 Fiche client
