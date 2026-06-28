@@ -10,10 +10,13 @@ import AdminOnboarding from './AdminOnboarding'
 import AdminRoadmap from './AdminRoadmap'
 import AdminNapoPlus from './AdminNapoPlus'
 import AdminMarketplace from './AdminMarketplace'
+import AdminUsers from './AdminUsers'
+import AdminUserDetail from './AdminUserDetail'
 
 export default function AdminLayout({ user }) {
   const [page, setPage] = useState('dashboard')
   const [decoOpen, setDecoOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -25,6 +28,7 @@ export default function AdminLayout({ user }) {
     { id: 'supabase',  label: 'Supabase',   icon: 'ti-database',     group: null },
     { id: 'napoplus',  label: 'Napo+',      icon: 'ti-sparkles',     group: null },
     { id: 'marketplace', label: 'Marketplace', icon: 'ti-store',        group: null },
+    { id: 'users',       label: 'Utilisateurs', icon: 'ti-users',      group: null },
   ]
 
   const supportItems = [
@@ -110,6 +114,8 @@ export default function AdminLayout({ user }) {
         {page === 'admin-news'  && <AdminNews />}
         {page === 'napoplus'    && <AdminNapoPlus />}
         {page === 'marketplace' && <AdminMarketplace />}
+        {page === 'users' && !selectedUser && <AdminUsers onSelectUser={u => setSelectedUser(u)} />}
+        {page === 'users' && selectedUser && <AdminUserDetail user={selectedUser} onBack={() => setSelectedUser(null)} />}
       </div>
 
       {decoOpen && (
