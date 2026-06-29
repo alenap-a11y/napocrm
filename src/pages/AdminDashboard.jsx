@@ -118,8 +118,8 @@ export default function AdminDashboard() {
           </div>
           <div style={{fontSize:'11px', color:'var(--color-text-secondary)', marginTop:'2px'}}>
             {alphaOpen
-              ? 'Les nouveaux testeurs peuvent s&#39;inscrire librement.'
-              : 'Les visiteurs voient un message de liste d&#39;attente et peuvent écrire à contact@naposolo.com.'
+              ? 'Les nouveaux testeurs peuvent s’inscrire librement.'
+              : 'Les visiteurs voient un message de liste d’attente et peuvent écrire à contact@naposolo.com.'
             }
           </div>
         </div>
