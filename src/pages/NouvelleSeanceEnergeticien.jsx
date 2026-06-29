@@ -117,10 +117,14 @@ export default function NouvelleSeanceEnergeticien() {
     setError(null)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Non connecté')
+
       /* 1 — Insérer la séance */
       const { data: seanceData, error: seanceErr } = await supabase
         .from('seances')
         .insert({
+          user_id: user.id,
           client_id: selectedClientId,
           date_seance: date,
           duree_minutes: parseInt(duree) || 75,
