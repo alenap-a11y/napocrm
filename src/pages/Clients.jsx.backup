@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
+import { useSeancesSync } from '../hooks/useSeancesSync'
 
 
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
@@ -15,13 +16,24 @@ const STATUT_STYLE = {
 }
 
 const SPEC_COLOR = {
-  'Sophrologie':    { bg: '#E6F1FB', color: '#185FA5' },
-  'Coaching':       { bg: '#EEEDFE', color: '#534AB7' },
-  'Naturopathie':   { bg: '#E1F5EE', color: '#0F6E56' },
-  'Fleurs de Bach': { bg: '#F0EBF8', color: '#7F3FBF' },
-  'Énergie':        { bg: '#FBEAF0', color: '#993556' },
-  'Massage':        { bg: '#FAEEDA', color: '#854F0B' },
-  'Autre':          { bg: '#F5F5F5', color: '#6B7280' },
+  'Aromathérapeute':  { bg: '#FEF3E2', color: '#A05A00' },
+  'Astrologue':       { bg: '#EEEDFE', color: '#534AB7' },
+  'Cartomancienne':   { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Coach bien-être':  { bg: '#E6F1FB', color: '#185FA5' },
+  'Coach yoga':       { bg: '#E1F5EE', color: '#0F6E56' },
+  'Energéticien':     { bg: '#FBEAF0', color: '#993556' },
+  'Fleurs de Bach':   { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Hypnothérapeute':  { bg: '#E6F1FB', color: '#185FA5' },
+  'Magnétiseur':      { bg: '#FAEEDA', color: '#854F0B' },
+  'Médium':           { bg: '#F0EBF8', color: '#7F3FBF' },
+  'Naturopathe':      { bg: '#E1F5EE', color: '#0F6E56' },
+  'Ostéopathe':       { bg: '#E6F1FB', color: '#185FA5' },
+  'Praticien massage':{ bg: '#FAEEDA', color: '#854F0B' },
+  'Psychologue':      { bg: '#EEEDFE', color: '#534AB7' },
+  'Réflexologue':     { bg: '#E1F5EE', color: '#0F6E56' },
+  'Reiki':            { bg: '#FBEAF0', color: '#993556' },
+  'Sophrologue':      { bg: '#E6F1FB', color: '#185FA5' },
+  'Autre':            { bg: '#F5F5F5', color: '#6B7280' },
 }
 
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
@@ -71,23 +83,37 @@ function clientName(c) { return `${c.prenom} ${c.nom}`.trim() }
 
 function fmtDate(d) {
   if (!d) return '—'
-  const [y, m, j] = d.split('-')
-  return `${j} ${MOIS_COURT[parseInt(m)-1]} ${y}`
+  const [y, m, j] = d.slice(0, 10).split('-')
+  return `${parseInt(j)} ${MOIS_COURT[parseInt(m)-1]} ${y}`
 }
 
 export default function Clients() {
   const importRef = useRef()
+  const [modalSeance, setModalSeance] = useState(null)
+  const [modalTab, setModalTab] = useState('infos')
 
   const location = useLocation()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
+  const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
+  const [napoNavState] = useState(() => {
+    const stored = JSON.parse(sessionStorage.getItem('napo_nav_state') || 'null')
+    if (stored) sessionStorage.removeItem('napo_nav_state')
+    return stored
+  })
+  const [napoOpenClientId] = useState(() => {
+    const id = sessionStorage.getItem('napo_open_client')
+    if (id) sessionStorage.removeItem('napo_open_client')
+    return id || null
+  })
+
   const [activeTab,      setActiveTab]      = useState('liste')
   const [search,         setSearch]         = useState('')
   const [filterSpec,     setFilterSpec]     = useState('Toutes')
   const [filterStatut,   setFilterStatut]   = useState('Tous')
   const [detail,         setDetail]         = useState(null)
   const [detailTab,      setDetailTab]      = useState('infos')
-  const [clientSeances,  setClientSeances]  = useState([])
+  const clientSeances = detail ? getSeancesByClient(detail.id) : []
   const [loadingSeances, setLoadingSeances] = useState(false)
   const [showNewSeance,  setShowNewSeance]  = useState(false)
   const [newSeanceForm,  setNewSeanceForm]  = useState({
@@ -100,13 +126,17 @@ export default function Clients() {
   })
   const [savingSeance,   setSavingSeance]   = useState(false)
   const [seanceMsg,      setSeanceMsg]      = useState('')
+  const [editingSeanceId, setEditingSeanceId] = useState(null)
+  const [editSeanceForm,  setEditSeanceForm]  = useState(null)
   const [editingDetail,  setEditingDetail]  = useState(false)
   const [editForm,       setEditForm]       = useState(null)
+  const [bachFiches,     setBachFiches]     = useState([])
+  const [loadingBach,    setLoadingBach]    = useState(false)
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
 
-  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologie', ville: '', statut: 'actif', notes: '' }
+  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologue', ville: '', statut: 'actif', notes: '' }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
@@ -124,57 +154,53 @@ export default function Clients() {
   const totalSeances = clients.reduce((s, c) => s + (c.nb_seances || 0), 0)
 
   useEffect(() => {
-    if (location.state?.searchClient) {
-      setSearch(location.state.searchClient)
-      if (location.state.openSeance && clients.length > 0) {
-        const found = clients.find(c =>
-          `${c.prenom} ${c.nom}`.toLowerCase() === location.state.searchClient.toLowerCase()
-        )
-        if (found) {
-          openDetail(found)
-          setTimeout(() => setDetailTab('seances'), 100)
-        }
+    if (!napoOpenClientId || clients.length === 0) return
+    const target = clients.find(c => c.id === napoOpenClientId)
+    if (target) openDetail(target)
+  }, [napoOpenClientId, clients])
+
+  useEffect(() => {
+    const state = napoNavState || location.state
+    if (!state?.searchClient) return
+    setSearch(state.searchClient)
+    if (state.openSeance && clients.length > 0) {
+      const found = clients.find(c =>
+        `${c.prenom} ${c.nom}`.toLowerCase() === state.searchClient.toLowerCase()
+      )
+      if (found) {
+        openDetail(found)
+        setTimeout(() => setDetailTab('seances'), 100)
       }
     }
-  }, [location.state, clients])
+  }, [napoNavState, location.state, clients])
 
-  async function fetchClientSeances(client) {
-    setLoadingSeances(true)
-    setClientSeances([])
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data } = await supabase
-        .from('seances')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('client_id', client.id)
-        .order('date_seance', { ascending: false })
-      setClientSeances(data || [])
-    } catch {}
-    setLoadingSeances(false)
-  }
+  useEffect(() => {
+    if (detailTab !== 'bach' || !detail) { setBachFiches([]); return }
+    setLoadingBach(true)
+    supabase.from('fiches_bach')
+      .select('id, created_at, selection, client_info, persos')
+      .eq('client_id', detail.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setBachFiches(data || []); setLoadingBach(false) })
+  }, [detailTab, detail?.id])
 
   async function handleAddSeanceFromFiche() {
     if (!detail) return
     setSavingSeance(true)
     setSeanceMsg('')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Non connecté')
-      const { data, error } = await supabase.from('seances').insert({
-        user_id: user.id,
-        client_id: detail.id,
+      const { error } = await addSeance({
         prenom: detail.prenom,
         nom: detail.nom,
         email: detail.email || null,
+        client_id: detail.id,
         type_seance: newSeanceForm.type_seance,
         date_seance: newSeanceForm.date_seance,
         heure_seance: newSeanceForm.heure_seance,
         duree_minutes: parseInt(newSeanceForm.duree_minutes) || 60,
         prix_euros: parseFloat(newSeanceForm.prix_euros) || null,
         notes: newSeanceForm.notes || null,
-      }).select().single()
+      })
       if (error) throw error
       setSeanceMsg('✓ Séance ajoutée')
       setShowNewSeance(false)
@@ -187,13 +213,37 @@ export default function Clients() {
     setSavingSeance(false)
   }
 
+  function openEditSeance(s) {
+    setEditSeanceForm({
+      type_seance: s.type_seance || 'Sophrologie',
+      date_seance: s.date_seance || '',
+      heure_seance: s.heure_seance || '',
+      duree_minutes: s.duree_minutes || '60',
+      prix_euros: s.prix_euros || '',
+      notes: s.notes || '',
+    })
+    setEditingSeanceId(s.id)
+  }
+
+  async function saveEditSeance() {
+    await updateSeance(editingSeanceId, {
+      type_seance: editSeanceForm.type_seance,
+      date_seance: editSeanceForm.date_seance,
+      heure_seance: editSeanceForm.heure_seance,
+      duree_minutes: parseInt(editSeanceForm.duree_minutes) || 60,
+      prix_euros: parseFloat(editSeanceForm.prix_euros) || 0,
+      notes: editSeanceForm.notes || null,
+    })
+    setEditingSeanceId(null)
+    setEditSeanceForm(null)
+  }
+
   function openDetail(c) {
     setDetail(c)
     setDetailTab('infos')
     setEditingDetail(false)
     setShowNewSeance(false)
     setSeanceMsg('')
-    fetchClientSeances(c)
   }
 
   function handleSave() {
@@ -228,6 +278,14 @@ export default function Clients() {
     await updateClient(detail.id, { ...editForm })
     setDetail(prev => ({ ...prev, ...editForm }))
     setEditingDetail(false)
+    const seancesClient = getSeancesByClient(detail.id)
+    for (const s of seancesClient) {
+      await updateSeance(s.id, {
+        prenom: editForm.prenom,
+        nom: editForm.nom,
+        email: editForm.email || null,
+      })
+    }
   }
 
   async function handleAddClient() {
@@ -302,8 +360,8 @@ export default function Clients() {
           </div>
 
           <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, overflow: 'hidden', border: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-              {['Client','Email','Spécialité','Âge','Statut',''].map((h,i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 90px 80px 36px', padding: '8px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+              {['Client','Email','Spécialité','Âge','Création','Statut',''].map((h,i) => (
                 <div key={i} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</div>
               ))}
             </div>
@@ -316,7 +374,7 @@ export default function Clients() {
               const stat = STATUT_STYLE[c.statut]   || STATUT_STYLE['inactif']
               return (
                 <div key={c.id} onClick={() => openDetail(c)}
-                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
+                  style={{ display: 'grid', gridTemplateColumns: '1.2fr 140px 120px 70px 90px 80px 36px', padding: '11px 16px', alignItems: 'center', cursor: 'pointer', borderBottom: idx < filtered.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none', transition: 'background .1s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-primary)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -331,6 +389,7 @@ export default function Clients() {
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.email}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: spec.bg, color: spec.color, padding: '2px 8px', borderRadius: 20 }}>{c.specialite}</span></div>
                   <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{age(c.date_naissance)}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{fmtDate(c.date_creation)}</div>
                   <div><span style={{ fontSize: 11, fontWeight: 600, background: stat.bg, color: stat.color, padding: '2px 8px', borderRadius: 20 }}>{stat.label}</span></div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button onClick={ev => { ev.stopPropagation(); downloadCSV(toCSV([c]), `client-${c.nom}.csv`) }}
@@ -365,6 +424,24 @@ export default function Clients() {
               <Field label="Ville"><input value={form.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
               <Field label="Spécialité">
                 <select value={form.specialite} onChange={f('specialite')} style={inp}>
+                  <option>Aromathérapeute</option>
+                  <option>Astrologue</option>
+                  <option>Cartomancienne</option>
+                  <option>Coach bien-être</option>
+                  <option>Coach yoga</option>
+                  <option>Energéticien</option>
+                  <option>Fleurs de Bach</option>
+                  <option>Hypnothérapeute</option>
+                  <option>Magnétiseur</option>
+                  <option>Médium</option>
+                  <option>Naturopathe</option>
+                  <option>Ostéopathe</option>
+                  <option>Praticien massage</option>
+                  <option>Psychologue</option>
+                  <option>Réflexologue</option>
+                  <option>Reiki</option>
+                  <option>Sophrologue</option>
+                  <option>Autre</option>
                   {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
@@ -456,6 +533,24 @@ export default function Clients() {
                       {editingDetail ? (
                         <>
                           <select value={editForm.specialite} onChange={ef('specialite')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
+                          <option>Aromathérapeute</option>
+                          <option>Astrologue</option>
+                          <option>Cartomancienne</option>
+                          <option>Coach bien-être</option>
+                          <option>Coach yoga</option>
+                          <option>Energéticien</option>
+                          <option>Fleurs de Bach</option>
+                          <option>Hypnothérapeute</option>
+                          <option>Magnétiseur</option>
+                          <option>Médium</option>
+                          <option>Naturopathe</option>
+                          <option>Ostéopathe</option>
+                          <option>Praticien massage</option>
+                          <option>Psychologue</option>
+                          <option>Réflexologue</option>
+                          <option>Reiki</option>
+                          <option>Sophrologue</option>
+                          <option>Autre</option>
                             {SPECIALITES.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                           <select value={editForm.statut} onChange={ef('statut')} style={{ ...mInp, fontSize: 11, padding: '2px 8px', width: 'auto' }}>
@@ -480,7 +575,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18 }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes']].map(([id, label, icon]) => (
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf']].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -563,7 +658,7 @@ export default function Clients() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                       <MField label="Type">
                         <select value={newSeanceForm.type_seance} onChange={e => setNewSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
-                          {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+                          {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </MField>
                       <MField label="Date">
@@ -604,27 +699,70 @@ export default function Clients() {
                     {clientSeances.map((s, idx) => {
                       const tc = { 'Sophrologie':{'bg':'#E6F1FB','color':'#185FA5'},'Coaching':{'bg':'#EEEDFE','color':'#534AB7'},'Naturopathie':{'bg':'#E1F5EE','color':'#0F6E56'},'Énergie':{'bg':'#FBEAF0','color':'#993556'},'Massage':{'bg':'#FAEEDA','color':'#854F0B'},'Fleurs de Bach':{'bg':'#F0EBF8','color':'#7F3FBF'},'Autre':{'bg':'#F5F5F5','color':'#6B7280'} }[s.type_seance] || {'bg':'#F5F5F5','color':'#6B7280'}
                       return (
-                        <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                {fmtDate(s.date_seance)}
-                              </span>
-                              {s.heure_seance && (
-                                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
-                                  à {s.heure_seance}
-                                </span>
-                              )}
-                              <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
-                            </div>
-                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                              {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
-                              {s.prix_euros    && <span><i className="ti ti-coin"  style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
-                            </div>
-                            {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
-                          </div>
-                        </div>
+  <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < clientSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+    <div style={{ width: 8, height: 8, borderRadius: '50%', background: tc.color, flexShrink: 0, marginTop: 5 }} />
+    <div style={{ flex: 1 }}>
+      {editingSeanceId === s.id ? (
+        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 10, padding: 14, border: '0.5px solid var(--color-border-secondary)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <MField label="Type">
+              <select value={editSeanceForm.type_seance} onChange={e => setEditSeanceForm(p => ({ ...p, type_seance: e.target.value }))} style={mInp}>
+                {['Sophrologie','Coaching','Naturopathie','Énergie','Massage','Fleurs de Bach','3D Humain','Autre'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </MField>
+            <MField label="Date">
+              <input type="date" value={editSeanceForm.date_seance} onChange={e => setEditSeanceForm(p => ({ ...p, date_seance: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Heure">
+              <input type="time" value={editSeanceForm.heure_seance} onChange={e => setEditSeanceForm(p => ({ ...p, heure_seance: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Durée (min)">
+              <input type="number" value={editSeanceForm.duree_minutes} min={15} step={15} onChange={e => setEditSeanceForm(p => ({ ...p, duree_minutes: e.target.value }))} style={mInp} />
+            </MField>
+            <MField label="Prix (€)" style={{ gridColumn: '1/-1' }}>
+              <input type="number" value={editSeanceForm.prix_euros} min={0} step={0.01} onChange={e => setEditSeanceForm(p => ({ ...p, prix_euros: e.target.value }))} style={mInp} />
+            </MField>
+          </div>
+          <MField label="Notes de cette séance">
+            <textarea value={editSeanceForm.notes} rows={2} onChange={e => setEditSeanceForm(p => ({ ...p, notes: e.target.value }))} style={{ ...mInp, resize: 'vertical', fontFamily: 'inherit' }} />
+          </MField>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+            <button onClick={() => { setEditingSeanceId(null); setEditSeanceForm(null) }} style={{ padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 12 }}>Annuler</button>
+            <button onClick={saveEditSeance} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+              <i className="ti ti-check" style={{ marginRight: 5 }} />Sauvegarder
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+              {fmtDate(s.date_seance)}
+            </span>
+            {s.heure_seance && (
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>
+                à {s.heure_seance}
+              </span>
+            )}
+            <span style={{ fontSize: 10, fontWeight: 600, background: tc.bg, color: tc.color, padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>{s.type_seance}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+            {s.duree_minutes && <span><i className="ti ti-clock" style={{ fontSize: 11, marginRight: 3 }} />{s.duree_minutes} min</span>}
+            {s.prix_euros    && <span><i className="ti ti-coin"  style={{ fontSize: 11, marginRight: 3 }} />{parseFloat(s.prix_euros).toFixed(0)} €</span>}
+          </div>
+          {s.notes && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{s.notes}</div>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+            <button onClick={() => setModalSeance(s)} style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-eye" style={{ fontSize: 11 }} />Voir
+            </button>
+            <button onClick={() => openEditSeance(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className="ti ti-pencil" style={{ fontSize: 11 }} />Modifier
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
                       )
                     })}
                     <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--color-background-secondary)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -650,6 +788,74 @@ export default function Clients() {
               </div>
             )}
 
+            {/* ── Onglet BACH ── */}
+            {detailTab === 'bach' && !editingDetail && (
+              <div>
+                <button
+                  onClick={() => { setDetail(null); window.location.href = `/fleurs-de-bach/${detail.id}` }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '11px 18px', marginBottom: 16, borderRadius: 10, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  🌿 Nouvelle séance Bach
+                </button>
+
+                {loadingBach && (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-loader-2" style={{ fontSize: 22, display: 'block', marginBottom: 8 }} />Chargement…
+                  </div>
+                )}
+
+                {!loadingBach && bachFiches.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <i className="ti ti-leaf-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+                    Aucune séance Bach enregistrée
+                    <div style={{ marginTop: 14 }}>
+                      <button onClick={() => { setDetail(null); window.location.href = `/fleurs-de-bach/${detail.id}` }}
+                        style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#3D5A3E', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Démarrer la première séance
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!loadingBach && bachFiches.map((fiche, idx) => {
+                  const nbFleurs   = Object.keys(fiche.selection || {}).length
+                  const ci         = fiche.client_info || {}
+                  const objectif   = ci.notes || fiche.persos || ''
+                  const typeSeance = ci.type_seance || ''
+                  const dateStr    = new Date(fiche.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+                  return (
+                    <div key={fiche.id} style={{ paddingTop: 12, paddingBottom: 12, borderBottom: idx < bachFiches.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3D5A3E', flexShrink: 0, marginTop: 5 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{dateStr}</span>
+                            {ci.heure && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>à {ci.heure}</span>}
+                            <span style={{ fontSize: 11, fontWeight: 600, background: '#EAF0EA', color: '#3D5A3E', padding: '1px 8px', borderRadius: 20 }}>
+                              {nbFleurs} fleur{nbFleurs !== 1 ? 's' : ''}
+                            </span>
+                            {typeSeance && (
+                              <span style={{ fontSize: 10, fontWeight: 600, background: '#F0EBF8', color: '#7F3FBF', padding: '1px 7px', borderRadius: 20 }}>{typeSeance}</span>
+                            )}
+                          </div>
+                          {objectif && (
+                            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5, fontStyle: 'italic', marginBottom: 6 }}>
+                              {objectif.length > 100 ? objectif.slice(0, 100) + '…' : objectif}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <button onClick={() => { setDetail(null); window.location.href = `/fleurs-de-bach/${detail.id}` }}
+                              style={{ background: 'none', border: '0.5px solid #3D5A3E', borderRadius: 6, cursor: 'pointer', color: '#3D5A3E', fontSize: 11, padding: '3px 8px' }}>
+                              🌿 Recharger
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8, marginTop: 20, paddingTop: 16, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
               {editingDetail ? (
@@ -661,7 +867,12 @@ export default function Clients() {
                 </>
               ) : (
                 <>
-                  <button onClick={async () => { await deleteClient(detail.id); setDetail(null) }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
+                  <button onClick={async () => {
+                    const seancesClient = getSeancesByClient(detail.id)
+                    for (const s of seancesClient) { await deleteSeance(s.id) }
+                    await deleteClient(detail.id)
+                    setDetail(null)
+                  }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
                   </button>
                   <button onClick={() => openEdit(detail)} style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
@@ -672,6 +883,41 @@ export default function Clients() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+      {modalSeance && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModalSeance(null)}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 14, padding: 24, maxWidth: 480, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>Fiche séance</span>
+              <button onClick={() => setModalSeance(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-secondary)' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[
+                ['Date',  modalSeance.date_seance ? new Date(modalSeance.date_seance.slice(0,10) + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '—'],
+                ['Heure', modalSeance.heure_seance ? modalSeance.heure_seance.slice(0,5) : '—'],
+                ['Type',  modalSeance.type_seance || '—'],
+                ['Durée', modalSeance.duree_minutes ? modalSeance.duree_minutes + ' min' : '—'],
+                ['Prix',  modalSeance.prix_euros != null ? parseFloat(modalSeance.prix_euros).toFixed(0) + ' €' : '—'],
+                ['Tags',  modalSeance.tags || '—'],
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--color-background-secondary)', borderRadius: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-primary)', fontWeight: 600 }}>{val}</span>
+                </div>
+              ))}
+              <div style={{ padding: '10px 12px', background: 'var(--color-background-secondary)', borderRadius: 8, gridColumn: '1/-1' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>Notes de séance</div>
+                {modalSeance.notes
+                  ? <div style={{ fontSize: 12, color: 'var(--color-text-primary)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{modalSeance.notes}</div>
+                  : <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Aucune note pour cette séance</div>
+                }
+              </div>
+            </div>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalSeance(null)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Fermer</button>
+            </div>
           </div>
         </div>
       )}

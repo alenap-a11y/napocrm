@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import ChakraDashboard from '../components/ChakraDashboard'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -93,6 +94,7 @@ export default function Clients() {
   const [modalTab, setModalTab] = useState('infos')
 
   const location = useLocation()
+  const navigate = useNavigate()
 
   const { clients, loading, addClient, updateClient, deleteClient, refresh: refreshClients } = useClients()
   const { seances: toutesSeances, addSeance, updateSeance, deleteSeance, getSeancesByClient, userId } = useSeancesSync()
@@ -574,9 +576,9 @@ export default function Clients() {
 
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
-              <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18 }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf']].map(([id, label, icon]) => (
-                  <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}>
+              <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18, overflowX: 'auto' }}>
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['chakras','Chakras','ti-yin-yang']].map(([id, label, icon]) => (
+                  <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
                       <span style={{ fontSize: 10, background: 'var(--color-background-secondary)', color: 'var(--color-text-secondary)', padding: '1px 6px', borderRadius: 20, marginLeft: 4 }}>{clientSeances.length}</span>
@@ -854,6 +856,14 @@ export default function Clients() {
                   )
                 })}
               </div>
+            )}
+
+            {/* ── Onglet CHAKRAS ── */}
+            {detailTab === 'chakras' && !editingDetail && (
+              <ChakraDashboard
+                clientId={detail.id}
+                onGenerateBilan={() => navigate(`/clients/${detail.id}/bilan`)}
+              />
             )}
 
             {/* Actions */}
