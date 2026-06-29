@@ -62,8 +62,8 @@ export default function NouvelleSeanceEnergeticien() {
 
   /* ── Chargement des clients ── */
   useEffect(() => {
-    supabase.from('clients').select('id, prenom, nom').order('nom')
-      .then(({ data }) => setClients(data || []))
+    supabase.from('clients').select('id, prenom, nom, email').order('nom')
+      .then(({ data, error }) => { console.log("clients loaded:", data, error); setClients(data || []) })
   }, [])
 
   /* ── Pré-remplissage niveaux Avant quand client change ── */
@@ -120,17 +120,22 @@ export default function NouvelleSeanceEnergeticien() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Non connecté')
 
+      const selectedClient = clients.find(c => c.id === selectedClientId)
+
       /* 1 — Insérer la séance */
       const { data: seanceData, error: seanceErr } = await supabase
         .from('seances')
         .insert({
-          user_id: user.id,
-          client_id: selectedClientId,
-          date_seance: date,
+          user_id:       user.id,
+          client_id:     selectedClientId,
+          prenom:        selectedClient?.prenom || selectedClient?.nom || 'Client',
+          nom:           selectedClient?.nom || 'Inconnu',
+          email:         selectedClient?.email  ?? null,
+          date_seance:   date,
           duree_minutes: parseInt(duree) || 75,
-          prix_euros: tarif ? parseFloat(tarif) : null,
-          type_seance: typeSeance,
-          notes: buildNotes() || null,
+          prix_euros:    tarif ? parseFloat(tarif) : null,
+          type_seance:   typeSeance,
+          notes:         buildNotes() || null,
           date_creation: new Date().toISOString(),
         })
         .select('id')
