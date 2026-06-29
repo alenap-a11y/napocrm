@@ -277,6 +277,9 @@ export default function BilanMiParcours() {
           <button onClick={() => navigate(-1)} style={S.btnSecondary}>
             ← Retour
           </button>
+          <button onClick={() => navigate(`/chakras/edit/${clientId}`)} style={{ ...S.btnSecondary, borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>
+            ✏️ Éditer la séance
+          </button>
           <button
             onClick={saveBilan}
             disabled={saving || saveStatus === 'ok'}
