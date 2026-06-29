@@ -23,7 +23,7 @@ export default function EditSeanceEnergeticien() {
         .select('id, date_seance, type_seance, duree_minutes, tarif')
         .eq('client_id', clientId)
         .order('date_seance', { ascending: false })
-      setSeances(data || [])
+      console.log('seances data:', data, 'clientId:', clientId); setSeances(data || [])
       setLoading(false)
     }
     load()
