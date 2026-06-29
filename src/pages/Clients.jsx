@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import ChakraDashboard from '../components/ChakraDashboard'
 import { supabase } from '../lib/supabase'
 import { useClients } from '../hooks/useClients'
 import { insertNotif } from '../lib/notif'
@@ -577,7 +576,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18, overflowX: 'auto' }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['chakras','Chakras','ti-yin-yang']].map(([id, label, icon]) => (
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf']].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -859,12 +858,7 @@ export default function Clients() {
             )}
 
             {/* ── Onglet CHAKRAS ── */}
-            {detailTab === 'chakras' && !editingDetail && (
-              <ChakraDashboard
-                clientId={detail.id}
-                onGenerateBilan={() => navigate(`/clients/${detail.id}/bilan`)}
-              />
-            )}
+
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 8, marginTop: 20, paddingTop: 16, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
