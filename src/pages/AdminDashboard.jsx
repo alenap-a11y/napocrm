@@ -7,7 +7,7 @@ export default function AdminDashboard() {
   const [selected, setSelected] = useState(0)
   const [tab, setTab] = useState('users') // 'users' | 'stats'
   const [periode, setPeriode] = useState('semaine')
-  const [alphaOpen, setAlphaOpen] = useState(true)
+  const [alphaOpen, setAlphaOpen] = useState(null)
   const [alphaLoading, setAlphaLoading] = useState(true)
   const [showConfirm, setShowConfirm] = useState(false)
   const [pendingValue, setPendingValue] = useState(null)
@@ -33,7 +33,7 @@ export default function AdminDashboard() {
     setPendingValue(null)
   }
 
-  if (loading) return <div style={{padding:'2rem',color:'var(--color-text-secondary)',fontSize:'13px'}}>Chargement...</div>
+  if (loading || alphaOpen === null) return <div style={{padding:'2rem',color:'var(--color-text-secondary)',fontSize:'13px'}}>Chargement...</div>
   if (!isAdmin) return <div style={{padding:'2rem',color:'red',fontSize:'13px'}}>Accès refusé.</div>
   if (!stats?.length) return <div style={{padding:'2rem',color:'var(--color-text-secondary)',fontSize:'13px'}}>Aucun utilisateur.</div>
 
