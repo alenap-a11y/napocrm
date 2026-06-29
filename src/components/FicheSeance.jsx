@@ -1,8 +1,19 @@
 import { useState, useEffect } from 'react'
 import CorpsHumain3D from './CorpsHumain3D'
 import { supabase } from '../lib/supabase'
+import { saveChakraEvaluation } from '../hooks/useChakras'
 
 /* ─── Constantes ─── */
+const CHAKRAS = [
+  { id: 1, nom: 'Muladhara',    sous_nom: 'Racine',        couleur: '#C0392B' },
+  { id: 2, nom: 'Svadhisthana', sous_nom: 'Sacré',         couleur: '#E67E22' },
+  { id: 3, nom: 'Manipura',     sous_nom: 'Plexus',        couleur: '#F39C12' },
+  { id: 4, nom: 'Anahata',      sous_nom: 'Cœur',          couleur: '#27AE60' },
+  { id: 5, nom: 'Vishuddha',    sous_nom: 'Gorge',         couleur: '#1A8FAA' },
+  { id: 6, nom: 'Ajna',         sous_nom: 'Troisième Œil', couleur: '#4A6FA5' },
+  { id: 7, nom: 'Sahasrara',    sous_nom: 'Couronne',      couleur: '#9B59B6' },
+]
+
 const PALETTE = [
   { color: '#E53E3E', label: 'Douleur' },
   { color: '#ED8936', label: 'Tension' },
@@ -93,6 +104,11 @@ export default function FicheSeance({ userId }) {
   const [noteInput, setNoteInput] = useState('')
   const [notes, setNotes] = useState([])
 
+  /* Chakras */
+  const [chakras, setChakras] = useState(
+    CHAKRAS.map(c => ({ chakra_id: c.id, niveau: 50, etat: 'ouverture' }))
+  )
+
   /* UI */
   const [saving,     setSaving]     = useState(false)
   const [saveStatus, setSaveStatus] = useState(null) // 'ok' | 'error' | null
@@ -171,7 +187,7 @@ export default function FicheSeance({ userId }) {
     }
 
     /* 2. Insert séance */
-    const { error: seanceErr } = await supabase
+    const { data: seanceData, error: seanceErr } = await supabase
       .from('seances')
       .insert({
         user_id:          userId,
@@ -187,6 +203,24 @@ export default function FicheSeance({ userId }) {
         zones_corps:        annotations.length ? [...new Set(annotations.map(a => yToZone(a.y)))] : null,
         tags:               tags.length ? tags : null,
       })
+      .select('id')
+      .single()
+
+    if (!seanceErr && seanceData) {
+      const sessionNum = history.length + 1
+      try {
+        await Promise.all(chakras.map(c => saveChakraEvaluation({
+          client_id:   client.id,
+          session_id:  seanceData.id,
+          session_num: sessionNum,
+          chakra_id:   c.chakra_id,
+          niveau:      c.niveau,
+          etat:        c.etat,
+        })))
+      } catch (chakraErr) {
+        console.error('chakra_evaluations:', chakraErr)
+      }
+    }
 
     setSaving(false)
     setSaveStatus(seanceErr ? 'error' : 'ok')
@@ -511,6 +545,45 @@ export default function FicheSeance({ userId }) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Évaluation chakras */}
+        <div style={{ ...S.card, overflowY: 'auto', maxHeight: 320 }}>
+          <div style={S.sectionTitle}>Évaluation chakras</div>
+          {CHAKRAS.map((c, i) => {
+            const val = chakras[i]
+            return (
+              <div key={c.id} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: c.couleur }}>
+                    {c.nom}{' '}
+                    <span style={{ fontWeight: 400, color: '#a07848', fontSize: 9 }}>({c.sous_nom})</span>
+                  </span>
+                  <span style={{ fontSize: 10, color: c.couleur, fontWeight: 700 }}>{val.niveau}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0" max="100" step="1"
+                  value={val.niveau}
+                  onChange={e => setChakras(prev => prev.map((x, j) =>
+                    j === i ? { ...x, niveau: Number(e.target.value) } : x
+                  ))}
+                  style={{ width: '100%', accentColor: c.couleur, cursor: 'pointer', marginBottom: 3 }}
+                />
+                <select
+                  value={val.etat}
+                  onChange={e => setChakras(prev => prev.map((x, j) =>
+                    j === i ? { ...x, etat: e.target.value } : x
+                  ))}
+                  style={{ ...S.input, fontSize: 10, padding: '4px 7px' }}
+                >
+                  <option value="bloqué">Bloqué</option>
+                  <option value="ouverture">Ouverture</option>
+                  <option value="ouvert">Ouvert</option>
+                </select>
+              </div>
+            )
+          })}
         </div>
 
         {/* Bouton Sauvegarder */}
