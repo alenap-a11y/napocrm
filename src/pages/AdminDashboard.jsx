@@ -1,11 +1,37 @@
 import { useAdminStats } from '../hooks/useAdminStats'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function AdminDashboard() {
   const { stats, isAdmin, loading } = useAdminStats()
   const [selected, setSelected] = useState(0)
   const [tab, setTab] = useState('users') // 'users' | 'stats'
   const [periode, setPeriode] = useState('semaine')
+  const [alphaOpen, setAlphaOpen] = useState(true)
+  const [alphaLoading, setAlphaLoading] = useState(true)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [pendingValue, setPendingValue] = useState(null)
+
+  useEffect(() => {
+    supabase.from('app_config').select('value').eq('key','alpha_open').single()
+      .then(({ data }) => {
+        if (data) setAlphaOpen(data.value === 'true')
+        setAlphaLoading(false)
+      })
+  }, [])
+
+  const handleToggleClick = (val) => {
+    setPendingValue(val)
+    setShowConfirm(true)
+  }
+
+  const confirmToggle = async () => {
+    const val = pendingValue
+    await supabase.from('app_config').update({ value: String(val), updated_at: new Date().toISOString() }).eq('key','alpha_open')
+    setAlphaOpen(val)
+    setShowConfirm(false)
+    setPendingValue(null)
+  }
 
   if (loading) return <div style={{padding:'2rem',color:'var(--color-text-secondary)',fontSize:'13px'}}>Chargement...</div>
   if (!isAdmin) return <div style={{padding:'2rem',color:'red',fontSize:'13px'}}>Accès refusé.</div>
@@ -56,6 +82,67 @@ export default function AdminDashboard() {
 
   return (
     <div style={{padding:'1.5rem',maxWidth:'940px',margin:'0 auto'}}>
+
+      {/* Modal confirmation */}
+      {showConfirm && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'var(--color-background-primary)',borderRadius:'14px',padding:'2rem',maxWidth:'380px',width:'90%',boxShadow:'0 8px 40px rgba(0,0,0,0.18)'}}>
+            <div style={{fontSize:'18px',fontWeight:600,marginBottom:'10px'}}>
+              {pendingValue ? '🟢 Ouvrir les inscriptions ?' : '🔴 Fermer les inscriptions ?'}
+            </div>
+            <div style={{fontSize:'13px',color:'var(--color-text-secondary)',marginBottom:'1.5rem',lineHeight:1.6}}>
+              {pendingValue
+                ? 'Les nouvelles inscriptions seront à nouveau acceptées sur naposolo.com.'
+                : 'Les inscriptions alpha seront fermées. Les visiteurs verront un message et pourront contacter contact@naposolo.com.'
+              }
+            </div>
+            <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
+              <button onClick={()=>setShowConfirm(false)} style={{padding:'8px 18px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',background:'transparent',cursor:'pointer',fontSize:'13px'}}>
+                Annuler
+              </button>
+              <button onClick={confirmToggle} style={{padding:'8px 18px',borderRadius:'8px',border:'none',cursor:'pointer',fontSize:'13px',fontWeight:500,
+                background: pendingValue ? '#1D9E75' : '#C0392B', color:'#fff'}}>
+                {pendingValue ? 'Ouvrir' : 'Fermer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bloc Alpha Toggle */}
+      <div style={{background: alphaOpen ? '#EAF3DE' : '#FDECEA', border: `0.5px solid ${alphaOpen ? '#A8D58A' : '#F5C6C6'}`, borderRadius:'10px', padding:'12px 16px', marginBottom:'1rem', display:'flex', alignItems:'center', gap:'12px'}}>
+        <i className={`ti ${alphaOpen ? 'ti-door-enter' : 'ti-door-off'}`} style={{fontSize:'18px', color: alphaOpen ? '#27500A' : '#C0392B'}} aria-hidden="true"/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:'13px', fontWeight:600, color: alphaOpen ? '#27500A' : '#C0392B'}}>
+            {alphaOpen ? 'Inscriptions alpha ouvertes' : 'Inscriptions alpha fermées'}
+          </div>
+          <div style={{fontSize:'11px', color:'var(--color-text-secondary)', marginTop:'2px'}}>
+            {alphaOpen
+              ? 'Les nouveaux testeurs peuvent s&#39;inscrire librement.'
+              : 'Les visiteurs voient un message de liste d&#39;attente et peuvent écrire à contact@naposolo.com.'
+            }
+          </div>
+        </div>
+        {alphaLoading ? (
+          <div style={{fontSize:'11px',color:'var(--color-text-secondary)'}}>...</div>
+        ) : (
+          <div
+            onClick={() => handleToggleClick(!alphaOpen)}
+            style={{
+              width:'48px', height:'26px', borderRadius:'13px', cursor:'pointer', position:'relative',
+              background: alphaOpen ? '#1D9E75' : '#B4B2A9',
+              transition:'background 0.2s', flexShrink:0
+            }}
+          >
+            <div style={{
+              position:'absolute', top:'3px',
+              left: alphaOpen ? '25px' : '3px',
+              width:'20px', height:'20px', borderRadius:'50%', background:'#fff',
+              transition:'left 0.2s', boxShadow:'0 1px 4px rgba(0,0,0,0.18)'
+            }}/>
+          </div>
+        )}
+      </div>
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'1.5rem',paddingBottom:'1rem',borderBottom:'0.5px solid var(--color-border-tertiary)'}}>
