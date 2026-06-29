@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [betaSent,     setBetaSent]     = useState(false)
   const [betaError,    setBetaError]    = useState('')
   const [betaPassword, setBetaPassword] = useState('')
+  const [alphaOpen, setAlphaOpen] = useState(true)
 
   useEffect(() => {
     // Charger textes CMS
@@ -61,6 +62,9 @@ export default function LoginPage() {
     supabase.from('landing_features').select('*').order('ordre').then(({ data }) => {
       if (data) setFeatures(data)
     })
+    // Charger etat inscriptions alpha
+    supabase.from('app_config').select('value').eq('key','alpha_open').single()
+      .then(({ data }) => { if (data) setAlphaOpen(data.value === 'true') })
   }, [])
 
   function cs(key) {
@@ -188,9 +192,24 @@ export default function LoginPage() {
                 <span style={{ fontSize: 11, color: '#9ca3af' }}>Pas encore de compte ?</span>
                 <div style={{ flex: 1, height: '0.5px', background: '#e5e7eb' }} />
               </div>
-              <button type="button" onClick={() => setBetaOpen(true)} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 700, minHeight: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l'alpha 🚀
-              </button>
+              {alphaOpen ? (
+                <button type="button" onClick={() => setBetaOpen(true)} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 700, minHeight: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <i className="ti ti-rocket" style={{ fontSize: 15 }} />Rejoindre l'alpha 🚀
+                </button>
+              ) : (
+                <div style={{ width: '100%', padding: '14px 16px', borderRadius: 9, background: '#FEF3C7', border: '0.5px solid #FCD34D', textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 6 }}>
+                    Inscriptions alpha temporairement fermees
+                  </div>
+                  <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5, marginBottom: 10 }}>
+                    Les places sont limitees. Contactez-nous pour rejoindre la liste d'attente.
+                  </div>
+                  <a href="mailto:contact@naposolo.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#111827', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                    <i className="ti ti-mail" style={{ fontSize: 13 }} />
+                    contact@naposolo.com
+                  </a>
+                </div>
+              )}
             </form>
         </div>
       </section>
