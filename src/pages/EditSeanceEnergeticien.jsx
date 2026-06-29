@@ -20,7 +20,7 @@ export default function EditSeanceEnergeticien() {
 
       const { data } = await supabase
         .from('seances')
-        .select('id, date_seance, type_seance, duree_minutes, tarif')
+        .select('id, date_seance, type, duree_minutes, prix_euros')
         .eq('client_id', clientId)
         .order('date_seance', { ascending: false })
       console.log('seances data:', data, 'clientId:', clientId); setSeances(data || [])
@@ -47,7 +47,7 @@ export default function EditSeanceEnergeticien() {
         <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 10, border: '1px solid var(--color-border)', marginBottom: 10, background: 'var(--color-surface)' }}>
           <div>
             <div style={{ fontWeight: 600, marginBottom: 2 }}>{s.date_seance}</div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{s.type_seance} · {s.duree_minutes} min {s.tarif ? `· ${s.tarif}€` : ''}</div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{s.type} · {s.duree_minutes} min {s.prix_euros ? `· ${s.prix_euros}€` : ''}</div>
           </div>
           <button
             onClick={() => navigate(`/chakras/edit/${clientId}/${s.id}`)}
