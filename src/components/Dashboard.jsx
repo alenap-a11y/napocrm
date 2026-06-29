@@ -965,42 +965,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               </div>
             </div>
           </div>
-          {/* Liste */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Dernières séances</span>
-            <button onClick={() => onNavigate?.('/seances')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
-          </div>
-          {recentSeances.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--color-text-secondary)', fontSize: 13 }}>Aucune séance enregistrée</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {recentSeances.map(s => {
-                const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance.slice(0,10) + 'T00:00:00'); const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); const heureStr = s.heure_seance ? s.heure_seance.slice(0,5) : '—'; return `${dateStr}, ${heureStr}` })() : '—'
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => onNavigate?.('/seances')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                      {(s.prenom?.[0] || '?')}{(s.nom?.[0] || '')}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prenom} {s.nom}</div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.type_seance}</div>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{dateLabel}</div>
-                      {s.prix_euros != null && <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.prix_euros} €</div>}
-                    </div>
-                    <i className="ti ti-chevron-right" style={{ fontSize: 13, color: 'var(--color-text-secondary)' }} aria-hidden="true" />
-                  </div>
-                )
-              })}
-            </div>
-          )}
         </div>
       </div>
 
