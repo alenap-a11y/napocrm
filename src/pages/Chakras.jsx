@@ -288,7 +288,7 @@ export default function Chakras() {
                   {/* Bouton */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                     <button
-                      onClick={() => navigate(`/chakras/edit/${row.id}`)}
+                      onClick={() => navigate(`/clients/${row.id}/bilan`)}
                       style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 13px', borderRadius: 7, border: '1px solid var(--color-accent)', background: 'transparent', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                     >
                       Éditer <i className="ti ti-pencil" style={{ fontSize: 12 }} />
