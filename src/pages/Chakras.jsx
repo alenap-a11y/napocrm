@@ -164,7 +164,7 @@ export default function Chakras() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button
-            onClick={() => navigate('/seances/nouvelle')}
+            onClick={() => navigate('/chakras/nouvelle')}
             onMouseEnter={() => setBtnHover(true)}
             onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
             onMouseDown={() => setBtnActive(true)}

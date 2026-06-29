@@ -29,6 +29,7 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const FicheSeance = lazy(() => import('./pages/FicheSeance'))
 const BilanMiParcours = lazy(() => import('./pages/BilanMiParcours'))
 const Chakras = lazy(() => import('./pages/Chakras'))
+const NouvelleSeanceEnergeticien = lazy(() => import('./pages/NouvelleSeanceEnergeticien'))
 
 class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
@@ -464,6 +465,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/seances/:id/fiche" element={<FicheSeance />} />
               <Route path="/seances"          element={<Seances />} />
               <Route path="/clients/:clientId/bilan" element={<BilanMiParcours />} />
+              <Route path="/chakras/nouvelle" element={<NouvelleSeanceEnergeticien />} />
               <Route path="/chakras" element={<Chakras />} />
               <Route path="/clients"  element={<Clients />} />
               <Route path="/agenda"   element={<Agenda />} />
