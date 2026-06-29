@@ -31,6 +31,10 @@ export default function App() {
       if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
       if (event === 'SIGNED_IN') {
         const params = new URLSearchParams(window.location.hash.replace('#', '?'))
+        if (params.get('type') === 'signup') {
+          setUser(session?.user ?? null)
+          return
+        }
         if (params.get('type') === 'invite') {
           window.location.replace('/set-password')
           return
