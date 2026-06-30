@@ -188,7 +188,7 @@ export default function AdminDashboard() {
       {tab === 'users' && (
         <>
           {/* Onglets users */}
-          <div style={{display:'flex',gap:0,borderBottom:'0.5px solid var(--color-border-tertiary)',marginBottom:'1.5rem'}}>
+          <div style={{display:'flex',gap:0,borderBottom:'0.5px solid var(--color-border-tertiary)',marginBottom:'1.5rem',overflowX:'auto',flexWrap:'nowrap',scrollbarWidth:'thin'}}>
             {stats.map((s,i) => {
               const online = s.lastSeen && (now - new Date(s.lastSeen)) < 1000*60*30
               return (
