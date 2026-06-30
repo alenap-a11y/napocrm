@@ -643,6 +643,23 @@ export default function Clients() {
                     <i className={`ti ${showNewSeance ? 'ti-x' : 'ti-plus'}`} style={{ fontSize: 13 }} />
                     {showNewSeance ? 'Annuler' : 'Nouvelle séance'}
                   </button>
+                  <button
+                    onClick={async () => {
+                      const { data: { user } } = await supabase.auth.getUser()
+                      const { data: existing } = await supabase.from('energie_seances').select('id').eq('client_id', detail.id).eq('user_id', user.id)
+                      const { data: s } = await supabase.from('energie_seances').insert({
+                        user_id: user.id, client_id: detail.id,
+                        date_seance: new Date().toISOString().slice(0,10),
+                        heure_seance: new Date().toTimeString().slice(0,5),
+                        numero_seance: (existing?.length || 0) + 1
+                      }).select().single()
+                      if (s) window.location.href = `/energie/${s.id}`
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '0.5px solid #993556', background: '#FBEAF0', color: '#993556', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    <i className="ti ti-sparkles" style={{ fontSize: 13 }} />
+                    Séance énergie
+                  </button>
                 </div>
 
                 {seanceMsg && (
