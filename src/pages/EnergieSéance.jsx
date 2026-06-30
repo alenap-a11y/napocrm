@@ -153,17 +153,6 @@ export default function EnergieSéance() {
               style={{ ...inp, width:90, fontSize:12 }} />
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:10, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.04em' }}>Duree</span>
-            <select value={seance.duree_minutes || '60'} onChange={e => updateSeanceField('duree_minutes', e.target.value)} style={{ ...inp, width:80 }}>
-              {[30,45,60,75,90,120].map(d => <option key={d} value={d}>{d} min</option>)}
-            </select>
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:10, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.04em' }}>Prix</span>
-            <input type="number" value={seance.prix_euros || ''} onChange={e => updateSeanceField('prix_euros', e.target.value)} placeholder="60" min="0" step="5" style={{ ...inp, width:70 }} />
-            <span style={{ fontSize:11, color:'var(--color-text-secondary)' }}>EUR</span>
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ fontSize:10, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.04em' }}>Outil</span>
             <select value={seance.outil || ''} onChange={e => updateSeanceField('outil', e.target.value)} style={{ ...inp, width:'auto' }}>
               <option value="">Sélectionner...</option>
