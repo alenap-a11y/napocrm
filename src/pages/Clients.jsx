@@ -928,7 +928,15 @@ export default function Clients() {
                         </div>
                         {s.outil && <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:4 }}><i className="ti ti-tool" style={{ fontSize:11, marginRight:4 }} />{s.outil}</div>}
                         {s.note_globale && <div style={{ fontSize:12, color:'var(--color-text-secondary)', lineHeight:1.5, background:'var(--color-background-secondary)', padding:'6px 10px', borderRadius:6, marginBottom:6 }}>{s.note_globale.length > 80 ? s.note_globale.slice(0,80)+'…' : s.note_globale}</div>}
-                        <div style={{ display:'flex', justifyContent:'flex-end' }}>
+                        <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                          <button onClick={async () => {
+                            if (!window.confirm('Supprimer cette séance énergie ?')) return
+                            await supabase.from('energie_chakras_mesures').delete().eq('seance_id', s.id)
+                            await supabase.from('energie_seances').delete().eq('id', s.id)
+                            setEnergieSeances(prev => prev.filter(x => x.id !== s.id))
+                          }} style={{ background:'none', border:'0.5px solid #FBEAF0', borderRadius:6, cursor:'pointer', color:'#993556', fontSize:11, padding:'3px 8px', display:'flex', alignItems:'center', gap:4 }}>
+                            <i className="ti ti-trash" style={{ fontSize:11 }} />Supprimer
+                          </button>
                           <button onClick={() => window.location.href=`/energie/${s.id}`}
                             style={{ background:'none', border:'0.5px solid var(--color-border-secondary)', borderRadius:6, cursor:'pointer', color:'var(--color-accent)', fontSize:11, padding:'3px 8px', display:'flex', alignItems:'center', gap:4 }}>
                             <i className="ti ti-eye" style={{ fontSize:11 }} />Voir
