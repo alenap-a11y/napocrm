@@ -52,10 +52,10 @@ export default function AdminDashboard() {
   const connectes = stats.filter(u => u.lastSeen && (now - new Date(u.lastSeen)) < 1000 * 60 * 30).length
   const nonConnectes = stats.length - connectes
 
-  const totalSessions = stats.reduce((a,u) => a + u.totalSessions, 0)
-  const totalActions  = stats.reduce((a,u) => a + Object.values(u.eventsByType).reduce((x,y)=>x+y,0), 0)
-  const totalSeances  = stats.reduce((a,u) => a + (u.eventsByType['seance_created']??0), 0)
-  const totalClients  = stats.reduce((a,u) => a + (u.eventsByType['client_added']??0), 0)
+  const totalSessions = stats.reduce((a,u) => a + (u.sessions ?? []).filter(s => isInPeriode(s.started_at)).length, 0)
+  const totalActions  = stats.reduce((a,u) => a + (u.events ?? []).filter(e => isInPeriode(e.created_at)).length, 0)
+  const totalSeances  = stats.reduce((a,u) => a + (u.events ?? []).filter(e => isInPeriode(e.created_at) && e.event_type === 'seance_created').length, 0)
+  const totalClients  = stats.reduce((a,u) => a + (u.events ?? []).filter(e => isInPeriode(e.created_at) && e.event_type === 'client_added').length, 0)
 
   const u = stats[selected]
   const totalActionsU = Object.values(u.eventsByType).reduce((a,b)=>a+b,0)
@@ -186,31 +186,37 @@ export default function AdminDashboard() {
 
       {/* TAB USERS */}
       {tab === 'users' && (
-        <>
-          {/* Onglets users */}
-          <div style={{display:'flex',gap:0,borderBottom:'0.5px solid var(--color-border-tertiary)',marginBottom:'1.5rem',overflowX:'auto',flexWrap:'nowrap',scrollbarWidth:'thin'}}>
-            {stats.map((s,i) => {
-              const online = s.lastSeen && (now - new Date(s.lastSeen)) < 1000*60*30
-              return (
-                <div key={s.id} onClick={()=>setSelected(i)} style={{
-                  padding:'10px 20px',fontSize:'13px',fontWeight:500,cursor:'pointer',
-                  borderBottom: selected===i ? '2px solid #534AB7' : '2px solid transparent',
-                  color: selected===i ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                  display:'flex',alignItems:'center',gap:'8px'}}>
-                  <div style={{position:'relative'}}>
-                    <div style={{width:24,height:24,borderRadius:'50%',background:'#EEEDFE',color:'#3C3489',
-                      display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',fontWeight:500}}>
-                      {s.prenom[0].toUpperCase()}
+        <div style={{display:'flex', gap:'1.5rem'}}>
+          {/* Sidebar users */}
+          <div style={{width:'220px',flexShrink:0,maxHeight:'600px',overflowY:'auto',borderRight:'0.5px solid var(--color-border-tertiary)',paddingRight:'1rem'}}>
+            <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+              {stats.map((s,i) => {
+                const online = s.lastSeen && (now - new Date(s.lastSeen)) < 1000*60*30
+                return (
+                  <div key={s.id} onClick={()=>setSelected(i)} style={{
+                    padding:'8px 10px',fontSize:'13px',fontWeight:500,cursor:'pointer',
+                    borderRadius:'8px',
+                    background: selected===i ? '#EEEDFE' : 'transparent',
+                    color: selected===i ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                    display:'flex',alignItems:'center',gap:'8px'}}>
+                    <div style={{position:'relative'}}>
+                      <div style={{width:24,height:24,borderRadius:'50%',background:'#EEEDFE',color:'#3C3489',
+                        display:'flex',alignItems:'center',justifyContent:'center',fontSize:'10px',fontWeight:500}}>
+                        {s.prenom[0].toUpperCase()}
+                      </div>
+                      <div style={{position:'absolute',bottom:0,right:0,width:7,height:7,borderRadius:'50%',
+                        background: online ? '#1D9E75' : '#B4B2A9',
+                        border:'1.5px solid var(--color-background-primary)'}}/>
                     </div>
-                    <div style={{position:'absolute',bottom:0,right:0,width:7,height:7,borderRadius:'50%',
-                      background: online ? '#1D9E75' : '#B4B2A9',
-                      border:'1.5px solid var(--color-background-primary)'}}/>
+                    {s.prenom}
                   </div>
-                  {s.prenom}
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
+
+          {/* Panneau droit */}
+          <div style={{flex:1, minWidth:0}}>
 
           {/* User hero */}
           <div style={{display:'flex',alignItems:'center',gap:'14px',padding:'1rem 0 1.25rem',borderBottom:'0.5px solid var(--color-border-tertiary)',marginBottom:'1.25rem'}}>
@@ -305,7 +311,8 @@ export default function AdminDashboard() {
                 </div>
             }
           </div>
-        </>
+          </div>
+        </div>
       )}
 
       {/* TAB STATS GÉNÉRALES */}

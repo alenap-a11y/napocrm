@@ -31,6 +31,8 @@ export function useAdminStats() {
       return {
         id: u.id,
         prenom: u.prenom ?? `User ${u.id.slice(0,6)}`,
+        events: ue,
+        sessions: us,
         totalEvents: ue.length,
         totalSessions: us.length,
         avgDuration: durations.length
