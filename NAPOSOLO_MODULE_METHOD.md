@@ -10,140 +10,65 @@
 
 | Fichier | Rôle |
 |---|---|
-| `src/AppShell.jsx` | Routes lazy + sidebar items `ALL_SB_ITEMS` |
+| `src/AppShell.jsx` | Routes lazy + sidebar items ALL_SB_ITEMS |
 | `src/pages/Clients.jsx` | Référence UI à reproduire à l'identique |
 | `src/components/SideBar.jsx` | Navigation principale |
 | `src/lib/supabase.js` | Client Supabase |
+| `src/pages/Energie.jsx` | Exemple liste module |
+| `src/pages/EnergieSéance.jsx` | Exemple détail module |
 
 ### Variables CSS obligatoires
-```
-var(--color-accent)
-var(--color-text-primary)
-var(--color-text-secondary)
-var(--color-background-primary)
-var(--color-background-secondary)
-var(--color-border-tertiary)
-var(--color-border-secondary)
-```
+- var(--color-accent)
+- var(--color-text-primary)
+- var(--color-text-secondary)
+- var(--color-background-primary)
+- var(--color-background-secondary)
+- var(--color-border-tertiary)
+- var(--color-border-secondary)
 
 ---
 
 ## Méthode standard — 5 étapes (toujours dans cet ordre)
 
-### 🔴 Étape 1 — SQL Supabase
-**Avant tout code React.**
-```sql
--- 1. Créer les tables
-CREATE TABLE IF NOT EXISTS module_xxx (...);
+### Étape 1 — SQL Supabase
+Avant tout code React. Toujours.
+- Créer tables avec user_id + client_id
+- RLS + policy auth.uid() = user_id sur toutes les tables
+- Vérif : Table visible Supabase Table Editor
 
--- 2. RLS obligatoire sur toutes les tables
-ALTER TABLE module_xxx ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "user isole" ON module_xxx
-  USING (auth.uid() = user_id);
+### Étape 2 — Route + Sidebar AppShell.jsx
+- Lazy import ligne ~31
+- ALL_SB_ITEMS ligne ~59
+- Routes ligne ~471
+- ATTENTION : créer les fichiers JSX AVANT npm run build
 
--- 3. Valeurs initiales si besoin
-INSERT INTO app_config (key, value) VALUES ('xxx_enabled', 'true')
-ON CONFLICT (key) DO NOTHING;
-```
-✅ Vérification : Table visible dans Supabase Table Editor
-✅ Vérification : `SELECT * FROM module_xxx` retourne vide (pas d'erreur)
+### Étape 3 — Page liste (layout Clients.jsx)
+- Header : icon + titre + sous-titre + bouton Nouveau
+- 4 StatCards : repeat(4,1fr) gap 12
+- Tabs : border-bottom accent marginBottom -1
+- Recherche : input + icône ti-search absolue
+- Table : background-secondary borderRadius 12 grid colonnes
+- Compteur bas : flex-end fontSize 13
 
----
+### Étape 4 — Page détail (/module/:id)
+- Bouton retour + fil ariane + titre + Sauvegarder droite
+- En-tête : date heure infos dans background-secondary borderRadius 14
+- Historique : chips cliquables
+- Toast sauvegardé 2.5s
+- Pattern save : setSaving + supabase update + setSaved + setTimeout
 
-### 🔴 Étape 2 — Route + Sidebar dans AppShell.jsx
-```js
-// Lazy import (ligne ~15)
-const MonModule = lazy(() => import('./pages/MonModule'))
+### Étape 5 — Onglet fiche client Clients.jsx
+- Ajouter dans tableau tabs modal
+- Ajouter state + useEffect chargement par client_id
+- Bloc JSX conditionnel avant section Actions
+- Bouton Nouvelle : insert DB + window.location.href
+- Bouton Supprimer : confirm() + delete cascade enfant d'abord + filter state
+- Bouton Voir : window.location.href vers page détail
 
-// ALL_SB_ITEMS (ligne ~55)
-{ id: 'monmodule', label: 'Mon Module', icon: 'ti-xxx', to: '/monmodule' }
-
-// Route dans <Routes> (chercher pattern existant)
-<Route path="/monmodule" element={<MonModule />} />
-<Route path="/monmodule/:id" element={<MonModuleDetail />} />
-```
-✅ Vérification : icône visible dans sidebar
-✅ Vérification : route `/monmodule` accessible sans erreur 404
-
----
-
-### 🔴 Étape 3 — Page liste (même layout que Clients.jsx)
-
-**Structure obligatoire à respecter :**
-```jsx
-// 1. Header
-<div> icon + titre + sous-titre + boutons droite (Nouveau) </div>
-
-// 2. 4 StatCards identiques
-<div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
-  <StatCard icon="..." iconBg="..." iconColor="..." label="..." value={...} />
-</div>
-
-// 3. Tabs (même style border-bottom accent)
-<div style={{ display:'flex', borderBottom:'0.5px solid var(--color-border-tertiary)' }}>
-  {TABS.map(tab => <button .../>)}
-</div>
-
-// 4. Table liste avec grid colonnes
-<div style={{ background:'var(--color-background-secondary)', borderRadius:12 }}>
-  // Header colonnes
-  // Lignes cliquables → openDetail()
-</div>
-
-// 5. Compteur bas de page
-<div>{filtered.length} élément(s) affiché(s)</div>
-```
-✅ Vérification : page s'affiche sans erreur console
-✅ Vérification : données chargées depuis Supabase
-
----
-
-### 🔴 Étape 4 — Page / Modal détail
-
-**Structure obligatoire :**
-```jsx
-// Modal fixe (position:fixed, inset:0, zIndex:1000)
-// ou page dédiée /module/:id
-
-// Header : avatar/icône + nom + badges statut
-// Tabs : Infos | Historique | Notes | (spécifique module)
-// Actions bas : Supprimer | Modifier | Fermer
-```
-✅ Vérification : ouverture/fermeture sans bug
-✅ Vérification : CRUD complet (create, read, update, delete)
-
----
-
-### 🔴 Étape 5 — Intégration fiche client (si lié aux clients)
-
-Dans `src/pages/Clients.jsx` — modal détail client :
-```jsx
-// Ajouter onglet dans le tableau des tabs (ligne ~détailTab)
-['energie', 'Énergie', 'ti-sparkles'],
-
-// Ajouter bloc conditionnel après onglet bach
-{detailTab === 'energie' && !editingDetail && (
-  <div>
-    // Liste des séances du module pour ce client
-    // Bouton "Nouvelle séance" → navigate(`/energie/nouvelle?client=${detail.id}`)
-    // Historique compact (date, statut, lien "Voir")
-  </div>
-)}
-```
-✅ Vérification : onglet visible dans fiche client
-✅ Vérification : lien vers page module fonctionnel
-
----
-
-### 🔴 Deploy final
-```bash
-# Si SQL modifié :
-supabase db push
-
-# Toujours :
-cd ~/napocrm && npm run build && git add . && git commit -m "feat: module [NOM]" && git push
-```
-✅ Vérification cache Vercel : `curl https://naposolo.com | grep "index-"`
+### Deploy final
+- supabase db push SI SQL modifié
+- npm run build + git add + commit + push
+- Vérif cache : curl https://naposolo.com | grep "index-"
 
 ---
 
@@ -151,54 +76,61 @@ cd ~/napocrm && npm run build && git add . && git commit -m "feat: module [NOM]"
 
 | Module | Route | Tables SQL | Statut |
 |---|---|---|---|
-| Alpha toggle | `/napo-cockpit-7X` | `app_config` | ✅ Livré juin 2026 |
-| **NapoÉnergie** | `/energie` | `energie_seances`, `energie_chakras_mesures` | 🔄 En cours |
+| Alpha toggle | /napo-cockpit-7X | app_config | OK juin 2026 |
+| NapoÉnergie | /energie | energie_seances, energie_chakras_mesures | OK juin 2026 |
+
+### NapoÉnergie détail
+- 7 chakras : rotation, état, taux Bovis, couleur perçue, avant/arrière, gauche/droite, observation
+- Onglet Énergie dans fiche client : historique + Nouvelle séance + Supprimer
+- Suppression cascade : energie_chakras_mesures avant energie_seances
+- Navigation historique par chips numéro + date
+- Sauvegarde manuelle uniquement
 
 ---
 
-## Modules en backlog
+## Modules backlog
 
 | Module | Priorité | Notes |
 |---|---|---|
-| NapoÉnergie | 🔴 | Fiche 7 chakras, séances énergie, lié clients |
-| NapoOracle standalone | 🟡 | Déjà dans app, à isoler |
-| NapoAnnuaire | 🟢 | Annuaire praticiens |
-| NapoCartes | 🟢 | Cartes mantras physiques/digitales |
-| NapoEvents | 🟢 | Événements / ateliers |
-| V2 co-consultation | 🟢 | Multi-experts / 1 client — ne pas builder maintenant |
+| Fiche client page dédiée | ROUGE | Refactoring modal vers /clients/:id |
+| NapoOracle standalone | JAUNE | Déjà dans app à isoler |
+| NapoAnnuaire | VERT | Annuaire praticiens |
+| NapoCartes | VERT | Cartes mantras |
+| NapoEvents | VERT | Événements ateliers |
+| V2 co-consultation | VERT | Ne pas builder maintenant |
 
 ---
 
-## Règles de sécurité obligatoires
+## Règles sécurité
 
-- **RLS sur toutes les tables** — aucune exception
-- **`auth.uid() = user_id`** sur chaque policy
-- **Jamais de `service_role` côté client**
-- Tester cross-compte : se connecter avec 2 users différents et vérifier isolation données
+- RLS toutes les tables sans exception
+- auth.uid() = user_id sur chaque policy
+- Jamais service_role côté client
+- Suppression cascade : table enfant d'abord puis parent
+- Tester cross-compte : 2 users isolation données
 
 ---
 
-## Règles de code React/Supabase
+## Règles code
 
-### 3 couches formulaire (rappel systématique)
-1. **Display** = JSX input visible
-2. **State** = `useState` + `onChange`
-3. **Database** = champ dans objet Supabase `insert/update`
+### 3 couches formulaire
+1. Display = JSX input visible
+2. State = useState + onChange
+3. Database = champ Supabase insert/update
 
 ### Import Supabase
-```js
-import { supabase } from '../lib/supabase'  // ✅
-// PAS '../supabaseClient'                   // ❌
-```
+- Correct : import { supabase } from '../lib/supabase'
+- Interdit : import { supabase } from '../supabaseClient'
 
-### Deploy
-```bash
-cd ~/napocrm && git add . && git commit -m "feat/fix: [desc]" && git push
-# SQL en premier si migration : supabase db push AVANT git push
-```
+### Fichiers JSX avec accents ou emojis
+Toujours passer par Python :
+python3 avec content = string et open(filepath, 'w')
+Jamais heredoc bash pour du JSX (chevrons et backticks cassent tout)
 
 ### Pièges connus
-- `window.location.reload()` sans counter = boucle infinie (ChunkErrorBoundary)
-- Vercel CDN cache stale jusqu'à 15min → tester avec `curl | grep index-`
-- Apostrophes dans JSX strings → utiliser `\u2019` ou template literals
-- `routerNavigate` doit être déclaré via `useNavigate()` dans AppShell ~ligne 107
+- window.location.reload() sans counter = boucle infinie ChunkErrorBoundary
+- Vercel CDN cache stale 15min : tester curl | grep index-
+- Apostrophes dans JSX strings : utiliser unicode \u2019
+- Heredoc bash échoue avec JSX : toujours Python
+- Nom fichier avec accents : vérifier avec ls | grep -i nom après création
+- routerNavigate via useNavigate() dans AppShell ligne ~107
