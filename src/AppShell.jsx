@@ -28,6 +28,8 @@ const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const FicheSeance = lazy(() => import('./pages/FicheSeance'))
 const BilanMiParcours = lazy(() => import('./pages/BilanMiParcours'))
+const Energie = lazy(() => import('./pages/Energie'))
+const EnergieSéance = lazy(() => import('./pages/EnergieSéance'))
 
 class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
@@ -54,6 +56,7 @@ const ALL_SB_ITEMS = [
   { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
+  { id: 'energie',  label: 'Énergie',  icon: 'ti-sparkles',         to: '/energie'  },
   { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
   { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
   { id: 'napoplus',      label: 'Napo+',        icon: 'ti-sparkles',        to: '/napoplus'       },
@@ -465,6 +468,8 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/clients"  element={<Clients />} />
               <Route path="/agenda"   element={<Agenda />} />
               <Route path="/notes"    element={<Notes />} />
+              <Route path="/energie"              element={<Energie />} />
+              <Route path="/energie/:id"          element={<EnergieSéance />} />
               <Route path="/fleurs-de-bach"                element={<PageBach />} />
               <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
