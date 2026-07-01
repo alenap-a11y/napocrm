@@ -62,6 +62,7 @@ export function useAdminStats() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      if (!user) return
 
       userId = user.id
 
