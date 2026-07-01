@@ -81,6 +81,9 @@ export function useAdminStats() {
       await fetchStats(userId)
 
       // Realtime — nouveau profil créé
+      supabase.getChannels()
+        .filter(ch => ch.topic === 'realtime:profiles-changes')
+        .forEach(ch => supabase.removeChannel(ch))
       const profileSub = supabase
         .channel('profiles-changes')
         .on('postgres_changes', {
