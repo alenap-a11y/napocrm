@@ -56,78 +56,51 @@ export function useAdminStats() {
     setLoading(false)
   }
 
-  useEffect(() => {
+    useEffect(() => {
     let userId = null
+    let isMounted = true
 
     async function init() {
+      setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      if (!user) return
-
+      if (!user) {
+        if (isMounted) setLoading(false)
+        return
+      }
       userId = user.id
-
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
         .single()
-
       if (!profile?.is_admin) {
-        setIsAdmin(false)
-        setLoading(false)
+        if (isMounted) {
+          setIsAdmin(false)
+          setLoading(false)
+        }
         return
       }
-
-      setIsAdmin(true)
-      await fetchStats(userId)
-
-      // Realtime — nouveau profil créé
-      supabase.getChannels()
-        .filter(ch => ch.topic === 'realtime:profiles-changes')
-        .forEach(ch => supabase.removeChannel(ch))
-      const profileSub = supabase
-        .channel('profiles-changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'profiles'
-        }, () => fetchStats(userId))
-        .subscribe()
-
-            // Realtime — nouvel event
-      supabase.getChannels()
-        .filter(ch => ch.topic === 'realtime:events-changes')
-        .forEach(ch => supabase.removeChannel(ch))
-      const eventSub = supabase
-        .channel('events-changes')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_events'
-        }, () => fetchStats(userId))
-        .subscribe()
-
-            // Realtime — nouvelle session
-      supabase.getChannels()
-        .filter(ch => ch.topic === 'realtime:sessions-changes')
-        .forEach(ch => supabase.removeChannel(ch))
-      const sessionSub = supabase
-        .channel('sessions-changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'user_sessions'
-        }, () => fetchStats(userId))
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(profileSub)
-        supabase.removeChannel(eventSub)
-        supabase.removeChannel(sessionSub)
+      if (isMounted) {
+        setIsAdmin(true)
+        await fetchStats(userId)
+        setLoading(false)
       }
     }
 
     init()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        init()
+      }
+    })
+
+    return () => {
+      isMounted = false
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe()
+      }
+    }
   }, [])
 
   return { stats, isAdmin, loading }
