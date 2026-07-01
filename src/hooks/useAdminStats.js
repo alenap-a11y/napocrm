@@ -57,41 +57,28 @@ export function useAdminStats() {
   }
 
     useEffect(() => {
-    let userId = null
+      useEffect(() => {
     let isMounted = true
 
-    async function init() {
+    async function checkUser() {
       setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+      const session = await supabase.auth.getSession()
+      const user = session?.data?.session?.user
       if (!user) {
-        if (isMounted) setLoading(false)
-        return
-      }
-      userId = user.id
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .single()
-      if (!profile?.is_admin) {
         if (isMounted) {
           setIsAdmin(false)
           setLoading(false)
         }
         return
       }
-      if (isMounted) {
-        setIsAdmin(true)
-        await fetchStats(userId)
-        setLoading(false)
-      }
+      // ... suite du code (fetch profile, etc.)
     }
 
-    init()
+    checkUser()
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        init()
+        checkUser()
       }
     })
 
@@ -102,6 +89,3 @@ export function useAdminStats() {
       }
     }
   }, [])
-
-  return { stats, isAdmin, loading }
-}
