@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const SUPABASE_URL = 'https://jzwwqngbgcdeyiqrvtle.supabase.co'
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export default function AgendaPublic22({ slug }) {
+export default function AgendaPublic({ slug }) {
   const [profil, setProfil] = useState(null)
   const [dispos, setDispos] = useState(null)
   const [seancesReservees, setSeancesReservees] = useState([])
