@@ -19,21 +19,67 @@ export default function AgendaPublic({ slug }) {
 
   useEffect(() => {
     async function load() {
-      let { data: p } = await supabase.from('profils').select('*').eq('slug', slug).eq('agenda_public', true).maybeSingle()
-      if (!p) {
-        const { data: p2 } = await supabase.from('profiles').select('*').eq('slug', slug).eq('agenda_public', true).maybeSingle()
-        p = p2
+      try {
+        // Chargement direct depuis profiles (table correcte)
+        const { data: p, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('slug', slug)
+          .eq('agenda_public', true)
+          .maybeSingle()
+
+        if (error) {
+          console.error('❌ Erreur Supabase:', error)
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
+        if (!p) {
+          console.warn('⚠️ Aucun profil trouvé pour le slug:', slug)
+          setNotFound(true)
+          setLoading(false)
+          return
+        }
+
+        setProfil(p)
+
+        // Chargement des disponibilités
+        const { data: d, error: errD } = await supabase
+          .from('disponibilites')
+          .select('*')
+          .eq('user_id', p.id)
+          .eq('actif', true)
+          .maybeSingle()
+
+        if (errD) {
+          console.error('❌ Erreur chargement disponibilités:', errD)
+        }
+        setDispos(d)
+
+        // Chargement des séances réservées
+        const today = new Date().toISOString().split('T')[0]
+        const { data: s, error: errS } = await supabase
+          .from('seances')
+          .select('date_seance, heure_seance')
+          .eq('user_id', p.id)
+          .gte('date_seance', today)
+          .neq('statut', 'disponible')
+
+        if (errS) {
+          console.error('❌ Erreur chargement séances:', errS)
+        }
+        setSeancesReservees(s || [])
+        setLoading(false)
+
+      } catch (err) {
+        console.error('❌ Erreur inattendue:', err)
+        setNotFound(true)
+        setLoading(false)
       }
-      if (!p) { setNotFound(true); setLoading(false); return }
-      setProfil(p)
-      const { data: d } = await supabase.from('disponibilites').select('*').eq('user_id', p.id).eq('actif', true).maybeSingle()
-      setDispos(d)
-      const today = new Date().toISOString().split('T')[0]
-      const { data: s } = await supabase.from('seances').select('date_seance, heure_seance').eq('user_id', p.id).gte('date_seance', today).neq('statut', 'disponible')
-      setSeancesReservees(s || [])
-      setLoading(false)
     }
-    load()
+
+    if (slug) load()
   }, [slug])
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontSize: 13, color: '#6B7280' }}>Chargement...</div>
@@ -45,6 +91,7 @@ export default function AgendaPublic({ slug }) {
     </div>
   )
 
+  // Le reste du code est inchangé à partir d'ici
   const reservesByDate = {}
   seancesReservees.forEach(s => {
     const key = s.date_seance?.slice(0, 10)
@@ -87,7 +134,7 @@ export default function AgendaPublic({ slug }) {
   const startDow = (new Date(year, month, 1).getDay() + 6) % 7
   const totalDays = new Date(year, month + 1, 0).getDate()
   const allCells = [...Array(startDow).fill(null), ...Array.from({ length: totalDays }, (_, i) => new Date(year, month, i + 1))]
-  const initials = ((profil.prenom?.[0] || '') + (profil.nom?.[0] || '')).toUpperCase() || '?'
+  const initials = ((profil?.prenom?.[0] || '') + (profil?.nom?.[0] || '')).toUpperCase() || '?'
   const isPrevDisabled = new Date(year, month, 1) <= new Date(today.getFullYear(), today.getMonth(), 1)
   const popupSlots = popupDate ? getSlotsForDate(popupDate) : []
 
@@ -97,7 +144,7 @@ export default function AgendaPublic({ slug }) {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
     try {
-      await supabase.from('seances').insert([{
+      const { error: insertError } = await supabase.from('seances').insert([{
         user_id: profil.id,
         prenom: form.prenom,
         nom: form.nom,
@@ -111,6 +158,13 @@ export default function AgendaPublic({ slug }) {
         type_seance: 'Autre',
         notes: form.motif || null,
       }])
+
+      if (insertError) {
+        console.error('❌ Erreur insertion séance:', insertError)
+        setSending(false)
+        return
+      }
+
       await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
@@ -119,22 +173,24 @@ export default function AgendaPublic({ slug }) {
           praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
           praticien: profil.prenom + ' ' + profil.nom,
-          date: formatDateLong(selectedSlot.date),
+          date: selectedSlot.date,
           heure: selectedSlot.heure,
           praticien_tel: profil.tel || profil.telephone || '',
           praticien_email: profil.email_contact || profil.email || '',
           praticien_adresse: [profil.adresse_rdv, profil.ville_rdv, profil.code_postal].filter(Boolean).join(', ') || '',
         })
       })
+
+      setSent(true)
     } catch(e) {
-      console.error('Erreur:', e)
+      console.error('❌ Erreur lors de la soumission:', e)
     }
-    setSent(true)
     setSending(false)
   }
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9FAFB', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      {/* Entête */}
       <div style={{ background: 'linear-gradient(135deg, #085041 0%, #0F6E56 100%)', padding: '28px 24px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials}</div>
@@ -146,6 +202,7 @@ export default function AgendaPublic({ slug }) {
         </div>
       </div>
 
+      {/* Contenu principal */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 16px' }}>
         {sent ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB' }}>
@@ -158,6 +215,7 @@ export default function AgendaPublic({ slug }) {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+            {/* Calendrier */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #F3F4F6' }}>
                 <button onClick={() => setCurrentMonth(new Date(year, month - 1, 1))} disabled={isPrevDisabled}
@@ -204,6 +262,7 @@ export default function AgendaPublic({ slug }) {
               {!selectedSlot && <div style={{ padding: '0 12px 12px', textAlign: 'center', fontSize: 12, color: '#9CA3AF' }}>👆 Cliquez sur un jour vert</div>}
             </div>
 
+            {/* Formulaire */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid ' + (selectedSlot ? '#0F6E56' : '#E5E7EB'), padding: '20px' }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#111827', marginBottom: 4 }}>Vos informations</div>
               <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 16 }}>Champs * obligatoires</div>
@@ -236,6 +295,7 @@ export default function AgendaPublic({ slug }) {
         )}
       </div>
 
+      {/* Popup des créneaux */}
       {popupDate && (
         <div onClick={() => setPopupDate(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', width: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '80vh', overflowY: 'auto' }}>
