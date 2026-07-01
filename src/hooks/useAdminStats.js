@@ -94,7 +94,10 @@ export function useAdminStats() {
         }, () => fetchStats(userId))
         .subscribe()
 
-      // Realtime — nouvel event
+            // Realtime — nouvel event
+      supabase.getChannels()
+        .filter(ch => ch.topic === 'realtime:events-changes')
+        .forEach(ch => supabase.removeChannel(ch))
       const eventSub = supabase
         .channel('events-changes')
         .on('postgres_changes', {
@@ -104,7 +107,10 @@ export function useAdminStats() {
         }, () => fetchStats(userId))
         .subscribe()
 
-      // Realtime — nouvelle session
+            // Realtime — nouvelle session
+      supabase.getChannels()
+        .filter(ch => ch.topic === 'realtime:sessions-changes')
+        .forEach(ch => supabase.removeChannel(ch))
       const sessionSub = supabase
         .channel('sessions-changes')
         .on('postgres_changes', {
