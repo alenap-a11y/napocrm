@@ -56,14 +56,14 @@ export function useAdminStats() {
     setLoading(false)
   }
 
-    useEffect(() => {
-      useEffect(() => {
+  useEffect(() => {
     let isMounted = true
 
     async function checkUser() {
       setLoading(true)
-      const session = await supabase.auth.getSession()
-      const user = session?.data?.session?.user
+      const { data: { session } } = await supabase.auth.getSession()
+      const user = session?.user
+
       if (!user) {
         if (isMounted) {
           setIsAdmin(false)
@@ -71,7 +71,26 @@ export function useAdminStats() {
         }
         return
       }
-      // ... suite du code (fetch profile, etc.)
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.is_admin) {
+        if (isMounted) {
+          setIsAdmin(false)
+          setLoading(false)
+        }
+        return
+      }
+
+      if (isMounted) {
+        setIsAdmin(true)
+        await fetchStats(user.id)
+        setLoading(false)
+      }
     }
 
     checkUser()
@@ -79,6 +98,12 @@ export function useAdminStats() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         checkUser()
+      }
+      if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setIsAdmin(false)
+          setLoading(false)
+        }
       }
     })
 
@@ -89,3 +114,6 @@ export function useAdminStats() {
       }
     }
   }, [])
+
+  return { stats, isAdmin, loading }
+}
