@@ -330,4 +330,4 @@ export default function AgendaPublic({ slug }) {
       )}
     </div>
   )
-}
+}// REBUILD FORCED - Thu Jul  2 12:00:51 AM CEST 2026
