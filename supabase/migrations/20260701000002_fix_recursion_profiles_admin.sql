@@ -12,7 +12,9 @@ AS $$
 $$;
 
 DROP POLICY IF EXISTS "profiles_admin_select" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_admin_select" ON public.profiles;
 CREATE POLICY "profiles_admin_select" ON public.profiles FOR SELECT TO authenticated USING (public.is_admin_user());
 
+DROP POLICY IF EXISTS "profiles_admin_delete" ON public.profiles;
 DROP POLICY IF EXISTS "profiles_admin_delete" ON public.profiles;
 CREATE POLICY "profiles_admin_delete" ON public.profiles FOR DELETE TO authenticated USING (public.is_admin_user());

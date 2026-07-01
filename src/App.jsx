@@ -5,8 +5,9 @@ import LoginPage from './pages/LoginPage'
 import SetPassword from './pages/SetPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
-import { supabase } from './lib/supabase'
+import AgendaSettings from './pages/AgendaSettings'
 import AgendaPublic from './pages/AgendaPublic'
+import { supabase } from './lib/supabase'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -58,6 +59,10 @@ export default function App() {
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
   if (location.pathname === '/set-password') return <SetPassword />
   if (!user) return <LoginPage />
+  
+  // Route pour la gestion d'agenda (protégée)
+  if (location.pathname === '/mon-agenda') return <AgendaSettings />
+
   if (location.pathname.startsWith('/napo-cockpit-7X')) {
     if (adminLoading) return null
     if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
