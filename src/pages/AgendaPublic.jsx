@@ -108,7 +108,7 @@ export default function AgendaPublic({ slug }) {
         heure_seance: selectedSlot.heure + ':00',
         duree_minutes: 60,
         statut: 'planifié',
-        type_seance: 'Séance',
+        type_seance: 'Autre',
         notes: form.motif || null,
       }])
       await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
