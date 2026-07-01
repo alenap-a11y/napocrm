@@ -126,7 +126,7 @@ export default function AdminUsers({ onSelectUser }) {
     async function fetchUsers() {
       setLoading(true)
       const { data, error } = await supabase
-        .from('admin_users_view')
+        .rpc('get_admin_users_view')
         .select('id, prenom, nom, slug, is_admin, agenda_public, welcomed_at, metier, email, last_sign_in_at, created_at')
         .order('last_sign_in_at', { ascending: false, nullsFirst: false })
       if (error) console.error('admin_users_view error:', error)
