@@ -20,7 +20,6 @@ export default function AgendaPublic({ slug }) {
   useEffect(() => {
     async function load() {
       try {
-        // Chargement direct depuis profiles (table correcte)
         const { data: p, error } = await supabase
           .from('profiles')
           .select('*')
@@ -44,7 +43,6 @@ export default function AgendaPublic({ slug }) {
 
         setProfil(p)
 
-        // Chargement des disponibilités
         const { data: d, error: errD } = await supabase
           .from('disponibilites')
           .select('*')
@@ -57,7 +55,6 @@ export default function AgendaPublic({ slug }) {
         }
         setDispos(d)
 
-        // Chargement des séances réservées
         const today = new Date().toISOString().split('T')[0]
         const { data: s, error: errS } = await supabase
           .from('seances')
@@ -91,7 +88,6 @@ export default function AgendaPublic({ slug }) {
     </div>
   )
 
-  // Le reste du code est inchangé à partir d'ici
   const reservesByDate = {}
   seancesReservees.forEach(s => {
     const key = s.date_seance?.slice(0, 10)
@@ -111,6 +107,12 @@ export default function AgendaPublic({ slug }) {
 
   function formatDateLong(ymd) {
     return new Date(ymd + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  }
+
+  // ✅ NOUVEAU : formate YYYY-MM-DD → DD/MM/YYYY (attendu par la Edge Function)
+  function formatDateShort(ymd) {
+    const parts = ymd.split('-')
+    return `${parts[2]}/${parts[1]}/${parts[0]}`
   }
 
   function getSlotsForDate(ymd) {
@@ -140,6 +142,7 @@ export default function AgendaPublic({ slug }) {
 
   const inp = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', color: '#111827' }
 
+  // ✅ FONCTION SUBMIT CORRIGÉE
   async function submit() {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
@@ -165,7 +168,8 @@ export default function AgendaPublic({ slug }) {
         return
       }
 
-      await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
+      // Envoi de l'email avec le bon format de date (DD/MM/YYYY)
+      const response = await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
         body: JSON.stringify({
@@ -173,7 +177,7 @@ export default function AgendaPublic({ slug }) {
           praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
           praticien: profil.prenom + ' ' + profil.nom,
-          date: selectedSlot.date,
+          date: formatDateShort(selectedSlot.date),   // ✅ FORMAT CORRECT
           heure: selectedSlot.heure,
           praticien_tel: profil.tel || profil.telephone || '',
           praticien_email: profil.email_contact || profil.email || '',
@@ -181,8 +185,17 @@ export default function AgendaPublic({ slug }) {
         })
       })
 
+      // ✅ Vérification de la réponse
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Erreur envoi email:', response.status, errorText)
+        setSending(false)
+        return
+      }
+
+      console.log('✅ Email envoyé avec succès')
       setSent(true)
-    } catch(e) {
+    } catch (e) {
       console.error('❌ Erreur lors de la soumission:', e)
     }
     setSending(false)
