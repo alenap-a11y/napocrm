@@ -138,6 +138,7 @@ export default function AgendaPublic({ slug }) {
 
   const inp = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', color: '#111827' }
 
+  // 🔧 FONCTION SUBMIT MODIFIÉE AVEC fetch + SERVICE_ROLE KEY
   async function submit() {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
@@ -163,9 +164,19 @@ export default function AgendaPublic({ slug }) {
         return
       }
 
-      console.log('📧 Envoi email...')
-      const { data, error } = await supabase.functions.invoke('send-rdv-email', {
-        body: {
+      console.log('📧 Envoi email avec fetch + service_role...')
+
+      // ⚠️ REMPLACE 'ta_vraie_cle_service_role_ici' PAR TA VRAIE CLÉ (Supabase → Settings → API → service_role)
+      const SERVICE_ROLE_KEY = 'sb_publishable_mCsCQ8QPzyzhORpSLE6WFQ_6lSD0bJY'
+      const SUPABASE_URL = 'https://jzwwqngbgcdeyiqrvtle.supabase.co'
+
+      const response = await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + SERVICE_ROLE_KEY
+        },
+        body: JSON.stringify({
           to_client: form.email,
           praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
@@ -175,16 +186,17 @@ export default function AgendaPublic({ slug }) {
           praticien_tel: profil.tel || profil.telephone || '',
           praticien_email: profil.email_contact || profil.email || '',
           praticien_adresse: [profil.adresse_rdv, profil.ville_rdv, profil.code_postal].filter(Boolean).join(', ') || '',
-        }
+        })
       })
 
-      if (error) {
-        console.error('❌ Erreur envoi email:', error)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Erreur envoi email:', response.status, errorText)
         setSending(false)
         return
       }
 
-      console.log('✅ Email envoyé avec succès', data)
+      console.log('✅ Email envoyé avec succès')
       setSent(true)
     } catch (e) {
       console.error('❌ Erreur lors de la soumission:', e)
