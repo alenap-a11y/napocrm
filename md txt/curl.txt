@@ -1,0 +1,13 @@
+
+
+
+
+
+
+
+
+curl -L -X POST 'https://jzwwqngbgcdeyiqrvtle.supabase.co/functions/v1/send-rdv-email' \
+  -H 'Authorization: Bearer sb_publishable_mCsCQ8QPzyzhORpSLE6WFQ_6lSD0bJY' \
+  -H 'apikey: sb_publishable_mCsCQ8QPzyzhORpSLE6WFQ_6lSD0bJY' \
+  -H 'Content-Type: application/json' \
+  --data '{"name":"Functions"}'

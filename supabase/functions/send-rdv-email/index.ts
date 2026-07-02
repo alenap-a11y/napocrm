@@ -6,7 +6,7 @@ serve(async (req) => {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
   }
 
-  // Récupération du payload avec vérifications
+  // Récupération du payload
   let payload
   try {
     payload = await req.json()
@@ -29,12 +29,29 @@ serve(async (req) => {
     })
   }
 
-  // Vérifier le format de la date (JJ/MM/AAAA) et heure (HH:MM)
-  const dateParts = date.split('/').map(s => s.trim())
+  // 🔧 NORMALISATION DE LA DATE : accepter YYYY-MM-DD ou DD/MM/YYYY
+  let normalizedDate = date
+  if (date.includes('-')) {
+    // Format YYYY-MM-DD → DD/MM/YYYY
+    const parts = date.split('-')
+    if (parts.length === 3) {
+      normalizedDate = `${parts[2]}/${parts[1]}/${parts[0]}`
+      console.log('📅 Date normalisée (YYYY-MM-DD → DD/MM/YYYY):', normalizedDate)
+    }
+  } else if (date.includes('/')) {
+    // Déjà au bon format, on garde
+    normalizedDate = date
+  } else {
+    // Format inconnu, on logge et on garde tel quel
+    console.warn('⚠️ Format de date non reconnu:', date)
+  }
+
+  // Vérifier le format de la date normalisée (JJ/MM/AAAA)
+  const dateParts = normalizedDate.split('/').map(s => s.trim())
   const heureParts = heure.split(':').map(s => s.trim())
 
   if (dateParts.length !== 3 || heureParts.length !== 2) {
-    console.error('❌ Format de date/heure invalide:', { date, heure })
+    console.error('❌ Format de date/heure invalide après normalisation:', { normalizedDate, heure })
     return new Response(JSON.stringify({ error: 'Format de date/heure invalide' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
@@ -88,7 +105,7 @@ serve(async (req) => {
     })
   }
 
-  // Email client
+  // Email client – on utilise normalizedDate dans le contenu
   try {
     await sendEmail(to_client, `✅ RDV confirmé — ${praticien}`,
       `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px">
@@ -99,7 +116,7 @@ serve(async (req) => {
   <p>Bonjour <strong>${client.prenom}</strong>,</p>
   <p>Votre rendez-vous avec <strong>${praticien}</strong> est confirmé.</p>
   <div style="background:#E1F5EE;border-radius:10px;padding:16px;margin:20px 0">
-    <p style="margin:0 0 8px;color:#0F6E56;font-weight:600;font-size:16px">📅 ${date} à ${heure}</p>
+    <p style="margin:0 0 8px;color:#0F6E56;font-weight:600;font-size:16px">📅 ${normalizedDate} à ${heure}</p>
     <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=RDV+${encodeURIComponent(praticien)}&dates=${dateICS}${heureICS}/${dateICS}${heureICSFin}&details=RDV%20avec%20${encodeURIComponent(praticien)}%0A%0A📞%20${encodeURIComponent(praticien_tel || '')}%0A✉️%20${encodeURIComponent(praticienEmail || '')}%0A📍%20${encodeURIComponent(praticien_adresse || '')}&location=${encodeURIComponent(praticien_adresse || '')}"
        target="_blank"
        style="display:inline-block;margin-top:8px;padding:8px 16px;background:#4285F4;color:#fff;border-radius:6px;text-decoration:none;font-size:13px">
@@ -117,7 +134,7 @@ serve(async (req) => {
     console.error('❌ Erreur envoi email client:', e.message)
   }
 
-  // Email praticien
+  // Email praticien – on utilise normalizedDate
   if (praticienEmail) {
     try {
       await sendEmail(praticienEmail, `🔔 Nouveau RDV — ${client.prenom} ${client.nom}`,
@@ -130,7 +147,7 @@ serve(async (req) => {
             <p style="margin:4px 0"><strong>Motif :</strong> ${client.motif || '—'}</p>
           </div>
           <div style="background:#E1F5EE;border-radius:10px;padding:16px">
-            <p style="margin:0;color:#0F6E56;font-weight:600">📅 ${date} à ${heure}</p>
+            <p style="margin:0;color:#0F6E56;font-weight:600">📅 ${normalizedDate} à ${heure}</p>
           </div>
           <p style="margin-top:16px;font-size:13px;color:#6B7280">
             Connectez-vous sur <a href="https://naposolo.com" style="color:#0F6E56">naposolo.com</a> pour confirmer.
