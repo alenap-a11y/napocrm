@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const SUPABASE_URL = 'https://jzwwqngbgcdeyiqrvtle.supabase.co'
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
-
 export default function AgendaPublic({ slug }) {
   const [profil, setProfil] = useState(null)
   const [dispos, setDispos] = useState(null)
@@ -109,7 +106,6 @@ export default function AgendaPublic({ slug }) {
     return new Date(ymd + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   }
 
-  // ✅ NOUVEAU : formate YYYY-MM-DD → DD/MM/YYYY (attendu par la Edge Function)
   function formatDateShort(ymd) {
     const parts = ymd.split('-')
     return `${parts[2]}/${parts[1]}/${parts[0]}`
@@ -142,7 +138,6 @@ export default function AgendaPublic({ slug }) {
 
   const inp = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', color: '#111827' }
 
-  // ✅ FONCTION SUBMIT CORRIGÉE
   async function submit() {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
@@ -168,32 +163,28 @@ export default function AgendaPublic({ slug }) {
         return
       }
 
-      // Envoi de l'email avec le bon format de date (DD/MM/YYYY)
-      const response = await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
-        body: JSON.stringify({
+      console.log('📧 Envoi email...')
+      const { data, error } = await supabase.functions.invoke('send-rdv-email', {
+        body: {
           to_client: form.email,
           praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
           praticien: profil.prenom + ' ' + profil.nom,
-          date: formatDateShort(selectedSlot.date),   // ✅ FORMAT CORRECT
+          date: formatDateShort(selectedSlot.date),
           heure: selectedSlot.heure,
           praticien_tel: profil.tel || profil.telephone || '',
           praticien_email: profil.email_contact || profil.email || '',
           praticien_adresse: [profil.adresse_rdv, profil.ville_rdv, profil.code_postal].filter(Boolean).join(', ') || '',
-        })
+        }
       })
 
-      // ✅ Vérification de la réponse
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Erreur envoi email:', response.status, errorText)
+      if (error) {
+        console.error('❌ Erreur envoi email:', error)
         setSending(false)
         return
       }
 
-      console.log('✅ Email envoyé avec succès')
+      console.log('✅ Email envoyé avec succès', data)
       setSent(true)
     } catch (e) {
       console.error('❌ Erreur lors de la soumission:', e)
@@ -330,4 +321,4 @@ export default function AgendaPublic({ slug }) {
       )}
     </div>
   )
-}// REBUILD FORCED - Thu Jul  2 12:00:51 AM CEST 2026
+}
