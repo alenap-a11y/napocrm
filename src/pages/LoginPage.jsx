@@ -117,6 +117,7 @@ export default function LoginPage() {
           email: betaEmail.trim(),
           metier: betaMetier.trim() || null
         }).maybeSingle()
+        supabase.from('system_email_stats').insert({ event_type: 'signup' }).then(({ error }) => { if (error) console.error('stats insert failed:', error) })
         setBetaSent(true)
       }
     } catch(e) { setBetaError('Erreur: ' + e.message) }
