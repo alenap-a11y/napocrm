@@ -12,6 +12,7 @@ import AdminNapoPlus from './AdminNapoPlus'
 import AdminMarketplace from './AdminMarketplace'
 import AdminUsers from './AdminUsers'
 import AdminUserDetail from './AdminUserDetail'
+import AdminRgpd from './AdminRgpd'
 
 export default function AdminLayout({ user }) {
   const [page, setPage] = useState('dashboard')
@@ -38,6 +39,7 @@ export default function AdminLayout({ user }) {
     { id: 'admin-onboarding', label: 'Popup onboarding', icon: 'ti-message-circle' },
     { id: 'admin-roadmap', label: 'Roadmap', icon: 'ti-map' },
     { id: 'admin-news', label: 'News',  icon: 'ti-speakerphone' },
+    { id: 'admin-rgpd', label: 'RGPD',  icon: 'ti-shield-lock' },
   ]
 
   function NavItem({ item }) {
@@ -112,6 +114,7 @@ export default function AdminLayout({ user }) {
         {page === 'admin-faq'   && <AdminFaq />}
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}
+        {page === 'admin-rgpd'  && <AdminRgpd />}
         {page === 'napoplus'    && <AdminNapoPlus />}
         {page === 'marketplace' && <AdminMarketplace />}
         {page === 'users' && !selectedUser && <AdminUsers onSelectUser={u => setSelectedUser(u)} />}

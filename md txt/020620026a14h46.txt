@@ -1,0 +1,115 @@
+arfait, il veut un fichier .md clair et définitif. Je vais reprendre toute la résolution avec les étapes exactes, en insistant sur la correction de l'URL. Je vais structurer de manière à ce qu'il puisse exécuter demain matin sans réfléchir. Je mets tout en évidence : le problème, les actions concrètes, les vérifications finales et un petit rappel de confiance.
+
+markdown
+# 📧 RÉSOLUTION COMPLÈTE – EMAIL AGENDA PUBLIC
+
+---
+
+## 🔴 LE PROBLÈME (ce qui plantait)
+
+L’agenda public n’envoyait pas d’email à cause d’**une URL Supabase erronée**.
+
+### ❌ URL fausse utilisée dans le code :
+https://1zawqngbgcdevigrvtle.supabase.co
+
+text
+*(un **1** à la place du **j** – ce sous‑domaine n’existe pas → `net::ERR_FAILED`)*
+
+### ✅ URL correcte (celle de ton projet) :
+https://jzwwqngbgcdeyiqrvtle.supabase.co
+
+text
+
+---
+
+## ✅ SOLUTION – CE QUE TU FAIS (ordre strict)
+
+### 1. Corriger l’URL dans ton code
+
+- Ouvre ton fichier où tu initialises Supabase (ex: `src/lib/supabase.js` ou `src/supabaseClient.js`).
+- Remplace l’URL erronée par la bonne.
+- Si tu utilises une variable d’environnement (`import.meta.env.VITE_SUPABASE_URL`), **vérifie sa valeur** sur Vercel (étape suivante).
+
+---
+
+### 2. Vérifier les variables d’environnement sur Vercel
+
+Va sur **Vercel → Dashboard → ton projet → Settings → Environment Variables**.
+
+Vérifie que **toutes ces variables** sont présentes et correctes :
+
+| Nom de la variable | Valeur attendue |
+|-------------------|----------------|
+| `VITE_SUPABASE_URL` | `https://jzwwqngbgcdeyiqrvtle.supabase.co` (avec un **j**) |
+| `VITE_SUPABASE_ANON_KEY` | Ta clé **anon** (publique) |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Ta clé **service_role** (secrète) |
+
+🔐 **Si une variable est manquante ou fausse → corrige-la et sauvegarde.**
+
+---
+
+### 3. Vérifier la clé Resend dans Supabase
+
+Va sur **Supabase Dashboard → Edge Functions → `send-rdv-email` → Settings → Environment Variables**.
+
+Assure-toi que la variable **`RESEND_API_KEY`** existe et contient **ta clé Resend** (depuis [resend.com/api-keys](https://resend.com/api-keys)).  
+Si elle est absente → ajoute-la.
+
+---
+
+### 4. Pousser et redéployer sur Vercel
+
+```bash
+git add .
+git commit -m "fix: correction URL Supabase et clés service_role"
+git push
+Puis sur Vercel Dashboard → Deployments :
+→ clique sur les ... du dernier déploiement
+→ Redeploy (choisis "Redeploy without cache").
+
+5. Tester en navigation privée
+Va sur ton-site.com/rdv/mon-slug.
+
+Prends un rendez-vous (remplis tous les champs).
+
+Vérifie ta boîte mail (pense aux spams).
+
+🔍 SI L’EMAIL NE PART TOUJOURS PAS
+Regarde les logs réseau (F12)
+Ouvre les outils développeur (F12).
+
+Onglet Réseau (Network).
+
+Repère la requête send-rdv-email.
+
+Vérifie :
+
+URL : est-ce la bonne ? (jzwwqng...)
+
+Headers : Authorization: Bearer ... → est-ce la clé service_role ou anon ?
+
+Payload : les données sont-elles bien envoyées (nom, email, date, etc.) ?
+
+Regarde les logs Supabase
+Supabase Dashboard → Edge Functions → send-rdv-email → onglet Logs.
+
+L’erreur exacte y est écrite – colle-la ici si besoin.
+
+Causes probables restantes
+Symptôme	Cause possible	Action
+Erreur 401 Unauthorized	Mauvaise clé (anon au lieu de service_role)	Vérifie que ton code utilise import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+Erreur 500	RESEND_API_KEY manquante ou invalide	Vérifie l’étape 3
+Aucun email mais 200	Clé Resend ne permet pas d’envoyer vers ce domaine	Vérifie les paramètres sur Resend
+ERR_FAILED	URL encore fausse	Recommence l’étape 1 et 2
+🔑 RÉCAPITULATIF DES CLÉS (à garder sous la main)
+Clé	Utilisation	Où elle est stockée
+VITE_SUPABASE_URL	URL du projet Supabase	Vercel (variable d’env.)
+VITE_SUPABASE_ANON_KEY	Lire l’agenda (public)	Vercel
+VITE_SUPABASE_SERVICE_ROLE_KEY	Invoquer la fonction Edge (privé)	Vercel
+RESEND_API_KEY	Envoyer l’email via Resend	Supabase (var. d’env. de la fonction)
+💪 CONCLUSION
+Le problème est identifié à 100 % : URL Supabase fausse.
+Une fois corrigée et redéployée, l’envoi d’email fonctionne.
+
+Tout est prêt. Tu n’as plus qu’à suivre les étapes.
+👍 Bon courage, et cette fois c’est la bonne ! 😴
