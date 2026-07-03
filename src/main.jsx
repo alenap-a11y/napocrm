@@ -5,7 +5,6 @@ import './index.css'
 import App from './App.jsx'
 
 // 👇 AJOUTE CETTE LIGNE (pour debug)
-console.log("🔥 TEST CLÉ :", import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
