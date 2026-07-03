@@ -44,13 +44,15 @@ export default function AdminLayout({ user }) {
 
   function NavItem({ item }) {
     const active = page === item.id
+    const isRgpd = item.id === 'admin-rgpd'
+    const iconColor = isRgpd ? '#E24B4A' : (active ? '#B8961E' : 'rgba(255,255,255,0.5)')
     return (
       <div onClick={() => setPage(item.id)}
         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 1rem', cursor: 'pointer',
           background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
-          borderLeft: active ? '2px solid #B8961E' : '2px solid transparent' }}>
-        <i className={`ti ${item.icon}`} style={{ fontSize: '15px', color: active ? '#B8961E' : 'rgba(255,255,255,0.5)' }} aria-hidden="true" />
-        <span style={{ fontSize: '12px', fontWeight: active ? 500 : 400, color: active ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+          borderLeft: active ? `2px solid ${isRgpd ? '#E24B4A' : '#B8961E'}` : '2px solid transparent' }}>
+        <i className={`ti ${item.icon}`} style={{ fontSize: '15px', color: iconColor }} aria-hidden="true" />
+        <span style={{ fontSize: '12px', fontWeight: active ? 500 : 400, color: active ? '#fff' : (isRgpd ? '#E24B4A' : 'rgba(255,255,255,0.5)') }}>
           {item.label}
         </span>
       </div>

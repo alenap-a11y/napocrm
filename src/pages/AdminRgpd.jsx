@@ -4,8 +4,8 @@ export default function AdminRgpd() {
       <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'1rem'}}>
         <i className="ti ti-shield-lock" style={{fontSize:'18px',color:'var(--color-text-secondary)'}} aria-hidden="true"/>
         <div style={{fontSize:'14px',fontWeight:500}}>RGPD</div>
-        <span style={{fontSize:'10px',padding:'3px 9px',borderRadius:'20px',background:'#FAEEDA',color:'#633806',fontWeight:500}}>
-          En redaction
+        <span style={{fontSize:'10px',padding:'3px 9px',borderRadius:'20px',background:'#FDECEA',color:'#C0392B',fontWeight:500}}>
+          Bloque - SIRET requis
         </span>
       </div>
 
