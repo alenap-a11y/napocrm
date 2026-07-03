@@ -1,0 +1,3 @@
+-- Migration deja appliquee en prod, contenu original non retrouve.
+-- Fichier stub cree le 03/07/2026 pour resynchroniser l'historique local avec supabase_migrations.schema_migrations.
+-- Voir schema_migrations remote pour confirmer la date d'application reelle.
