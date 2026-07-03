@@ -134,6 +134,13 @@ serve(async (req) => {
     console.error('❌ Erreur envoi email client:', e.message)
   }
 
+  // Log stats RGPD (best-effort, ne bloque jamais l'envoi)
+  try {
+    await sb.from('system_email_stats').insert({ event_type: 'agenda_confirmation' })
+  } catch (e) {
+    console.error('❌ Erreur log system_email_stats:', e.message)
+  }
+
   // Email praticien – on utilise normalizedDate
   if (praticienEmail) {
     try {
