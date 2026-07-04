@@ -6,6 +6,7 @@ import { supabase } from './lib/supabase'
 import { useActivityTracker } from './hooks/useActivityTracker'
 import { useIsMobile } from './hooks/useIsMobile'
 import WelcomeModal from './components/WelcomeModal'
+import ConsentRgpdGate from './components/ConsentRgpdGate'
 import NapoAssistant from './components/NapoAssistant'
 import BottomNav from './components/BottomNav'
 
@@ -485,6 +486,7 @@ export default function AppShell({ user, onSignOut }) {
           </Suspense></ChunkErrorBoundary>
         </main>
       </div>
+      <ConsentRgpdGate user={user} />
       <WelcomeModal user={user} />
       <NapoAssistant />
       {isMobile && <BottomNav accent={accent} />}
