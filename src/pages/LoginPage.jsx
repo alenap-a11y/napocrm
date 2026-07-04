@@ -122,7 +122,7 @@ export default function LoginPage() {
           metier: betaMetier.trim() || null,
           consent_rgpd: true,
           consent_rgpd_date: new Date().toISOString()
-        }).select().maybeSingle()
+        })
         if (insertError) {
           if (insertError.code === '23505') setBetaError('Un compte existe deja avec cet email.')
           else setBetaError('Erreur: ' + insertError.message)
