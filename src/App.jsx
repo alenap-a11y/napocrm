@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
 import AgendaSettings from './pages/AgendaSettings'
 import AgendaPublic from './pages/AgendaPublic'
+import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import { supabase } from './lib/supabase'
 
 export default function App() {
@@ -54,6 +55,9 @@ export default function App() {
   if (location.pathname.startsWith('/rdv/')) {
     const slug = location.pathname.split('/rdv/')[1]
     return <AgendaPublic slug={slug} />
+  }
+  if (location.pathname === '/politique-confidentialite') {
+    return <PolitiqueConfidentialite />
   }
   if (loading) return null
   if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
