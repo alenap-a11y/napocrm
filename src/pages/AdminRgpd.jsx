@@ -13,13 +13,35 @@ export default function AdminRgpd() {
   const [delResult, setDelResult] = useState(null)
   const [delError, setDelError] = useState('')
 
+  const [inscriptions, setInscriptions] = useState([])
+  const [inscLoading, setInscLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filterConsent, setFilterConsent] = useState('tous')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
   useEffect(() => {
     supabase.from('system_email_stats').select('event_type, created_at')
       .then(({ data }) => {
         setRows(data || [])
         setLoading(false)
       })
+    supabase.from('beta_inscriptions').select('prenom, nom, email, metier, consent_rgpd, consent_rgpd_date, created_at').order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setInscriptions(data || [])
+        setInscLoading(false)
+      })
   }, [])
+
+  const filteredInscriptions = inscriptions.filter(i => {
+    const q = search.trim().toLowerCase()
+    if (q && !(`${i.prenom||''} ${i.nom||''} ${i.email||''}`.toLowerCase().includes(q))) return false
+    if (filterConsent === 'oui' && !i.consent_rgpd) return false
+    if (filterConsent === 'non' && i.consent_rgpd) return false
+    if (dateFrom && new Date(i.created_at) < new Date(dateFrom)) return false
+    if (dateTo && new Date(i.created_at) > new Date(dateTo + 'T23:59:59')) return false
+    return true
+  })
 
   const now = new Date()
   function isInPeriode(dateStr) {
@@ -150,6 +172,59 @@ export default function AdminRgpd() {
             <button onClick={resetDelete} style={{marginTop:'10px',fontSize:'12px',color:'#534AB7',background:'none',border:'none',cursor:'pointer',textDecoration:'underline'}}>
               Nouvelle suppression
             </button>
+          </div>
+        )}
+      </div>
+
+      <div style={{borderTop:'0.5px solid var(--color-border-tertiary)',marginTop:'2rem',paddingTop:'1.5rem'}}>
+        <div style={{fontSize:'14px',fontWeight:500,marginBottom:'1rem'}}>Recherche des inscriptions</div>
+
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginBottom:'1rem'}}>
+          <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nom, prenom ou email..."
+            style={{flex:'1 1 220px',padding:'8px 10px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',fontSize:'13px'}} />
+          <select value={filterConsent} onChange={e=>setFilterConsent(e.target.value)}
+            style={{padding:'8px 10px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',fontSize:'13px'}}>
+            <option value="tous">Consentement: tous</option>
+            <option value="oui">Consentement: oui</option>
+            <option value="non">Consentement: non</option>
+          </select>
+          <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+            style={{padding:'8px 10px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',fontSize:'13px'}} />
+          <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+            style={{padding:'8px 10px',borderRadius:'8px',border:'0.5px solid var(--color-border-tertiary)',fontSize:'13px'}} />
+        </div>
+
+        {inscLoading ? (
+          <div style={{fontSize:'13px',color:'var(--color-text-secondary)'}}>Chargement...</div>
+        ) : (
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:640}}>
+              <thead>
+                <tr>
+                  {['Prenom','Nom','Email','Metier','Consentement','Date'].map(h => (
+                    <th key={h} style={{textAlign:'left',fontSize:'11px',fontWeight:600,color:'var(--color-text-secondary)',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)',textTransform:'uppercase',letterSpacing:'.03em'}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInscriptions.length === 0 ? (
+                  <tr><td colSpan={6} style={{padding:'16px 10px',fontSize:'13px',color:'var(--color-text-secondary)'}}>Aucun resultat</td></tr>
+                ) : filteredInscriptions.map((i, idx) => (
+                  <tr key={idx}>
+                    <td style={{fontSize:'13px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)'}}>{i.prenom || '—'}</td>
+                    <td style={{fontSize:'13px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)'}}>{i.nom || '—'}</td>
+                    <td style={{fontSize:'13px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)'}}>{i.email}</td>
+                    <td style={{fontSize:'13px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)'}}>{i.metier || '—'}</td>
+                    <td style={{fontSize:'13px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)',color: i.consent_rgpd ? '#27500A' : '#C0392B'}}>
+                      {i.consent_rgpd ? 'Oui' : 'Non'}
+                    </td>
+                    <td style={{fontSize:'12px',padding:'8px 10px',borderBottom:'1px solid var(--color-border-tertiary)',color:'var(--color-text-secondary)'}}>
+                      {new Date(i.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
