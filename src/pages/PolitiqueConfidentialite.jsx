@@ -17,9 +17,9 @@ export default function PolitiqueConfidentialite() {
 
   const subRows = [
     ['Supabase', 'Hébergement de la base de données et authentification', 'États-Unis', "Données d'authentification et de profil", "Clauses Contractuelles Types (SCC) conformes à l'Art. 46 RGPD"],
-    ['Vercel', "Hébergement de l'application", 'États-Unis', 'Logs techniques (sans données utilisateurs)', 'SCC conformes à l\\'Art. 46 RGPD'],
-    ['Resend', 'Envoi des emails transactionnels', 'États-Unis', "Emails et noms (uniquement pour l'envoi)", 'SCC conformes à l\\'Art. 46 RGPD'],
-    ['Anthropic', 'Traitement des requêtes via NapoAssistant', 'États-Unis', 'Messages échangés (traitement en temps réel, sans stockage permanent)', 'SCC conformes à l\\'Art. 46 RGPD'],
+    ['Vercel', "Hébergement de l'application", 'États-Unis', 'Logs techniques (sans données utilisateurs)', "SCC conformes à l'Art. 46 RGPD"],
+    ['Resend', 'Envoi des emails transactionnels', 'États-Unis', "Emails et noms (uniquement pour l'envoi)", "SCC conformes à l'Art. 46 RGPD"],
+    ['Anthropic', 'Traitement des requêtes via NapoAssistant', 'États-Unis', 'Messages échangés (traitement en temps réel, sans stockage permanent)', "SCC conformes à l'Art. 46 RGPD"],
   ];
 
   return (
