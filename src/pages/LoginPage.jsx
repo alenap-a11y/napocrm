@@ -330,7 +330,7 @@ export default function LoginPage() {
                   </div>
                   <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 11.5, color: '#6b7280', lineHeight: 1.5, cursor: 'pointer', marginTop: 2 }}>
                     <input type="checkbox" checked={betaConsent} onChange={e => setBetaConsent(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
-                    <span>J'accepte que mes données (nom, prénom, email, métier) soient traitées par Naposolo pour la gestion de mon compte, via nos sous-traitants Supabase, Vercel, Resend et Anthropic. *</span>
+                    <span>J'accepte le traitement de mes données conformément à la <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: '#0F6E56', textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>politique de confidentialité</a>. *</span>
                   </label>
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     <button onClick={closeBeta} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>Annuler</button>
