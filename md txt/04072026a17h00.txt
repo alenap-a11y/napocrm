@@ -1,3 +1,0 @@
-Template Supabase Auth — texte donné il y a deux échanges, à coller manuellement dans Dashboard Supabase → Authentication → Email Templates → Confirm signup. Rien à voir tant que ce n'est pas fait de ton côté.
-Prospection — compteur à zéro depuis le début, bloqué sur une question sans réponse : un opt-in séparé existe-t-il dans ton produit, ou faut-il le construire ?
-agenda_confirmation — compteur à zéro, jamais testé de bout en bout sur /rdv/:slug malgré le code déployé et fonctionnel.

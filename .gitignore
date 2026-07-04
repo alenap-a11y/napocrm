@@ -35,3 +35,4 @@ dist-ssr
 *.jsx.backup*
 *.backup*
 *.backup*
+md txt/
