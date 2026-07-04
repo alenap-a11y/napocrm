@@ -109,9 +109,9 @@ serve(async (req) => {
   try {
     await sendEmail(to_client, `✅ RDV confirmé — ${praticien}`,
       `<div style="font-family:Inter,sans-serif;max-width:500px;margin:0 auto;padding:32px">
-  <div style="background:linear-gradient(135deg,#085041,#0F6E56);padding:24px;border-radius:12px;margin-bottom:24px">
+  <div style="background:#4BBFCE;padding:24px;border-radius:12px;margin-bottom:24px">
     <h1 style="color:#fff;margin:0;font-size:20px">Votre confirmation de séance ✅</h1>
-    <p style="color:#A7F3D0;margin:8px 0 0;font-size:14px">Votre RDV est bien enregistré</p>
+    <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px">Votre RDV est bien enregistré</p>
   </div>
   <p>Bonjour <strong>${client.prenom}</strong>,</p>
   <p>Votre rendez-vous avec <strong>${praticien}</strong> est confirmé.</p>
