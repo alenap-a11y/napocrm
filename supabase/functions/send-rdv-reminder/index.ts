@@ -96,6 +96,7 @@ serve(async (req) => {
         <tr><td style="background:#F9FAFB;padding:20px 40px;text-align:center;border-top:1px solid #F3F4F6;">
           <p style="margin:0 0 4px;font-size:12px;color:#9CA3AF;">Naposolo · L'outil des praticiens indépendants</p>
           <p style="margin:0;font-size:11px;color:#D1D5DB;font-style:italic;">"Les petits font les grands !"</p>
+          <p style="margin:12px 0 0;font-size:10px;color:#D1D5DB;">Vos données sont traitées conformément a notre <a href="https://naposolo.com/politique-confidentialite" style="color:#9CA3AF;text-decoration:underline;">politique de confidentialité</a>.</p>
         </td></tr>
       </table>
     </td></tr>
