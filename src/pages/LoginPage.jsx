@@ -36,12 +36,14 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [betaOpen,     setBetaOpen]     = useState(false)
   const [betaPrenom,   setBetaPrenom]   = useState('')
+  const [betaNom,      setBetaNom]      = useState('')
   const [betaEmail,    setBetaEmail]    = useState('')
   const [betaMetier,   setBetaMetier]   = useState('')
   const [betaLoading,  setBetaLoading]  = useState(false)
   const [betaSent,     setBetaSent]     = useState(false)
   const [betaError,    setBetaError]    = useState('')
   const [betaPassword, setBetaPassword] = useState('')
+  const [betaConsent,  setBetaConsent]  = useState(false)
   const [alphaOpen, setAlphaOpen] = useState(true)
 
   useEffect(() => {
@@ -96,15 +98,16 @@ export default function LoginPage() {
 
 
   async function handleBeta() {
-    if (!betaPrenom.trim() || !betaEmail.trim()) { setBetaError('Prénom et email requis.'); return }
+    if (!betaPrenom.trim() || !betaNom.trim() || !betaEmail.trim()) { setBetaError('Nom, prénom et email requis.'); return }
     if (!betaPassword || betaPassword.length < 8) { setBetaError('Mot de passe minimum 8 caractères.'); return }
+    if (!betaConsent) { setBetaError('Merci de cocher la case de consentement RGPD.'); return }
     setBetaLoading(true); setBetaError('')
     try {
       const { error } = await supabase.auth.signUp({
         email: betaEmail.trim(),
         password: betaPassword,
         options: {
-          data: { prenom: betaPrenom.trim(), metier: betaMetier.trim() || null },
+          data: { prenom: betaPrenom.trim(), nom: betaNom.trim(), metier: betaMetier.trim() || null },
           emailRedirectTo: 'https://naposolo.com'
         }
       })
@@ -114,8 +117,11 @@ export default function LoginPage() {
       } else {
         await supabase.from('beta_inscriptions').insert({
           prenom: betaPrenom.trim(),
+          nom: betaNom.trim(),
           email: betaEmail.trim(),
-          metier: betaMetier.trim() || null
+          metier: betaMetier.trim() || null,
+          consent_rgpd: true,
+          consent_rgpd_date: new Date().toISOString()
         }).maybeSingle()
         supabase.from('system_email_stats').insert({ event_type: 'signup' }).then(({ error }) => { if (error) console.error('stats insert failed:', error) })
         setBetaSent(true)
@@ -281,6 +287,10 @@ export default function LoginPage() {
                     <input type="text" autoFocus value={betaPrenom} onChange={e => setBetaPrenom(e.target.value)} placeholder="Votre prénom" style={inputStyle} />
                   </div>
                   <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Nom *</label>
+                    <input type="text" value={betaNom} onChange={e => setBetaNom(e.target.value)} placeholder="Votre nom" style={inputStyle} />
+                  </div>
+                  <div>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Email *</label>
                     <input type="email" value={betaEmail} onChange={e => setBetaEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
                   </div>
@@ -318,9 +328,13 @@ export default function LoginPage() {
                       <option>Autre praticien</option>
                     </select>
                   </div>
+                  <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 11.5, color: '#6b7280', lineHeight: 1.5, cursor: 'pointer', marginTop: 2 }}>
+                    <input type="checkbox" checked={betaConsent} onChange={e => setBetaConsent(e.target.checked)} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <span>J'accepte que mes données (nom, prénom, email, métier) soient traitées par Naposolo pour la gestion de mon compte, via nos sous-traitants Supabase, Vercel, Resend et Anthropic. *</span>
+                  </label>
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     <button onClick={closeBeta} style={{ flex: 1, padding: '10px', borderRadius: 8, border: '0.5px solid #d1d5db', background: 'transparent', color: '#6b7280', fontSize: 14, cursor: 'pointer' }}>Annuler</button>
-                    <button onClick={handleBeta} disabled={betaLoading} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: betaLoading ? '#7dd3fc' : 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: betaLoading ? 'not-allowed' : 'pointer', minHeight: 44 }}>
+                    <button onClick={handleBeta} disabled={betaLoading || !betaConsent} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: (betaLoading || !betaConsent) ? '#7dd3fc' : 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: (betaLoading || !betaConsent) ? 'not-allowed' : 'pointer', minHeight: 44 }}>
                       {betaLoading ? 'Inscription...' : "Je rejoins l'alpha 🚀"}
                     </button>
                   </div>
