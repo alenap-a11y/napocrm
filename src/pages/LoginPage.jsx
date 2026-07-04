@@ -115,16 +115,21 @@ export default function LoginPage() {
         if (error.message.includes('already registered')) setBetaError('Cet email est déjà inscrit.')
         else throw error
       } else {
-        await supabase.from('beta_inscriptions').insert({
+        const { error: insertError } = await supabase.from('beta_inscriptions').insert({
           prenom: betaPrenom.trim(),
           nom: betaNom.trim(),
           email: betaEmail.trim(),
           metier: betaMetier.trim() || null,
           consent_rgpd: true,
           consent_rgpd_date: new Date().toISOString()
-        }).maybeSingle()
-        supabase.from('system_email_stats').insert({ event_type: 'signup' }).then(({ error }) => { if (error) console.error('stats insert failed:', error) })
-        setBetaSent(true)
+        }).select().maybeSingle()
+        if (insertError) {
+          if (insertError.code === '23505') setBetaError('Un compte existe deja avec cet email.')
+          else setBetaError('Erreur: ' + insertError.message)
+        } else {
+          supabase.from('system_email_stats').insert({ event_type: 'signup' }).then(({ error }) => { if (error) console.error('stats insert failed:', error) })
+          setBetaSent(true)
+        }
       }
     } catch(e) { setBetaError('Erreur: ' + e.message) }
     setBetaLoading(false)
