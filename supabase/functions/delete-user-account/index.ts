@@ -69,10 +69,18 @@ serve(async (req) => {
     results['auth.users'] = `ECHEC: ${e.message}`
   }
 
-  try {
-    await sb.from('system_email_stats').insert({ event_type: 'deletion_request' })
-  } catch (e) {
-    console.error('Erreur log deletion_request:', e.message)
+  if (authDeleted) {
+    try {
+      await sb.from('system_email_stats').insert({ event_type: 'deletion_request' })
+      const encoder = new TextEncoder()
+      const data = encoder.encode(email.toLowerCase().trim())
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const emailHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+      await sb.from('deletion_log').insert({ email_hash: emailHash })
+    } catch (e) {
+      console.error('Erreur log deletion_log:', e.message)
+    }
   }
 
   return new Response(JSON.stringify({ ok: authDeleted, results }), {
