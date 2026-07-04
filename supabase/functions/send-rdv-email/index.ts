@@ -128,7 +128,7 @@ serve(async (req) => {
     <a href="mailto:${praticienEmail}" style="color:#0F6E56;margin-right:16px">✉️ Contacter le praticien</a>
   </div>
   <p style="color:#9CA3AF;font-size:11px;text-align:center">Propulsé par <strong style="color:#0F6E56">Naposolo</strong></p>
-  <p style="margin-top:8px;font-size:10px;color:#D1D5DB;text-align:center">Vos données sont traitées conformément a notre <a href="https://naposolo.com/politique-confidentialite" style="color:#9CA3AF;text-decoration:underline">politique de confidentialité</a>.</p>
+  <p style="margin-top:8px;font-size:10px;color:#D1D5DB;text-align:center">Conformément au Règlement (UE) 2016/679 (RGPD), vous disposez d'un droit d'accès, de rectification et d'effacement de vos données. Consultez notre <a href="https://naposolo.com/politique-confidentialite" style="color:#9CA3AF;text-decoration:underline">politique de confidentialité</a>.</p>
 </div>`
     )
   } catch (e) {
@@ -161,7 +161,7 @@ serve(async (req) => {
             Connectez-vous sur <a href="https://naposolo.com" style="color:#0F6E56">naposolo.com</a> pour confirmer.
           </p>
           <p style="margin-top:8px;font-size:10px;color:#9CA3AF">
-            Vos données sont traitées conformément a notre <a href="https://naposolo.com/politique-confidentialite" style="color:#9CA3AF;text-decoration:underline">politique de confidentialité</a>.
+            Conformément au Règlement (UE) 2016/679 (RGPD), vous disposez d'un droit d'accès, de rectification et d'effacement de vos données. Consultez notre <a href="https://naposolo.com/politique-confidentialite" style="color:#9CA3AF;text-decoration:underline">politique de confidentialité</a>.
           </p>
         </div>`
       )
