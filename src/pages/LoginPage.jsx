@@ -256,6 +256,7 @@ export default function LoginPage() {
           <span style={{ fontSize: 13, color: '#9ca3af' }}>Naposolo — naposolo.com</span>
         </div>
         <span style={{ fontSize: 13, color: '#9ca3af', ...cs('footer_city') }}>Fait avec ❤️ à {cms.footer_city}</span>
+        <a href="/politique-confidentialite" style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'underline', marginTop: 2 }}>Politique de confidentialité</a>
       </footer>
 
       {/* MODAL BETA */}
