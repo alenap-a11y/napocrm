@@ -947,7 +947,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       {/* Activité récente */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>ACTIVITÉ RÉCENTE</div>
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, width: '50%' }}>
           {/* Compteurs du mois */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
