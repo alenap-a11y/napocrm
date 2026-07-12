@@ -854,7 +854,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         {/* Compteurs */}
         <div className="dash-overview-grid">
-          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '50%' }}>
             <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <i className="ti ti-users" style={{ fontSize: 18, color: accent }} aria-hidden="true" />
             </div>
@@ -863,7 +863,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.clientsCount}</div>
             </div>
           </div>
-          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '50%' }}>
             <div style={{ width: 36, height: 36, borderRadius: 8, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <i className="ti ti-coin" style={{ fontSize: 18, color: '#1D9E75' }} aria-hidden="true" />
             </div>
