@@ -69,6 +69,14 @@ const ALL_SB_ITEMS = [
 ]
 
 const SB_STORAGE_KEY = 'napo_sb_items_v2'
+const SB_REMOVED_KEY = 'napo_sb_removed_v1'
+function loadSbRemoved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SB_REMOVED_KEY))
+    if (Array.isArray(saved)) return saved
+  } catch {}
+  return []
+}
 
 function loadSbItems() {
   try {
@@ -77,9 +85,10 @@ function loadSbItems() {
     const map = Object.fromEntries(ALL_SB_ITEMS.map(i => [i.id, i]))
     const result = saved.map(id => map[id]).filter(Boolean)
     if (result.length === 0) return ALL_SB_ITEMS
-    // Append any new items not yet in saved order
+    // Append any new items not yet in saved order — sauf ceux explicitement supprimés par l'utilisateur
+    const removed = new Set(loadSbRemoved())
     const resultIds = new Set(result.map(i => i.id))
-    ALL_SB_ITEMS.filter(i => !resultIds.has(i.id)).forEach(i => result.push(i))
+    ALL_SB_ITEMS.filter(i => !resultIds.has(i.id) && !removed.has(i.id)).forEach(i => result.push(i))
     return result
   } catch { return ALL_SB_ITEMS }
 }
@@ -119,6 +128,7 @@ export default function AppShell({ user, onSignOut }) {
   const isMobile = useIsMobile()
   const routerNavigate = useNavigate()
   const [sbItems, setSbItems] = useState(loadSbItems)
+  const [sbRemoved, setSbRemoved] = useState(loadSbRemoved)
   const [sbVis, setSbVis] = useState(loadSbVis)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
@@ -165,10 +175,12 @@ export default function AppShell({ user, onSignOut }) {
     const item = ALL_SB_ITEMS.find(i => i.id === id)
     if (!item || sbItems.find(i => i.id === id)) return
     setSbItems(prev => [...prev, item])
+    setSbRemoved(prev => prev.filter(rid => rid !== id))
   }
 
   function removeSbItem(id) {
     setSbItems(prev => prev.length <= 1 ? prev : prev.filter(i => i.id !== id))
+    setSbRemoved(prev => prev.includes(id) ? prev : [...prev, id])
   }
 
   function toggleSbVis(id) {
@@ -235,6 +247,9 @@ export default function AppShell({ user, onSignOut }) {
   useEffect(() => {
     localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
   }, [sbItems])
+  useEffect(() => {
+    localStorage.setItem(SB_REMOVED_KEY, JSON.stringify(sbRemoved))
+  }, [sbRemoved])
 
   useEffect(() => {
     localStorage.setItem(SB_VIS_KEY, JSON.stringify(sbVis))
