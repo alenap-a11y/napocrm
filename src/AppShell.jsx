@@ -33,6 +33,7 @@ const Energie = lazy(() => import('./pages/Energie'))
 const EnergieSéance = lazy(() => import('./pages/EnergieSéance'))
 const Napo3D = lazy(() => import('./pages/Napo3D'))
 const Napo3DSeance = lazy(() => import('./pages/Napo3DSeance'))
+const NouvelleSeanceStandard = lazy(() => import('./pages/NouvelleSeanceStandard'))
 
 class ChunkErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { hasError: false } }
@@ -466,6 +467,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/"         element={<Navigate to="/board" replace />} />
               <Route path="/board"    element={<Dashboard accent={accent} sbActif="dashboard" sbItems={sbItems} widgets={widgets} setWidgets={setWidgets} onNavigate={routerNavigate} />} />
               <Route path="/seances/nouvelle" element={<NouvelleSeance />} />
+              <Route path="/seances/nouvelle-standard" element={<NouvelleSeanceStandard />} />
               <Route path="/seances/:id/fiche" element={<FicheSeance />} />
               <Route path="/seances"          element={<Seances />} />
               <Route path="/napo-3d" element={<Napo3D />} />

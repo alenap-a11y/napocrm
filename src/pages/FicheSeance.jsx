@@ -130,7 +130,7 @@ export default function FicheSeance() {
             {editType ? (
               <div style={{display:'flex',gap:8,alignItems:'center',gridColumn:'1/-1'}}>
                 <select value={typeVal} onChange={e=>setTypeVal(e.target.value)} style={{padding:'6px 10px',borderRadius:6,border:'1px solid #ddd',fontSize:13}}>
-                  {['Sophrologie','Coaching','Naturopathie','Fleurs de Bach','Énergie','Massage','Autre'].map(t=><option key={t}>{t}</option>)}
+                  {['Sophrologie','Coaching','Naturopathie','Massage','Autre'].map(t=><option key={t}>{t}</option>)}
                 </select>
                 <button onClick={saveType} style={{padding:'5px 12px',background:'#2d6a4f',color:'#fff',border:'none',borderRadius:6,fontSize:12,fontWeight:700,cursor:'pointer'}}>✓</button>
                 <button onClick={()=>setEditType(false)} style={{padding:'5px 10px',background:'#eee',border:'none',borderRadius:6,fontSize:12,cursor:'pointer'}}>✕</button>

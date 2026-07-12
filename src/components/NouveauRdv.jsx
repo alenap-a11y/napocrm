@@ -132,6 +132,25 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
 
       if (error) throw error
 
+      // Insert lié dans energie_seances si type Énergie (option A validée juillet 2026,
+      // voir NAPOSOLO_MODULE_METHOD.md) — évite de dupliquer toute la logique calendrier
+      // (drag, resize, conflits) sur plusieurs tables dans Agenda.jsx
+      if (['Énergie', 'Magnétiseur', 'Énergéticien'].includes(typeSeance) && client?.id) {
+        try {
+          const { count } = await supabase
+            .from('energie_seances')
+            .select('id', { count: 'exact', head: true })
+            .eq('client_id', client.id)
+          await supabase.from('energie_seances').insert({
+            user_id:       user.id,
+            client_id:     client.id,
+            date_seance:   date,
+            heure_seance:  heure,
+            numero_seance: (count || 0) + 1,
+          })
+        } catch (e) { console.warn('Création séance Énergie liée:', e) }
+      }
+
       if (client?.id) {
         try {
           const { data: clientData } = await supabase.from("clients").select("email, prenom, nom").eq("id", client.id).single()

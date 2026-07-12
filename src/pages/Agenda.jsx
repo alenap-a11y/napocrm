@@ -253,6 +253,34 @@ export default function Agenda() {
         notes:        editForm.notes.trim() || null,
       }).eq('id', editingId)
       if (error) throw error
+
+      // Insert lié dans energie_seances si type Énergie/Magnétiseur/Énergéticien
+      // (même logique qu'à la création, voir NouveauRdv.jsx) — anti-doublon par
+      // vérification client_id + date + heure avant insert
+      if (['Énergie', 'Magnétiseur', 'Énergéticien'].includes(editForm.typeSeance) && editForm.clientId) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          const { data: existing } = await supabase.from('energie_seances')
+            .select('id')
+            .eq('client_id', editForm.clientId)
+            .eq('date_seance', editForm.date)
+            .eq('heure_seance', editForm.heure)
+            .maybeSingle()
+          if (!existing && user) {
+            const { count } = await supabase.from('energie_seances')
+              .select('id', { count: 'exact', head: true })
+              .eq('client_id', editForm.clientId)
+            await supabase.from('energie_seances').insert({
+              user_id:       user.id,
+              client_id:     editForm.clientId,
+              date_seance:   editForm.date,
+              heure_seance:  editForm.heure,
+              numero_seance: (count || 0) + 1,
+            })
+          }
+        } catch (e) { console.warn('Création séance Énergie liée (édition):', e) }
+      }
+
       const client = clientsAll.find(c => c.id === editForm.clientId)
       const label  = client ? `${client.prenom || ''} ${client.nom || ''}`.trim() : ''
       insertNotif({ msg: `RDV modifié${label ? ` — ${label}` : ''}`, icon: 'ti-calendar', iconColor: '#185FA5', bg: '#E6F1FB' })
@@ -420,7 +448,20 @@ export default function Agenda() {
                 style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <i className="ti ti-pencil" style={{ marginRight: 4 }} aria-hidden="true" />Modifier
               </button>
-              <button onClick={() => window.location.href = `/seances/${detail.id}/fiche`}
+              <button onClick={async () => {
+                  if (['Énergie', 'Magnétiseur', 'Énergéticien'].includes(detail.type_seance) && detail.client_id) {
+                    const { data: es } = await supabase.from('energie_seances')
+                      .select('id')
+                      .eq('client_id', detail.client_id)
+                      .eq('date_seance', detail.date_rdv?.slice(0, 10))
+                      .maybeSingle()
+                    window.location.href = es ? `/energie/${es.id}` : `/seances/${detail.id}/fiche`
+                  } else if (detail.type_seance === '3D Humain') {
+                    window.location.href = `/napo-3d/seance/${detail.id}`
+                  } else {
+                    window.location.href = `/seances/${detail.id}/fiche`
+                  }
+                }}
                 style={{ padding: '7px 12px', borderRadius: 6, border: 'none', background: '#0F6E56', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
                 📋 Séance du jour
               </button>
