@@ -909,7 +909,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           </div>
 
           {/* 5 dernières séances */}
-          <div style={cardStyle}>
+          <div style={{ ...cardStyle, width: '50%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Dernières séances</span>
               <button onClick={() => onNavigate?.('/seances')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
