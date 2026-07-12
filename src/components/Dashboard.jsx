@@ -878,7 +878,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         <div className="dash-lists-grid">
 
           {/* 5 derniers clients */}
-          <div style={cardStyle}>
+          <div style={{ ...cardStyle, width: '50%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Derniers clients</span>
               <button onClick={() => onNavigate?.('/clients')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
