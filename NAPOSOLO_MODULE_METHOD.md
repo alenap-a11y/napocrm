@@ -78,6 +78,7 @@ Avant tout code React. Toujours.
 |---|---|---|---|
 | Alpha toggle | /napo-cockpit-7X | app_config | OK juin 2026 |
 | NapoÉnergie | /energie | energie_seances, energie_chakras_mesures | OK juin 2026 |
+| Napo-3D | /napo-3d | seances (réutilisée, filtre type_seance='3D Humain') | OK juillet 2026 |
 
 ### NapoÉnergie détail
 - 7 chakras : rotation, état, taux Bovis, couleur perçue, avant/arrière, gauche/droite, observation
@@ -85,6 +86,13 @@ Avant tout code React. Toujours.
 - Suppression cascade : energie_chakras_mesures avant energie_seances
 - Navigation historique par chips numéro + date
 - Sauvegarde manuelle uniquement
+
+### Napo-3D détail
+- Architecture divergente du pattern standard, assumée : pas de nouvelle table SQL. Réutilise la table `seances` existante, filtrée sur `type_seance = '3D Humain'`. Décision prise après analyse coût/bénéfice — éviter de dupliquer resolveClientId, autocomplete client, envoi email confirmation déjà présents dans NouvelleSeance.jsx.
+- Pages : `Napo3D.jsx` (liste, layout Clients.jsx : StatCards + tabs + recherche), `Napo3DSeance.jsx` (fiche détail, layout EnergieSéance.jsx : historique chips + sauvegarde manuelle)
+- Création : réutilise `NouvelleSeance.jsx` existant (canvas Three.js/GLTF), pas de composant dédié. Route dupliquée `/napo-3d/nouvelle` -> même composant que `/seances/nouvelle`, uniquement pour que le préfixe d'URL matche l'item sidebar actif (NavLink matche par préfixe, pas par exact).
+- `NouvelleSeance.jsx` lit `?type=` en query param (`searchParams.get('type')`) pour pré-sélectionner le type et déterminer le routage retour (`isFrom3D`). Toute autre page qui redirige vers ce formulaire doit passer ce paramètre explicitement, sinon le type retombe sur 'Sophrologie' par défaut.
+- Fiche détail (`Napo3DSeance.jsx`) affiche les zones annotées (`schema_annotations`) en liste texte (pastille couleur + nom de zone), PAS de replay du corps 3D — `captureSchema()` génère un PNG côté client mais ne le sauvegarde jamais en base/Storage. Si un aperçu visuel devient nécessaire : soit uploader ce PNG vers Supabase Storage au moment du save, soit rejoindre la scène Three.js en lecture seule dans la fiche (chantier plus lourd, non fait).
 
 ---
 
@@ -108,6 +116,7 @@ Avant tout code React. Toujours.
 - Jamais service_role côté client
 - Suppression cascade : table enfant d'abord puis parent
 - Tester cross-compte : 2 users isolation données
+- Jamais de service_role hardcodé dans du code client, surtout pages publiques (ex: AgendaPublic.jsx découvert juillet 2026) — utiliser supabase.functions.invoke() qui passe la clé anon déjà configurée ; le service_role reste uniquement côté Edge Function serveur
 
 ---
 
