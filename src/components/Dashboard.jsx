@@ -971,7 +971,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       {/* Ligne 3 : Clients récents + Anniversaires */}
       <div className="dash-row-bottom">
 
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, width: '50%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Clients récents</span>
             <button onClick={() => onNavigate?.('/clients')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
