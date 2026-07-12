@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo, Suspense, Component } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Html, useGLTF } from '@react-three/drei'
 import { supabase } from '../lib/supabase'
@@ -371,6 +371,7 @@ function BodyMesh({ annots, onAdd, onRemove, tool, color, dotSize, modelHeightRe
 
 export default function NouvelleSeance() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const orbitRef       = useRef()
   const cameraRef      = useRef(null)
   const modelHeightRef = useRef(0.3)
@@ -405,7 +406,8 @@ export default function NouvelleSeance() {
   const [seancesJour,  setSeancesJour]  = useState([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [prix,  setPrix]  = useState('')
-  const [type,  setType]  = useState('Sophrologie')
+  const [type,  setType]  = useState(searchParams.get('type') || 'Sophrologie')
+  const isFrom3D = searchParams.get('type') === '3D Humain'
 
   /* Créneaux disponibles — rechargés à chaque changement de date */
   useEffect(() => {
@@ -764,7 +766,7 @@ export default function NouvelleSeance() {
             })
           } catch(e) { console.warn('Email confirmation:', e) }
         }
-        setTimeout(() => window.location.hash = '#seances', 1400)
+        setTimeout(() => navigate(isFrom3D ? '/napo-3d' : '/seances'), 1400)
       }
     } catch (err) {
       console.error('Erreur:', err)
@@ -792,11 +794,11 @@ export default function NouvelleSeance() {
       {/* ── Topbar ── */}
       <div style={{ height: 44, background: '#fff', display: 'flex', alignItems: 'center', padding: '0 14px', gap: 10, flexShrink: 0, borderBottom: '1px solid #e5e7eb' }}>
         <button
-          onClick={() => window.location.hash = '#seances'}
+          onClick={() => navigate(isFrom3D ? '/napo-3d' : '/seances')}
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 3, border: '1px solid #e5e7eb', background: 'transparent', color: '#374151', fontSize: 12, cursor: 'pointer' }}
         >
           <i className="ti ti-arrow-left" style={{ fontSize: 13 }} />
-          Séances
+          {isFrom3D ? 'Retour' : 'Séances'}
         </button>
         <span style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 600, color: '#111827', letterSpacing: '.02em' }}>
           Nouvelle séance

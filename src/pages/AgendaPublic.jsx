@@ -166,17 +166,8 @@ export default function AgendaPublic({ slug }) {
 
       console.log('📧 Envoi email avec fetch + service_role...')
 
-      // ⚠️ REMPLACE 'ta_vraie_cle_service_role_ici' PAR TA VRAIE CLÉ (Supabase → Settings → API → service_role)
-      const SERVICE_ROLE_KEY = 'sb_publishable_mCsCQ8QPzyzhORpSLE6WFQ_6lSD0bJY'
-      const SUPABASE_URL = 'https://jzwwqngbgcdeyiqrvtle.supabase.co'
-
-      const response = await fetch(SUPABASE_URL + '/functions/v1/send-rdv-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + SERVICE_ROLE_KEY
-        },
-        body: JSON.stringify({
+      const { error: fnError } = await supabase.functions.invoke('send-rdv-email', {
+        body: {
           to_client: form.email,
           praticien_id: profil.id,
           client: { prenom: form.prenom, nom: form.nom, email: form.email, telephone: form.telephone, motif: form.motif },
@@ -186,12 +177,11 @@ export default function AgendaPublic({ slug }) {
           praticien_tel: profil.tel || profil.telephone || '',
           praticien_email: profil.email_contact || profil.email || '',
           praticien_adresse: [profil.adresse_rdv, profil.ville_rdv, profil.code_postal].filter(Boolean).join(', ') || '',
-        })
+        }
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Erreur envoi email:', response.status, errorText)
+      if (fnError) {
+        console.error('❌ Erreur envoi email:', fnError.message)
         setSending(false)
         return
       }
