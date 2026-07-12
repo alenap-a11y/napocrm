@@ -96,6 +96,87 @@ Avant tout code React. Toujours.
 
 ---
 
+## Décision architecture — modules 3D (juillet 2026)
+
+Historique de la décision, dans l'ordre :
+
+1. **Départ (Napo-3D v1)** : filtre sur la table `seances` existante (`type_seance = '3D Humain'`), pas de table dédiée. Choix initial pour éviter de dupliquer resolveClientId/autocomplete/email déjà présents dans NouvelleSeance.jsx.
+
+2. **Revirement assumé** : dès qu'un deuxième module 3D est prévu (3D Animaux, table `seances3dA`), le filtre sur une table générique unique ne tient plus — deux types de corps (humain/animal) ont des GLTF et des ancres anatomiques différents, donc des besoins de structure différents. Décision : chaque variante 3D a sa propre table.
+
+3. **Renommage prévu** : `NouvelleSeance.jsx` → `NouvelleSeance3DH.jsx` (H = Humain). **STATUT : PAS ENCORE FAIT.** Bloqué en attente du `grep -rn "NouvelleSeance" src/AppShell.jsx` pour lister toutes les références (lazy import, routes `/seances/nouvelle`, `/napo-3d/nouvelle`) à mettre à jour en même temps que le renommage, pour ne rien casser.
+
+4. **Nouvelle table `seances3dH`** (remplace le filtre sur `seances`) : `user_id, client_id, prenom, nom, genre, tel, email, date_naissance, date_seance, heure_seance, duree_minutes, prix_euros, schema_annotations (jsonb), zones_corps (jsonb), tags (jsonb), notes, numero_seance, statut, premiere_seance, date_creation`. Pas de colonne `type_seance` — la table entière EST le type. **STATUT : SQL PAS ENCORE ÉCRIT**, en attente de confirmation post-renommage.
+
+5. **Migration des données existantes** : décidée non-critique ("pas grave, go") — les séances 3D de test déjà dans `seances` restent où elles sont, pas de migration rétroactive vers `seances3dH`.
+
+6. **Refactorisation prévue avant duplication** : extraire la logique Three.js générique de NouvelleSeance3DH.jsx (BodyMesh, ancres anatomiques, contrôles caméra, calibration) en composant réutilisable, paramétré par `modelPath` + `anchors`. Objectif : que le futur module 3D Animaux réutilise ce composant au lieu de dupliquer ~500 lignes de logique Three.js identique. **STATUT : PAS COMMENCÉ**, à faire avant d'attaquer 3DA, pas après.
+
+7. **Futur module 3D Animaux (3DA)** : table `seances3dA`, même schéma que 3dH adapté, nouveau GLTF, nouvelles ancres. Dépend de l'étape 6 pour éviter la duplication.
+
+### Règle de migration générale (tous futurs modules type SeanceStandard)
+
+Si un type de séance démarre comme `type_seance = 'X'` filtré sur `seances` (ex: futur module Méditation), et migre plus tard vers sa propre table dédiée (façon Énergie) :
+- Migration = `INSERT INTO seances_x (...) SELECT ... FROM seances WHERE type_seance = 'X'`
+- **Ne jamais supprimer les lignes originales de `seances` après migration** — si un email de confirmation ou un lien externe référence l'`id` d'origine, le lien casse. Garder le doublon temporaire, faire pointer le code vers la nouvelle table à partir de la date de bascule.
+- Donc : aucun module démarré sur `seances` filtrée n'est jamais "coincé" — l'évolution vers une table dédiée reste toujours possible sans refonte lourde.
+
+## Routage Agenda -> modules dédiés (juillet 2026)
+
+Contexte : le bouton "Séance du jour" dans Agenda.jsx pointait toujours vers FicheSeance.jsx
+(fiche générique), même pour des RDV de type Énergie/3D — perte totale des données
+spécifiques au module (chakras, annotations 3D). Corrigé en option (A) : NouveauRdv.jsx
+crée toujours une ligne dans `seances` (pour le calendrier), PLUS une ligne liée dans la
+table du module concerné si le type correspond. Une seule source de vérité pour le
+calendrier (`seances`), zéro refonte d'Agenda.jsx (drag/resize/conflits inchangés).
+
+### Corrélation type -> module (validée juillet 2026)
+
+Le module Énergie se déclenche pour TROIS valeurs de `type_seance`, pas une seule :
+Ces trois valeurs viennent de deux listes différentes mélangées dans le select
+NouveauRdv.jsx (mélange assumé, pas un bug — voir section "Listes dupliquées" ci-dessous) :
+'Énergie' = liste type_seance (8 valeurs), 'Magnétiseur'/'Énergéticien' = liste des 18
+métiers. Si un nouveau métier énergétique est ajouté un jour (ex: Radiesthésiste), il faut
+l'ajouter manuellement dans CETTE liste précise, à 3 endroits (voir ci-dessous) — pas de
+détection automatique par mot-clé.
+
+### Fichiers modifiés et logique exacte
+
+**NouveauRdv.jsx** (création d'un RDV) :
+- Après l'insert dans `seances`, si `['Énergie','Magnétiseur','Énergéticien'].includes(typeSeance)`
+  et qu'un client est lié : insert supplémentaire dans `energie_seances`
+  (user_id, client_id, date_seance, heure_seance, numero_seance calculé par comptage).
+- Erreur silencieuse en `console.warn` si ça échoue (RDV quand même créé dans `seances`,
+  pas de blocage utilisateur).
+
+**Agenda.jsx — saveEdit()** (modification d'un RDV existant) :
+- Même logique que NouveauRdv.jsx, déclenchée à la sauvegarde d'une édition.
+- Anti-doublon : recherche une ligne existante par `client_id + date_seance + heure_seance`
+  exacts avant d'insérer — évite de dupliquer si on sauvegarde plusieurs fois sans changer le type.
+- LIMITE CONNUE, pas corrigée : si on modifie la date/heure d'un RDV Énergie déjà lié EN
+  MÊME TEMPS que la sauvegarde, l'anti-doublon cherche avec la NOUVELLE date/heure, ne
+  trouve rien, et crée une deuxième ligne au lieu de mettre à jour l'ancienne. À corriger
+  si ce cas se présente en usage réel (chercher par l'ancienne date/heure avant modif).
+
+**Agenda.jsx — bouton "Séance du jour"** :
+- Routage conditionnel selon `detail.type_seance` :
+  - Énergie/Magnétiseur/Énergéticien -> recherche l'id correspondant dans `energie_seances`
+    par `client_id + date_seance`, redirige vers `/energie/:id`. Si non trouvé (RDV créé
+    avant ce patch, ou insert lié qui a échoué) -> fallback vers `/seances/:id/fiche`.
+  - 3D Humain -> `/napo-3d/seance/:id` directement (pas de recherche, id identique car
+    Napo-3D filtre encore sur la table `seances`, voir section 3D ci-dessous).
+  - Tout le reste -> `/seances/:id/fiche` (comportement d'origine inchangé).
+
+### Non fait dans ce chantier
+
+- **Fleurs de Bach** : pas de routage équivalent. Bloqué volontairement — le schéma
+  `fiches_bach` (selection, client_info en JSON) est piloté par un wizard 6 étapes non vu
+  en détail ; insérer une ligne "vide" à la création du RDV risquerait une fiche Bach
+  incohérente avec ce que le wizard attend en la rouvrant. À faire quand le composant
+  wizard Bach aura été audité.
+- **Édition avec changement simultané date/heure + type** sur un RDV déjà lié — limite
+  connue ci-dessus, non corrigée.
+
 ## Modules backlog
 
 | Module | Priorité | Notes |
