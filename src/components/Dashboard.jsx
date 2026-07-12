@@ -386,7 +386,7 @@ function AnniversairesWidget({ accent, onNavigate }) {
     .sort((a, b) => a.joursRestants - b.joursRestants)
     .slice(0, 3)
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14, marginTop: 0 }}>
+    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14, marginTop: 0, width: '50%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <i className="ti ti-cake" style={{ fontSize: 14, color: accent }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>Anniversaires</span>
