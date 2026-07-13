@@ -43,3 +43,5 @@ clean_before_commit.py
 *.bak
 scope_localstorage_step1.py
 *.jsx.bak
+scope_localstorage_step1.py
+*.jsx.bak
