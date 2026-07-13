@@ -70,8 +70,8 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .sb-items::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
 .sb-items::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 .sb-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; gap: 4px; width: 100%; padding: 4px 0; }
-.sb-icon-sq { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
-.sb-icon-sq i { font-size: 34px; color: rgba(255,255,255,0.55); transition: color .15s; }
+.sb-icon-sq { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.sb-icon-sq i { font-size: 15px; color: rgba(255,255,255,0.55); transition: color .15s; }
 .sb-item.active .sb-icon-sq i, .sb-item:hover .sb-icon-sq i { color: #fff; }
 .sb-item-lbl { font-size: 11px; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.2; letter-spacing: .07em; text-transform: uppercase; }
 .sb-item.active .sb-item-lbl { color: rgba(255,255,255,0.9); }
