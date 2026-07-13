@@ -14,12 +14,21 @@ import AdminUsers from './AdminUsers'
 import AdminUserDetail from './AdminUserDetail'
 import AdminRgpd from './AdminRgpd'
 
+function clearNapoLocalPrefs() {
+  const NAPO_LOCAL_KEYS_PREFIX = ['napo_', 'naposolo_'];
+  Object.keys(localStorage)
+    .filter(k => NAPO_LOCAL_KEYS_PREFIX.some(p => k.startsWith(p)))
+    .forEach(k => localStorage.removeItem(k));
+}
+
+
 export default function AdminLayout({ user }) {
   const [page, setPage] = useState('dashboard')
   const [decoOpen, setDecoOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
 
   async function signOut() {
+    clearNapoLocalPrefs();
     await supabase.auth.signOut()
     window.location.hash = '#'
   }

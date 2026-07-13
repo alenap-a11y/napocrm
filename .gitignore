@@ -38,3 +38,6 @@ dist-ssr
 md txt/
 *.zip
 *.zip
+fix_logout_prefs.py
+clean_before_commit.py
+*.bak

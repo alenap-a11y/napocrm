@@ -10,6 +10,14 @@ import AgendaPublic from './pages/AgendaPublic'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import { supabase } from './lib/supabase'
 
+function clearNapoLocalPrefs() {
+  const NAPO_LOCAL_KEYS_PREFIX = ['napo_', 'naposolo_'];
+  Object.keys(localStorage)
+    .filter(k => NAPO_LOCAL_KEYS_PREFIX.some(p => k.startsWith(p)))
+    .forEach(k => localStorage.removeItem(k));
+}
+
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +56,7 @@ export default function App() {
   }, [])
 
   async function signOut() {
+    clearNapoLocalPrefs();
     await supabase.auth.signOut()
     setUser(null)
   }
@@ -72,5 +81,5 @@ export default function App() {
     if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
     return <AdminLayout user={user} onSignOut={signOut} />
   }
-  return <AppShell user={user} onSignOut={signOut} />
+  return <AppShell key={user?.id ?? 'guest'} user={user} onSignOut={signOut} />
 }
