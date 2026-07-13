@@ -10,6 +10,8 @@ import ConsentRgpdGate from './components/ConsentRgpdGate'
 import NapoAssistant from './components/NapoAssistant'
 import BottomNav from './components/BottomNav'
 
+const scopedKey = (key, userId) => `${key}_${userId ?? 'guest'}`
+
 const Dashboard = lazy(() => import('./components/Dashboard'))
 const ProfilPage = lazy(() => import('./components/ProfilPage'))
 const Seances = lazy(() => import('./pages/Seances'))
@@ -134,10 +136,10 @@ export default function AppShell({ user, onSignOut }) {
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
   const [curView, setCurView] = useState('dash')
-  const [accent, setAccent] = useState(() => localStorage.getItem('napo_accent') || '#B8961E')
-  const [bgCol, setBgCol] = useState(() => localStorage.getItem('napo_bgcol') || '#1E1A4E')
+  const [accent, setAccent] = useState(() => localStorage.getItem(scopedKey('napo_accent', user?.id)) || '#B8961E')
+  const [bgCol, setBgCol] = useState(() => localStorage.getItem(scopedKey('napo_bgcol', user?.id)) || '#1E1A4E')
   const [widgets, setWidgets] = useState(() => {
-    const saved = localStorage.getItem('napo_widgets')
+    const saved = localStorage.getItem(scopedKey('napo_widgets', user?.id))
     return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
   })
   const [activePanel, setActivePanel] = useState(null)
@@ -233,15 +235,15 @@ export default function AppShell({ user, onSignOut }) {
 
   useEffect(() => {
     document.documentElement.style.setProperty('--color-accent', accent)
-    localStorage.setItem('napo_accent', accent)
+    localStorage.setItem(scopedKey('napo_accent', user?.id), accent)
   }, [accent])
 
   useEffect(() => {
-    localStorage.setItem('napo_bgcol', bgCol)
+    localStorage.setItem(scopedKey('napo_bgcol', user?.id), bgCol)
   }, [bgCol])
 
   useEffect(() => {
-    localStorage.setItem('napo_widgets', JSON.stringify(widgets))
+    localStorage.setItem(scopedKey('napo_widgets', user?.id), JSON.stringify(widgets))
   }, [widgets])
 
   useEffect(() => {
