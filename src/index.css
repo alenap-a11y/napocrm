@@ -64,6 +64,11 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 .sb-logo { padding: 10px 0 8px; display: flex; align-items: center; justify-content: center; border-bottom: 0.5px solid rgba(255,255,255,0.08); }
 .sb-logo-t { font-size: 8px; font-weight: 500; letter-spacing: .08em; }
 .sb-items { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; }
+.sb-items { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+.sb-items::-webkit-scrollbar { width: 4px; }
+.sb-items::-webkit-scrollbar-track { background: transparent; }
+.sb-items::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+.sb-items::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 .sb-item { display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; gap: 4px; width: 100%; padding: 4px 0; }
 .sb-icon-sq { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
 .sb-icon-sq i { font-size: 34px; color: rgba(255,255,255,0.55); transition: color .15s; }
