@@ -34,14 +34,12 @@ dist-ssr
 .env*
 *.jsx.backup*
 *.backup*
-*.backup*
 md txt/
-*.zip
 *.zip
 fix_logout_prefs.py
 clean_before_commit.py
 *.bak
 scope_localstorage_step1.py
 *.jsx.bak
-scope_localstorage_step1.py
-*.jsx.bak
+scope_localstorage_step2.py
+*.jsx.bak2

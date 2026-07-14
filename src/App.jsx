@@ -56,7 +56,6 @@ export default function App() {
   }, [])
 
   async function signOut() {
-    clearNapoLocalPrefs();
     await supabase.auth.signOut()
     setUser(null)
   }

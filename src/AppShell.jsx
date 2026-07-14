@@ -72,23 +72,23 @@ const ALL_SB_ITEMS = [
 
 const SB_STORAGE_KEY = 'napo_sb_items_v2'
 const SB_REMOVED_KEY = 'napo_sb_removed_v1'
-function loadSbRemoved() {
+function loadSbRemoved(userId) {
   try {
-    const saved = JSON.parse(localStorage.getItem(SB_REMOVED_KEY))
+    const saved = JSON.parse(localStorage.getItem(scopedKey(SB_REMOVED_KEY, userId)))
     if (Array.isArray(saved)) return saved
   } catch {}
   return []
 }
 
-function loadSbItems() {
+function loadSbItems(userId) {
   try {
-    const saved = JSON.parse(localStorage.getItem(SB_STORAGE_KEY))
+    const saved = JSON.parse(localStorage.getItem(scopedKey(SB_STORAGE_KEY, userId)))
     if (!Array.isArray(saved) || saved.length === 0) return ALL_SB_ITEMS
     const map = Object.fromEntries(ALL_SB_ITEMS.map(i => [i.id, i]))
     const result = saved.map(id => map[id]).filter(Boolean)
     if (result.length === 0) return ALL_SB_ITEMS
     // Append any new items not yet in saved order — sauf ceux explicitement supprimés par l'utilisateur
-    const removed = new Set(loadSbRemoved())
+    const removed = new Set(loadSbRemoved(userId))
     const resultIds = new Set(result.map(i => i.id))
     ALL_SB_ITEMS.filter(i => !resultIds.has(i.id) && !removed.has(i.id)).forEach(i => result.push(i))
     return result
@@ -97,9 +97,9 @@ function loadSbItems() {
 
 const SB_VIS_KEY = 'napo_sb_vis_v1'
 
-function loadSbVis() {
+function loadSbVis(userId) {
   try {
-    const saved = JSON.parse(localStorage.getItem(SB_VIS_KEY))
+    const saved = JSON.parse(localStorage.getItem(scopedKey(SB_VIS_KEY, userId)))
     if (saved && typeof saved === 'object') return saved
   } catch {}
   return { factures: false, fiscal: false }
@@ -129,9 +129,9 @@ export default function AppShell({ user, onSignOut }) {
   useActivityTracker()
   const isMobile = useIsMobile()
   const routerNavigate = useNavigate()
-  const [sbItems, setSbItems] = useState(loadSbItems)
-  const [sbRemoved, setSbRemoved] = useState(loadSbRemoved)
-  const [sbVis, setSbVis] = useState(loadSbVis)
+  const [sbItems, setSbItems] = useState(() => loadSbItems(user?.id))
+  const [sbRemoved, setSbRemoved] = useState(() => loadSbRemoved(user?.id))
+  const [sbVis, setSbVis] = useState(() => loadSbVis(user?.id))
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
@@ -247,14 +247,14 @@ export default function AppShell({ user, onSignOut }) {
   }, [widgets])
 
   useEffect(() => {
-    localStorage.setItem(SB_STORAGE_KEY, JSON.stringify(sbItems.map(i => i.id)))
+    localStorage.setItem(scopedKey(SB_STORAGE_KEY, user?.id), JSON.stringify(sbItems.map(i => i.id)))
   }, [sbItems])
   useEffect(() => {
-    localStorage.setItem(SB_REMOVED_KEY, JSON.stringify(sbRemoved))
+    localStorage.setItem(scopedKey(SB_REMOVED_KEY, user?.id), JSON.stringify(sbRemoved))
   }, [sbRemoved])
 
   useEffect(() => {
-    localStorage.setItem(SB_VIS_KEY, JSON.stringify(sbVis))
+    localStorage.setItem(scopedKey(SB_VIS_KEY, user?.id), JSON.stringify(sbVis))
   }, [sbVis])
 
   // Sauvegarde auto Supabase (debounce 1s)
