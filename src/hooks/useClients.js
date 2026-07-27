@@ -17,12 +17,12 @@ export function useClients() {
 
   const addClient = async (fields) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('clients').insert({ ...fields, date_naissance: fields.date_naissance || null, user_id: user?.id || null });
+    const { error } = await supabase.from('clients').insert({ ...fields, email: fields.email || null, date_naissance: fields.date_naissance || null, user_id: user?.id || null });
     if (error) console.error(error); else fetchClients();
   };
 
   const updateClient = async (id, fields) => {
-    const { error } = await supabase.from('clients').update({ ...fields, date_naissance: fields.date_naissance || null }).eq('id', id);
+    const { error } = await supabase.from('clients').update({ ...fields, email: fields.email || null, date_naissance: fields.date_naissance || null }).eq('id', id);
     if (error) console.error(error); else fetchClients();
   };
 
