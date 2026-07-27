@@ -86,7 +86,7 @@ export function useSeancesSync() {
       await fetchSeances(user.id)
 
       channel = supabase
-        .channel('seances-sync-global')
+        .channel(`seances-sync-${user.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',

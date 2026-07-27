@@ -215,7 +215,6 @@ export default function Clients() {
       setSeanceMsg('✓ Séance ajoutée')
       setShowNewSeance(false)
       setNewSeanceForm({ type_seance: 'Sophrologie', date_seance: new Date().toISOString().slice(0, 10), heure_seance: '10:00', duree_minutes: '60', prix_euros: '', notes: '' })
-      await fetchClientSeances(detail)
       setTimeout(() => setSeanceMsg(''), 3000)
     } catch (e) {
       setSeanceMsg('✗ Erreur : ' + e.message)
