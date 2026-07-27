@@ -37,6 +37,19 @@ export default function EnergieSéance() {
   const [client, setClient] = useState(null)
   const [historique, setHistorique] = useState([])
   const [mesures, setMesures] = useState({})
+
+  const [mesuresAvant, setMesuresAvant] = useState([])
+  const [mesuresApres, setMesuresApres] = useState([])
+
+  function ajouterMesure(setter) {
+    setter(prev => prev.length >= 20 ? prev : [...prev, { id: crypto.randomUUID(), libelle: '', valeur: '' }])
+  }
+  function modifierMesure(setter, id, champ, val) {
+    setter(prev => prev.map(m => m.id === id ? { ...m, [champ]: val } : m))
+  }
+  function supprimerMesure(setter, id) {
+    setter(prev => prev.filter(m => m.id !== id))
+  }
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -47,6 +60,8 @@ export default function EnergieSéance() {
         .select('*, clients(id, prenom, nom)').eq('id', id).single()
       if (!s) { navigate('/energie'); return }
       setSeance(s)
+      setMesuresAvant(s.mesures_avant || [])
+      setMesuresApres(s.mesures_apres || [])
       setClient(s.clients)
       const { data: hist } = await supabase.from('energie_seances')
         .select('id, numero_seance, date_seance').eq('client_id', s.client_id)
@@ -81,6 +96,8 @@ export default function EnergieSéance() {
       heure_seance: seance.heure_seance,
       outil: seance.outil,
       note_globale: seance.note_globale,
+      mesures_avant: mesuresAvant,
+      mesures_apres: mesuresApres,
       duree_minutes: parseInt(seance.duree_minutes) || 60,
       prix_euros: parseFloat(seance.prix_euros) || null,
       updated_at: new Date().toISOString()
@@ -196,6 +213,28 @@ export default function EnergieSéance() {
         </div>
       </div>
 
+            <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
+        {[
+          { titre: 'Avant', items: mesuresAvant, setter: setMesuresAvant },
+          { titre: 'Après', items: mesuresApres, setter: setMesuresApres },
+        ].map(col => (
+          <div key={col.titre} style={{ flex: 1 }}>
+            <h4>{col.titre}</h4>
+            {col.items.map(m => (
+              <div key={m.id} style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                <input placeholder="ex: taux vitalité" value={m.libelle}
+                  onChange={e => modifierMesure(col.setter, m.id, 'libelle', e.target.value)} />
+                <input placeholder="ex: 70%" value={m.valeur}
+                  onChange={e => modifierMesure(col.setter, m.id, 'valeur', e.target.value)} />
+                <button onClick={() => supprimerMesure(col.setter, m.id)}>×</button>
+              </div>
+            ))}
+            {col.items.length < 20 && (
+              <button onClick={() => ajouterMesure(col.setter)}>+ Ajouter un champ</button>
+            )}
+          </div>
+        ))}
+      </div>
       {/* Chakras */}
       <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {CHAKRAS.map(ch => {
