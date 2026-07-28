@@ -318,6 +318,24 @@ export default function NapoMarketplace() {
     supabase.auth.getUser().then(({ data: { user: u } }) => setCurrentUser(u))
   }, [])
 
+  useEffect(() => {
+    if (!currentUser || modules.length === 0) return
+    async function checkActivated() {
+      const results = {}
+      for (const m of modules) {
+        if (m.catalogue_deck_id) {
+          const { data } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', m.title).maybeSingle()
+          if (data) results[m.id] = true
+        } else if (m.catalogue_theme_id) {
+          const { data } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', m.title).maybeSingle()
+          if (data) results[m.id] = true
+        }
+      }
+      setActivated(results)
+    }
+    checkActivated()
+  }, [currentUser, modules])
+
   async function openCatalogueContent(mod) {
     if (mod.catalogue_deck_id) {
       const { data } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
@@ -348,6 +366,24 @@ export default function NapoMarketplace() {
       }
     }
     setActivated(prev => ({ ...prev, [mod.id]: true }))
+  }
+
+  async function deactivateCatalogue(mod) {
+    if (!currentUser) return
+    if (mod.catalogue_deck_id) {
+      const { data: deckPerso } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
+      if (deckPerso) {
+        await supabase.from('napo_oracle_cartes_perso').delete().eq('deck_id', deckPerso.id).eq('user_id', currentUser.id)
+        await supabase.from('napo_oracle_decks_perso').delete().eq('id', deckPerso.id)
+      }
+    } else if (mod.catalogue_theme_id) {
+      const { data: themePerso } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
+      if (themePerso) {
+        await supabase.from('napo_oracle_questions_perso').delete().eq('theme_id', themePerso.id).eq('user_id', currentUser.id)
+        await supabase.from('napo_oracle_themes_perso').delete().eq('id', themePerso.id)
+      }
+    }
+    setActivated(prev => ({ ...prev, [mod.id]: false }))
   }
 
   function sendSuggestion() {
@@ -569,11 +605,10 @@ export default function NapoMarketplace() {
                             Voir
                           </button>
                           <button
-                            disabled={!!activated[m.id]}
-                            style={{ flex: 1, padding: '7px 0', fontSize: 12, cursor: activated[m.id] ? 'default' : 'pointer', borderRadius: 8, border: 'none', background: activated[m.id] ? 'var(--color-border-secondary)' : '#185FA5', color: activated[m.id] ? 'var(--color-text-secondary)' : '#fff' }}
-                            onClick={() => activateCatalogue(m)}
+                            style={{ flex: 1, padding: '7px 0', fontSize: 12, cursor: 'pointer', borderRadius: 8, border: activated[m.id] ? '0.5px solid #c00' : 'none', background: activated[m.id] ? 'transparent' : '#185FA5', color: activated[m.id] ? '#c00' : '#fff' }}
+                            onClick={() => activated[m.id] ? deactivateCatalogue(m) : activateCatalogue(m)}
                           >
-                            {activated[m.id] ? 'Activé' : 'Activer'}
+                            {activated[m.id] ? 'Désactiver' : 'Activer'}
                           </button>
                         </div>
                       ) : (
@@ -675,11 +710,10 @@ export default function NapoMarketplace() {
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button onClick={() => setViewCatalogue(null)} style={{ flex: 1, padding: '6px 0', background: 'transparent', border: '0.5px solid var(--color-border-secondary)', color: 'var(--color-text-primary)', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Fermer</button>
               <button
-                disabled={!!activated[viewCatalogue.mod.id]}
-                onClick={() => { activateCatalogue(viewCatalogue.mod); setViewCatalogue(null) }}
-                style={{ flex: 1, padding: '6px 0', background: activated[viewCatalogue.mod.id] ? 'var(--color-border-secondary)' : '#185FA5', color: activated[viewCatalogue.mod.id] ? 'var(--color-text-secondary)' : '#fff', border: 'none', borderRadius: 8, cursor: activated[viewCatalogue.mod.id] ? 'default' : 'pointer', fontSize: 12 }}
+                onClick={() => { activated[viewCatalogue.mod.id] ? deactivateCatalogue(viewCatalogue.mod) : activateCatalogue(viewCatalogue.mod); setViewCatalogue(null) }}
+                style={{ flex: 1, padding: '6px 0', background: activated[viewCatalogue.mod.id] ? 'transparent' : '#185FA5', color: activated[viewCatalogue.mod.id] ? '#c00' : '#fff', border: activated[viewCatalogue.mod.id] ? '0.5px solid #c00' : 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}
               >
-                {activated[viewCatalogue.mod.id] ? 'Activé' : 'Activer'}
+                {activated[viewCatalogue.mod.id] ? 'Désactiver' : 'Activer'}
               </button>
             </div>
           </div>
