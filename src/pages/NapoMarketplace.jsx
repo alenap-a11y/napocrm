@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
-const TABS = ['Tous', 'Intelligence Artificielle', 'Experts', 'Outils']
+const TABS = ['Tous', 'Intelligence Artificielle', 'Experts', 'Outils', 'Modules & Addons']
 
 /* ── IA ─────────────────────────────────────────────────────────── */
 const IA_ITEMS = [
@@ -300,7 +301,16 @@ export default function NapoMarketplace() {
   const [activeExpert, setActiveExpert] = useState('juridique')
   const [suggModal, setSuggModal] = useState(false)
   const [suggText, setSuggText] = useState('')
-
+  const [modules, setModules] = useState([])
+  useEffect(() => {
+    supabase.from('marketplace_modules').select('*').eq('visible', true).order('position').then(({ data }) => {
+      if (data) setModules(data)
+    })
+  }, [])
+  const modulesByCategory = modules.reduce((acc, m) => {
+    (acc[m.category] = acc[m.category] || []).push(m)
+    return acc
+  }, {})
 
   function sendSuggestion() {
     if (!suggText.trim()) return
@@ -316,6 +326,7 @@ export default function NapoMarketplace() {
   const showIA = activeTab === 'Tous' || activeTab === 'Intelligence Artificielle'
   const showExperts = activeTab === 'Tous' || activeTab === 'Experts'
   const showOutils = activeTab === 'Tous' || activeTab === 'Outils'
+  const showModules = activeTab === 'Tous' || activeTab === 'Modules & Addons'
 
   return (
     <div style={{ fontFamily: 'inherit', minHeight: '100vh' }}>
@@ -485,6 +496,51 @@ export default function NapoMarketplace() {
                 ))}
               </div>
             </div>
+          </section>
+        )}
+
+        {/* ── SECTION MODULES & ADDONS ────────────────────────────── */}
+        {showModules && (
+          <section>
+            <SectionHeader icon="ti-apps" color="#185FA5" bg="#E8F1FB" label="Modules & Addons" sub="Vos metiers et outils Naposolo, activables a la carte" />
+            {Object.entries(modulesByCategory).map(([cat, items]) => (
+              <div key={cat} style={{ marginTop: 18 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-secondary)', margin: '0 0 10px' }}>{cat}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                  {items.map(m => (
+                    <div key={m.id} style={{
+                      border: '0.5px solid var(--color-border-tertiary)',
+                      borderRadius: 12,
+                      padding: 16,
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      background: 'var(--color-background-primary)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: m.icon_bg || '#EEEDFE', color: m.icon_color || '#534AB7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <i className={`ti ${m.icon}`} style={{ fontSize: 18 }} aria-hidden="true" />
+                        </div>
+                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: 'var(--color-text-primary)' }}>{m.title}</p>
+                      </div>
+                      <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0, flex: 1 }}>{m.description}</p>
+                      <button
+                        disabled={m.status !== 'available'}
+                        style={{
+                          marginTop: 4, padding: '7px 0', fontSize: 12,
+                          cursor: m.status === 'available' ? 'pointer' : 'default',
+                          borderRadius: 8, width: '100%',
+                          border: m.status === 'available' ? 'none' : '0.5px solid var(--color-border-secondary)',
+                          background: m.status === 'available' ? '#185FA5' : 'transparent',
+                          color: m.status === 'available' ? '#fff' : 'var(--color-text-secondary)',
+                        }}
+                        onClick={() => { if (m.status === 'available' && m.path) window.location.hash = m.path }}
+                      >
+                        {m.cta}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
         )}
 
