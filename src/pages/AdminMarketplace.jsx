@@ -8,8 +8,43 @@ export default function AdminMarketplace() {
   const [form, setForm] = useState(EMPTY)
   const [editing, setEditing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [viewContent, setViewContent] = useState(null)
+  const [creatingCatalogue, setCreatingCatalogue] = useState(null)
 
   useEffect(() => { fetchModules() }, [])
+
+  async function openContent(mod) {
+    if (mod.catalogue_deck_id) {
+      const { data } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
+      setViewContent({ type: 'cartes', title: mod.title, items: data || [] })
+    } else if (mod.catalogue_theme_id) {
+      const { data } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
+      setViewContent({ type: 'questions', title: mod.title, items: data || [] })
+    }
+  }
+
+  async function createCatalogue(mod, type, texte) {
+    const lignes = texte.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lignes.length === 0) return
+    if (type === 'cartes') {
+      const { data: deck } = await supabase.from('napo_oracle_decks_catalogue').insert({ nom: mod.title }).select().single()
+      if (!deck) return
+      const cartes = lignes.map(l => {
+        const match = l.match(/^(\d+)[.)\s-]+(.+)$/)
+        return match ? { deck_id: deck.id, numero: parseInt(match[1], 10), nom: match[2].trim() } : { deck_id: deck.id, numero: null, nom: l }
+      })
+      await supabase.from('napo_oracle_cartes_catalogue').insert(cartes)
+      await supabase.from('marketplace_modules').update({ catalogue_deck_id: deck.id }).eq('id', mod.id)
+    } else {
+      const { data: theme } = await supabase.from('napo_oracle_themes_catalogue').insert({ nom: mod.title }).select().single()
+      if (!theme) return
+      const questions = lignes.map(q => ({ theme_id: theme.id, question: q }))
+      await supabase.from('napo_oracle_questions_catalogue').insert(questions)
+      await supabase.from('marketplace_modules').update({ catalogue_theme_id: theme.id }).eq('id', mod.id)
+    }
+    setCreatingCatalogue(null)
+    fetchModules()
+  }
 
   async function fetchModules() {
     setLoading(true)
@@ -83,11 +118,58 @@ export default function AdminMarketplace() {
                 <td style={{ padding: '10px 12px', display: 'flex', gap: 8 }}>
                   <button onClick={() => edit(mod)} style={{ padding: '4px 12px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Éditer</button>
                   <button onClick={() => remove(mod.id)} style={{ padding: '4px 12px', background: '#fee', color: '#c00', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Supprimer</button>
+                  {(mod.catalogue_deck_id || mod.catalogue_theme_id) ? (
+                    <button onClick={() => openContent(mod)} style={{ padding: '4px 12px', background: '#E1F5EE', color: '#0F6E56', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Voir contenu</button>
+                  ) : (
+                    <>
+                      <button onClick={() => setCreatingCatalogue({ mod, type: 'cartes', texte: '' })} style={{ padding: '4px 12px', background: '#FEF3E2', color: '#A05A00', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Catalogue cartes</button>
+                      <button onClick={() => setCreatingCatalogue({ mod, type: 'questions', texte: '' })} style={{ padding: '4px 12px', background: '#EEEDFE', color: '#534AB7', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Catalogue questions</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {viewContent && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewContent(null)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 480, maxHeight: '70vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{viewContent.title}</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 12, color: '#666' }}>
+              {viewContent.type === 'cartes' ? `${viewContent.items.length} cartes` : `${viewContent.items.length} questions`}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {viewContent.items.map(item => (
+                <li key={item.id} style={{ fontSize: 13, padding: '6px 10px', background: '#F7F7FB', borderRadius: 6 }}>
+                  {viewContent.type === 'cartes' ? `${item.numero} — ${item.nom}` : item.question}
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => setViewContent(null)} style={{ marginTop: 16, padding: '6px 16px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Fermer</button>
+          </div>
+        </div>
+      )}
+      {creatingCatalogue && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setCreatingCatalogue(null)}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 480, width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{creatingCatalogue.mod.title}</h3>
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: '#666' }}>
+              {creatingCatalogue.type === 'cartes' ? 'Une carte par ligne, format "numero. nom"' : 'Une question par ligne'}
+            </p>
+            <textarea
+              value={creatingCatalogue.texte}
+              onChange={e => setCreatingCatalogue(c => ({ ...c, texte: e.target.value }))}
+              rows={10}
+              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #DDD', fontSize: 13, boxSizing: 'border-box', fontFamily: 'monospace' }}
+            />
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => setCreatingCatalogue(null)} style={{ flex: 1, padding: '8px 0', background: '#eee', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Annuler</button>
+              <button onClick={() => createCatalogue(creatingCatalogue.mod, creatingCatalogue.type, creatingCatalogue.texte)} style={{ flex: 1, padding: '8px 0', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Créer le catalogue</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
