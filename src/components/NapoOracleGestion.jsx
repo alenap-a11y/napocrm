@@ -6,10 +6,14 @@ export default function NapoOracleGestion({ onClose }) {
   const [themes, setThemes] = useState([])
   const [cartesParDeck, setCartesParDeck] = useState({})
   const [questionsParTheme, setQuestionsParTheme] = useState({})
-  const [ouvert, setOuvert] = useState(null) // id du deck ou thème actuellement déplié
+  const [ouvert, setOuvert] = useState(null)
   const [nouvelleCarte, setNouvelleCarte] = useState('')
   const [nouvelleQuestion, setNouvelleQuestion] = useState('')
   const [loading, setLoading] = useState(true)
+
+  const [nouveauDeckNom, setNouveauDeckNom] = useState('')
+  const [nouveauThemeNom, setNouveauThemeNom] = useState('')
+  const [texteImportQuestionsTheme, setTexteImportQuestionsTheme] = useState({}) // { [themeId]: texte }
 
   useEffect(() => {
     async function load() {
@@ -26,22 +30,56 @@ export default function NapoOracleGestion({ onClose }) {
   }, [])
 
   async function chargerCartes(deckId) {
-    if (cartesParDeck[deckId]) return
     const { data } = await supabase.from('napo_oracle_cartes_perso')
       .select('id, nom, numero').eq('deck_id', deckId).order('numero', { ascending: true, nullsFirst: false })
     setCartesParDeck(prev => ({ ...prev, [deckId]: data || [] }))
   }
   async function chargerQuestions(themeId) {
-    if (questionsParTheme[themeId]) return
     const { data } = await supabase.from('napo_oracle_questions_perso')
       .select('id, texte').eq('theme_id', themeId).order('texte')
     setQuestionsParTheme(prev => ({ ...prev, [themeId]: data || [] }))
   }
 
+  async function creerDeck() {
+    if (!nouveauDeckNom.trim()) return
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data, error } = await supabase.from('napo_oracle_decks_perso')
+      .insert({ user_id: user.id, nom: nouveauDeckNom.trim() }).select().single()
+    if (error) { alert('Ce deck existe déjà.'); return }
+    setDecks(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
+    setNouveauDeckNom('')
+    setOuvert(`d-${data.id}`)
+    setCartesParDeck(prev => ({ ...prev, [data.id]: [] }))
+  }
+
+  async function creerTheme() {
+    if (!nouveauThemeNom.trim()) return
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data, error } = await supabase.from('napo_oracle_themes_perso')
+      .insert({ user_id: user.id, nom: nouveauThemeNom.trim() }).select().single()
+    if (error) { alert('Ce thème existe déjà.'); return }
+    setThemes(prev => [...prev, data].sort((a, b) => a.nom.localeCompare(b.nom)))
+    setNouveauThemeNom('')
+    setOuvert(`t-${data.id}`)
+    setQuestionsParTheme(prev => ({ ...prev, [data.id]: [] }))
+  }
+
+  async function importerQuestionsEnMasse(themeId) {
+    const texte = texteImportQuestionsTheme[themeId] || ''
+    const lignes = texte.split('\n').map(l => l.trim()).filter(Boolean)
+    if (lignes.length === 0) return
+    const { data: { user } } = await supabase.auth.getUser()
+    for (const ligne of lignes) {
+      await supabase.from('napo_oracle_questions_perso')
+        .upsert({ user_id: user.id, theme_id: themeId, texte: ligne }, { onConflict: 'user_id,texte', ignoreDuplicates: true })
+    }
+    setTexteImportQuestionsTheme(prev => ({ ...prev, [themeId]: '' }))
+    await chargerQuestions(themeId)
+  }
+
   async function renommerDeck(deck) {
     const nouveauNom = window.prompt('Renommer le deck :', deck.nom)
     if (!nouveauNom || nouveauNom === deck.nom) return
-    const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('napo_oracle_decks_perso').update({ nom: nouveauNom }).eq('id', deck.id)
     if (error) { alert("Ce nom existe déjà dans ta liste de decks."); return }
     setDecks(prev => prev.map(d => d.id === deck.id ? { ...d, nom: nouveauNom } : d))
@@ -68,6 +106,33 @@ export default function NapoOracleGestion({ onClose }) {
     setQuestionsParTheme(prev => ({ ...prev, [themeId]: prev[themeId].map(q => q.id === question.id ? { ...q, texte: nouveauTexte } : q) }))
   }
 
+  async function supprimerDeck(deck) {
+    if (!window.confirm(`Supprimer le deck "${deck.nom}" et toutes ses cartes (${(cartesParDeck[deck.id] || []).length}) ? Cette action est irréversible.`)) return
+    await supabase.from('napo_oracle_cartes_perso').delete().eq('deck_id', deck.id)
+    const { error } = await supabase.from('napo_oracle_decks_perso').delete().eq('id', deck.id)
+    if (error) { alert("Erreur lors de la suppression : " + error.message); return }
+    setDecks(prev => prev.filter(d => d.id !== deck.id))
+  }
+  async function supprimerTheme(theme) {
+    if (!window.confirm(`Supprimer le thème "${theme.nom}" et toutes ses questions (${(questionsParTheme[theme.id] || []).length}) ? Cette action est irréversible.`)) return
+    await supabase.from('napo_oracle_questions_perso').delete().eq('theme_id', theme.id)
+    const { error } = await supabase.from('napo_oracle_themes_perso').delete().eq('id', theme.id)
+    if (error) { alert("Erreur lors de la suppression : " + error.message); return }
+    setThemes(prev => prev.filter(t => t.id !== theme.id))
+  }
+  async function supprimerCarte(deckId, carte) {
+    if (!window.confirm(`Supprimer la carte "${carte.nom}" ?`)) return
+    const { error } = await supabase.from('napo_oracle_cartes_perso').delete().eq('id', carte.id)
+    if (error) { alert("Erreur : " + error.message); return }
+    setCartesParDeck(prev => ({ ...prev, [deckId]: prev[deckId].filter(c => c.id !== carte.id) }))
+  }
+  async function supprimerQuestion(themeId, question) {
+    if (!window.confirm(`Supprimer cette question ?`)) return
+    const { error } = await supabase.from('napo_oracle_questions_perso').delete().eq('id', question.id)
+    if (error) { alert("Erreur : " + error.message); return }
+    setQuestionsParTheme(prev => ({ ...prev, [themeId]: prev[themeId].filter(q => q.id !== question.id) }))
+  }
+
   async function ajouterCarte(deckId) {
     if (!nouvelleCarte.trim()) return
     const { data: { user } } = await supabase.auth.getUser()
@@ -91,6 +156,9 @@ export default function NapoOracleGestion({ onClose }) {
   }
 
   const inp = { width:'100%', padding:'6px 8px', borderRadius:6, border:'0.5px solid var(--color-border-secondary)', background:'var(--color-background-secondary)', color:'var(--color-text-primary)', fontSize:12, boxSizing:'border-box', fontFamily:'inherit' }
+  const btnMini = { fontSize:10, padding:'2px 6px', borderRadius:5, border:'0.5px solid var(--color-border-secondary)', background:'none', cursor:'pointer' }
+  const btnMiniDanger = { ...btnMini, color:'#B91C1C', borderColor:'#FCA5A5' }
+  const btnAjout = { fontSize:11, padding:'6px 12px', borderRadius:6, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', whiteSpace:'nowrap' }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }} onClick={onClose}>
@@ -103,25 +171,34 @@ export default function NapoOracleGestion({ onClose }) {
         {loading ? <div style={{ fontSize:13, color:'var(--color-text-secondary)' }}>Chargement…</div> : (
           <>
             <div style={{ fontSize:12, fontWeight:600, color:'var(--color-accent)', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:8 }}>Decks</div>
+
+            <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+              <input value={nouveauDeckNom} onChange={e => setNouveauDeckNom(e.target.value)}
+                placeholder="Nom du nouvel oracle (ex: Oracle des Anges)" style={inp} />
+              <button onClick={creerDeck} style={btnAjout}>+ Nouveau deck</button>
+            </div>
+
             {decks.length === 0 && <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:16 }}>Aucun deck pour l'instant.</div>}
             {decks.map(deck => (
               <div key={deck.id} style={{ border:'0.5px solid var(--color-border-tertiary)', borderRadius:10, marginBottom:8, padding:'8px 12px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }} onClick={() => { setOuvert(o => o === `d-${deck.id}` ? null : `d-${deck.id}`); chargerCartes(deck.id) }}>
-                  <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{deck.nom}</span>
-                  <button onClick={e => { e.stopPropagation(); renommerDeck(deck) }} style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'0.5px solid var(--color-border-secondary)', background:'none', cursor:'pointer' }}>Renommer</button>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ flex:1, fontSize:13, fontWeight:500, cursor:'pointer' }} onClick={() => { setOuvert(o => o === `d-${deck.id}` ? null : `d-${deck.id}`); chargerCartes(deck.id) }}>{deck.nom}</span>
+                  <button onClick={() => renommerDeck(deck)} style={btnMini}>Renommer</button>
+                  <button onClick={() => supprimerDeck(deck)} style={btnMiniDanger}>Supprimer</button>
                 </div>
                 {ouvert === `d-${deck.id}` && (
                   <div style={{ marginTop:8, paddingLeft:8 }}>
                     {(cartesParDeck[deck.id] || []).map(c => (
                       <div key={c.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 0', fontSize:12 }}>
                         <span style={{ flex:1 }}>{c.numero ? `${c.numero} — ${c.nom}` : c.nom}</span>
-                        <button onClick={() => renommerCarte(deck.id, c)} style={{ fontSize:10, padding:'2px 6px', borderRadius:5, border:'0.5px solid var(--color-border-secondary)', background:'none', cursor:'pointer' }}>Renommer</button>
+                        <button onClick={() => renommerCarte(deck.id, c)} style={btnMini}>Renommer</button>
+                        <button onClick={() => supprimerCarte(deck.id, c)} style={btnMiniDanger}>Supprimer</button>
                       </div>
                     ))}
                     <div style={{ display:'flex', gap:6, marginTop:8 }}>
                       <input value={nouvelleCarte} onChange={e => setNouvelleCarte(e.target.value)}
                         placeholder="ex: 54- Nouvelle carte" style={inp} />
-                      <button onClick={() => ajouterCarte(deck.id)} style={{ fontSize:11, padding:'6px 12px', borderRadius:6, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', whiteSpace:'nowrap' }}>+ Ajouter</button>
+                      <button onClick={() => ajouterCarte(deck.id)} style={btnAjout}>+ Ajouter</button>
                     </div>
                   </div>
                 )}
@@ -129,25 +206,46 @@ export default function NapoOracleGestion({ onClose }) {
             ))}
 
             <div style={{ fontSize:12, fontWeight:600, color:'var(--color-accent)', textTransform:'uppercase', letterSpacing:'.05em', margin:'20px 0 8px' }}>Thèmes</div>
+
+            <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+              <input value={nouveauThemeNom} onChange={e => setNouveauThemeNom(e.target.value)}
+                placeholder="Nom du nouveau thème (ex: Travail et Carrière)" style={inp} />
+              <button onClick={creerTheme} style={btnAjout}>+ Nouveau thème</button>
+            </div>
+
             {themes.length === 0 && <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>Aucun thème pour l'instant.</div>}
             {themes.map(theme => (
               <div key={theme.id} style={{ border:'0.5px solid var(--color-border-tertiary)', borderRadius:10, marginBottom:8, padding:'8px 12px' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }} onClick={() => { setOuvert(o => o === `t-${theme.id}` ? null : `t-${theme.id}`); chargerQuestions(theme.id) }}>
-                  <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{theme.nom}</span>
-                  <button onClick={e => { e.stopPropagation(); renommerTheme(theme) }} style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'0.5px solid var(--color-border-secondary)', background:'none', cursor:'pointer' }}>Renommer</button>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ flex:1, fontSize:13, fontWeight:500, cursor:'pointer' }} onClick={() => { setOuvert(o => o === `t-${theme.id}` ? null : `t-${theme.id}`); chargerQuestions(theme.id) }}>{theme.nom}</span>
+                  <button onClick={() => renommerTheme(theme)} style={btnMini}>Renommer</button>
+                  <button onClick={() => supprimerTheme(theme)} style={btnMiniDanger}>Supprimer</button>
                 </div>
                 {ouvert === `t-${theme.id}` && (
                   <div style={{ marginTop:8, paddingLeft:8 }}>
+                    {(questionsParTheme[theme.id] || []).length === 0 && (
+                      <div style={{ background:'var(--color-background-secondary)', borderRadius:8, padding:'8px 10px', marginBottom:8 }}>
+                        <div style={{ fontSize:10, color:'var(--color-text-secondary)', marginBottom:6 }}>
+                          Colle ici la liste des questions de ce thème (une par ligne) pour les importer d'un coup.
+                        </div>
+                        <textarea value={texteImportQuestionsTheme[theme.id] || ''}
+                          onChange={e => setTexteImportQuestionsTheme(prev => ({ ...prev, [theme.id]: e.target.value }))}
+                          rows={5} placeholder={"Quelle est l'énergie actuelle de ma vie amoureuse ?\n..."}
+                          style={{ ...inp, resize:'vertical', marginBottom:6 }} />
+                        <button onClick={() => importerQuestionsEnMasse(theme.id)} style={btnAjout}>Importer la liste</button>
+                      </div>
+                    )}
                     {(questionsParTheme[theme.id] || []).map(q => (
                       <div key={q.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'3px 0', fontSize:12 }}>
                         <span style={{ flex:1 }}>{q.texte}</span>
-                        <button onClick={() => renommerQuestion(theme.id, q)} style={{ fontSize:10, padding:'2px 6px', borderRadius:5, border:'0.5px solid var(--color-border-secondary)', background:'none', cursor:'pointer' }}>Modifier</button>
+                        <button onClick={() => renommerQuestion(theme.id, q)} style={btnMini}>Modifier</button>
+                        <button onClick={() => supprimerQuestion(theme.id, q)} style={btnMiniDanger}>Supprimer</button>
                       </div>
                     ))}
                     <div style={{ display:'flex', gap:6, marginTop:8 }}>
                       <input value={nouvelleQuestion} onChange={e => setNouvelleQuestion(e.target.value)}
                         placeholder="Nouvelle question" style={inp} />
-                      <button onClick={() => ajouterQuestion(theme.id)} style={{ fontSize:11, padding:'6px 12px', borderRadius:6, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', whiteSpace:'nowrap' }}>+ Ajouter</button>
+                      <button onClick={() => ajouterQuestion(theme.id)} style={btnAjout}>+ Ajouter</button>
                     </div>
                   </div>
                 )}
