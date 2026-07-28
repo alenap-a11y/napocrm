@@ -16,11 +16,17 @@ export default function AdminMarketplace() {
   async function openContent(mod) {
     if (mod.catalogue_deck_id) {
       const { data } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
-      setViewContent({ type: 'cartes', title: mod.title, items: data || [] })
+      const { data: deck } = await supabase.from('napo_oracle_decks_catalogue').select('fiche').eq('id', mod.catalogue_deck_id).single()
+      setViewContent({ type: 'cartes', title: mod.title, items: data || [], deckId: mod.catalogue_deck_id, fiche: deck?.fiche || '' })
     } else if (mod.catalogue_theme_id) {
       const { data } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
       setViewContent({ type: 'questions', title: mod.title, items: data || [] })
     }
+  }
+
+  async function saveFiche() {
+    if (!viewContent?.deckId) return
+    await supabase.from('napo_oracle_decks_catalogue').update({ fiche: viewContent.fiche }).eq('id', viewContent.deckId)
   }
 
   async function createCatalogue(mod, type, texte) {
@@ -135,18 +141,32 @@ export default function AdminMarketplace() {
 
       {viewContent && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewContent(null)}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 480, maxHeight: '70vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, maxWidth: 720, maxHeight: '85vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{viewContent.title}</h3>
             <p style={{ margin: '0 0 16px', fontSize: 12, color: '#666' }}>
               {viewContent.type === 'cartes' ? `${viewContent.items.length} cartes` : `${viewContent.items.length} questions`}
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 20 }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6, flex: '0 0 40%', maxHeight: '65vh', overflowY: 'auto' }}>
               {viewContent.items.map(item => (
                 <li key={item.id} style={{ fontSize: 13, padding: '6px 10px', background: '#F7F7FB', borderRadius: 6 }}>
                   {viewContent.type === 'cartes' ? `${item.numero} — ${item.nom}` : item.question}
                 </li>
               ))}
             </ul>
+            {viewContent.type === 'cartes' && (
+              <div style={{ marginTop: 16 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#534AB7', display: 'block', marginBottom: 4 }}>Fiche descriptive</label>
+                <textarea
+                  value={viewContent.fiche}
+                  onChange={e => setViewContent(v => ({ ...v, fiche: e.target.value }))}
+                  rows={8}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #DDD', fontSize: 12, boxSizing: 'border-box', fontFamily: 'monospace' }}
+                />
+                <button onClick={saveFiche} style={{ marginTop: 6, padding: '6px 14px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Enregistrer la fiche</button>
+              </div>
+            )}
+            </div>
             <button onClick={() => setViewContent(null)} style={{ marginTop: 16, padding: '6px 16px', background: '#534AB7', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>Fermer</button>
           </div>
         </div>

@@ -339,7 +339,8 @@ export default function NapoMarketplace() {
   async function openCatalogueContent(mod) {
     if (mod.catalogue_deck_id) {
       const { data } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
-      setViewCatalogue({ type: 'cartes', title: mod.title, items: data || [], mod })
+      const { data: deck } = await supabase.from('napo_oracle_decks_catalogue').select('fiche').eq('id', mod.catalogue_deck_id).single()
+      setViewCatalogue({ type: 'cartes', title: mod.title, items: data || [], mod, fiche: deck?.fiche || '' })
     } else if (mod.catalogue_theme_id) {
       const { data } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
       setViewCatalogue({ type: 'questions', title: mod.title, items: data || [], mod })
@@ -695,18 +696,25 @@ export default function NapoMarketplace() {
       )}
       {viewCatalogue && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewCatalogue(null)}>
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 12, padding: 24, maxWidth: 480, maxHeight: '70vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 12, padding: 24, maxWidth: 720, maxHeight: '85vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{viewCatalogue.title}</h3>
             <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--color-text-secondary)' }}>
               {viewCatalogue.type === 'cartes' ? `${viewCatalogue.items.length} cartes` : `${viewCatalogue.items.length} questions`}
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 20 }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6, flex: '0 0 40%', maxHeight: '65vh', overflowY: 'auto' }}>
               {viewCatalogue.items.map(item => (
                 <li key={item.id} style={{ fontSize: 13, padding: '6px 10px', background: 'var(--color-background-secondary)', borderRadius: 6 }}>
                   {viewCatalogue.type === 'cartes' ? `${item.numero} — ${item.nom}` : item.question}
                 </li>
               ))}
             </ul>
+            {viewCatalogue.fiche && (
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--color-background-secondary)', borderRadius: 8, fontSize: 12, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                {viewCatalogue.fiche}
+              </div>
+            )}
+            </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button onClick={() => setViewCatalogue(null)} style={{ flex: 1, padding: '6px 0', background: 'transparent', border: '0.5px solid var(--color-border-secondary)', color: 'var(--color-text-primary)', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Fermer</button>
               <button
