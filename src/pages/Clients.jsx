@@ -134,6 +134,8 @@ export default function Clients() {
   const [bachFiches,     setBachFiches]     = useState([])
   const [energieSeances, setEnergieSeances] = useState([])
   const [loadingEnergie, setLoadingEnergie] = useState(false)
+  const [oracleSeances, setOracleSeances] = useState([])
+  const [loadingOracle, setLoadingOracle] = useState(false)
   const [loadingBach,    setLoadingBach]    = useState(false)
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
@@ -183,6 +185,13 @@ export default function Clients() {
       supabase.from('energie_seances').select('id, numero_seance, date_seance, heure_seance, outil, note_globale')
         .eq('client_id', detail.id).order('date_seance', { ascending: false })
         .then(({ data }) => { setEnergieSeances(data || []); setLoadingEnergie(false) })
+      return
+    }
+    if (detailTab === 'oracle' && detail) {
+      setLoadingOracle(true)
+      supabase.from('napo_oracle_seances').select('id, numero_seance, date_seance, heure_seance, deck_utilise, note_globale')
+        .eq('client_id', detail.id).order('date_seance', { ascending: false })
+        .then(({ data }) => { setOracleSeances(data || []); setLoadingOracle(false) })
       return
     }
     if (detailTab !== 'bach' || !detail) { setBachFiches([]); return }
@@ -584,7 +593,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18, overflowX: 'auto' }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['energie','⚡ Énergie','ti-sparkles']].map(([id, label, icon]) => (
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['energie','⚡ Énergie','ti-sparkles'],['oracle','🔮 Oracle','ti-cards']].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -868,6 +877,84 @@ export default function Clients() {
 
             {/* ── Onglet CHAKRAS ── */}
 
+
+            {/* Onglet ORACLE */}
+            {detailTab === 'oracle' && !editingDetail && (
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:'var(--color-text-primary)' }}>
+                    {oracleSeances.length} séance(s) oracle
+                  </span>
+                  <button onClick={async () => {
+                    const { data: { user } } = await supabase.auth.getUser()
+                    const { data: s } = await supabase.from('napo_oracle_seances').insert({
+                      user_id: user.id, client_id: detail.id,
+                      date_seance: new Date().toISOString().slice(0,10),
+                      heure_seance: new Date().toTimeString().slice(0,5),
+                      numero_seance: oracleSeances.length + 1
+                    }).select().single()
+                    if (s) window.location.href = `/napo-oracle/${s.id}`
+                  }} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    <i className="ti ti-plus" style={{ fontSize:13 }} />Nouvelle séance oracle
+                  </button>
+                </div>
+
+                {loadingOracle ? (
+                  <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
+                    <i className="ti ti-loader-2" style={{ fontSize:22, display:'block', marginBottom:8 }} />Chargement…
+                  </div>
+                ) : oracleSeances.length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
+                    <i className="ti ti-cards" style={{ fontSize:28, display:'block', marginBottom:8 }} />
+                    Aucune séance oracle enregistrée
+                    <div style={{ marginTop:14 }}>
+                      <button onClick={async () => {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        const { data: s } = await supabase.from('napo_oracle_seances').insert({
+                          user_id: user.id, client_id: detail.id,
+                          date_seance: new Date().toISOString().slice(0,10),
+                          heure_seance: new Date().toTimeString().slice(0,5),
+                          numero_seance: 1
+                        }).select().single()
+                        if (s) window.location.href = `/napo-oracle/${s.id}`
+                      }} style={{ padding:'8px 18px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                        Démarrer la première séance
+                      </button>
+                    </div>
+                  </div>
+                ) : oracleSeances.map((s, idx) => {
+                  const d = s.date_seance ? s.date_seance.slice(0,10).split('-') : null
+                  const dateStr = d ? `${parseInt(d[2])} ${['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'][parseInt(d[1])-1]} ${d[0]}` : '—'
+                  return (
+                    <div key={s.id} style={{ display:'flex', gap:12, alignItems:'flex-start', padding:'12px 0', borderBottom:idx < oracleSeances.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                      <div style={{ width:8, height:8, borderRadius:'50%', background:'#993556', flexShrink:0, marginTop:5 }} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                          <span style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{dateStr}</span>
+                          {s.heure_seance && <span style={{ fontSize:12, color:'var(--color-text-secondary)' }}>à {s.heure_seance.slice(0,5)}</span>}
+                          <span style={{ fontSize:10, fontWeight:600, background:'#FBEAF0', color:'#993556', padding:'1px 7px', borderRadius:20, marginLeft:'auto' }}>Séance #{s.numero_seance}</span>
+                        </div>
+                        {s.deck_utilise && <div style={{ fontSize:12, color:'var(--color-text-secondary)', marginBottom:4 }}><i className="ti ti-cards" style={{ fontSize:11, marginRight:4 }} />{s.deck_utilise}</div>}
+                        {s.note_globale && <div style={{ fontSize:12, color:'var(--color-text-secondary)', lineHeight:1.5, background:'var(--color-background-secondary)', padding:'6px 10px', borderRadius:6, marginBottom:6 }}>{s.note_globale.length > 80 ? s.note_globale.slice(0,80)+'…' : s.note_globale}</div>}
+                        <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                          <button onClick={async () => {
+                            if (!window.confirm('Supprimer cette séance oracle ?')) return
+                            await supabase.from('napo_oracle_seances').delete().eq('id', s.id)
+                            setOracleSeances(prev => prev.filter(x => x.id !== s.id))
+                          }} style={{ background:'none', border:'0.5px solid #FBEAF0', borderRadius:6, cursor:'pointer', color:'#993556', fontSize:11, padding:'3px 8px', display:'flex', alignItems:'center', gap:4 }}>
+                            <i className="ti ti-trash" style={{ fontSize:11 }} />Supprimer
+                          </button>
+                          <button onClick={() => window.location.href=`/napo-oracle/${s.id}`}
+                            style={{ background:'none', border:'0.5px solid var(--color-border-secondary)', borderRadius:6, cursor:'pointer', color:'var(--color-accent)', fontSize:11, padding:'3px 8px', display:'flex', alignItems:'center', gap:4 }}>
+                            <i className="ti ti-eye" style={{ fontSize:11 }} />Voir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Onglet ENERGIE */}
             {detailTab === 'energie' && !editingDetail && (

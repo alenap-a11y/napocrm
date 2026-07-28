@@ -33,6 +33,8 @@ const FicheSeance = lazy(() => import('./pages/FicheSeance'))
 const BilanMiParcours = lazy(() => import('./pages/BilanMiParcours'))
 const Energie = lazy(() => import('./pages/Energie'))
 const EnergieSéance = lazy(() => import('./pages/EnergieSéance'))
+const NapoOracle = lazy(() => import('./pages/NapoOracle'))
+const NapoOracleSéance = lazy(() => import('./pages/NapoOracleSéance'))
 const Napo3D = lazy(() => import('./pages/Napo3D'))
 const Napo3DSeance = lazy(() => import('./pages/Napo3DSeance'))
 const NouvelleSeanceStandard = lazy(() => import('./pages/NouvelleSeanceStandard'))
@@ -64,6 +66,7 @@ const ALL_SB_ITEMS = [
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
   { id: 'energie',  label: 'Énergie',  icon: 'ti-sparkles',         to: '/energie'  },
+  { id: 'napo-oracle', label: 'Napo-Oracle', icon: 'ti-cards', to: '/napo-oracle' },
   { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
   { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
   { id: 'napoplus',      label: 'Napo+',        icon: 'ti-sparkles',        to: '/napoplus'       },
@@ -496,6 +499,8 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/notes"    element={<Notes />} />
               <Route path="/energie"              element={<Energie />} />
               <Route path="/energie/:id"          element={<EnergieSéance />} />
+              <Route path="/napo-oracle"              element={<NapoOracle />} />
+              <Route path="/napo-oracle/:id"          element={<NapoOracleSéance />} />
               <Route path="/fleurs-de-bach"                element={<PageBach />} />
               <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
