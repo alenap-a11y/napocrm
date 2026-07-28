@@ -8,7 +8,6 @@ import AdminNews from './AdminNews'
 import AdminLanding from './AdminLanding'
 import AdminOnboarding from './AdminOnboarding'
 import AdminRoadmap from './AdminRoadmap'
-import AdminNapoPlus from './AdminNapoPlus'
 import AdminMarketplace from './AdminMarketplace'
 import AdminUsers from './AdminUsers'
 import AdminUserDetail from './AdminUserDetail'
@@ -36,7 +35,6 @@ export default function AdminLayout({ user }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard',  icon: 'ti-shield-check', group: null },
     { id: 'supabase',  label: 'Supabase',   icon: 'ti-database',     group: null },
-    { id: 'napoplus',  label: 'Napo+',      icon: 'ti-sparkles',     group: null },
     { id: 'marketplace', label: 'Marketplace', icon: 'ti-store',        group: null },
     { id: 'users',       label: 'Utilisateurs', icon: 'ti-users',      group: null },
   ]
@@ -126,7 +124,6 @@ export default function AdminLayout({ user }) {
         {page === 'admin-aide'  && <AdminAide />}
         {page === 'admin-news'  && <AdminNews />}
         {page === 'admin-rgpd'  && <AdminRgpd />}
-        {page === 'napoplus'    && <AdminNapoPlus />}
         {page === 'marketplace' && <AdminMarketplace />}
         {page === 'users' && !selectedUser && <AdminUsers onSelectUser={u => setSelectedUser(u)} />}
         {page === 'users' && selectedUser && <AdminUserDetail user={selectedUser} onBack={() => setSelectedUser(null)} />}

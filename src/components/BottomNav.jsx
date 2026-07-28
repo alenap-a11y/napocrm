@@ -9,7 +9,6 @@ const MENU_ITEMS = [
   { to: '/energie',       icon: 'ti-sparkles',         label: 'Energie'        },
   { to: '/factures',      icon: 'ti-file',             label: 'Facturation'    },
   { to: '/fiscal',        icon: 'ti-calculator',       label: 'Fiscalite'      },
-  { to: '/napoplus',      icon: 'ti-sparkles',         label: 'Napo+'          },
   { to: '/marketplace',   icon: 'ti-building-store',   label: 'Marketplace'    },
 ]
 

@@ -22,7 +22,6 @@ const Notes = lazy(() => import('./pages/Notes'))
 const FicheClientBach = lazy(() => import('./components/FicheClientBach'))
 const PageBach = lazy(() => import('./pages/PageBach'))
 const SimulateurFiscal = lazy(() => import('./components/SimulateurFiscal'))
-const NapoPlus = lazy(() => import('./pages/NapoPlus'))
 const Factures = lazy(() => import('./pages/Factures'))
 const FAQ = lazy(() => import('./pages/FAQ'))
 const Aide = lazy(() => import('./pages/Aide'))
@@ -69,7 +68,6 @@ const ALL_SB_ITEMS = [
   { id: 'napo-oracle', label: 'Napo-Oracle', icon: 'ti-cards', to: '/napo-oracle' },
   { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
   { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
-  { id: 'napoplus',      label: 'Napo+',        icon: 'ti-sparkles',        to: '/napoplus'       },
   { id: 'marketplace',   label: 'Marketplace',  icon: 'ti-building-store',  to: '/marketplace'    },
 ]
 
@@ -505,7 +503,6 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/fleurs-de-bach/:clientId?" element={<FicheClientBach />} />
               <Route path="/factures" element={<Factures />} />
               <Route path="/fiscal"    element={<SimulateurFiscal />} />
-              <Route path="/napoplus"    element={<NapoPlus />} />
               <Route path="/marketplace" element={<NapoMarketplace />} />
               <Route path="/profil"   element={<ProfilPage accent={accent} onSignOut={() => setDecoOpen(true)} />} />
               <Route path="/faq"      element={<FAQ />} />
