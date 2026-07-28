@@ -311,6 +311,44 @@ export default function NapoMarketplace() {
     (acc[m.category] = acc[m.category] || []).push(m)
     return acc
   }, {})
+  const [currentUser, setCurrentUser] = useState(null)
+  const [viewCatalogue, setViewCatalogue] = useState(null)
+  const [activated, setActivated] = useState({})
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => setCurrentUser(u))
+  }, [])
+
+  async function openCatalogueContent(mod) {
+    if (mod.catalogue_deck_id) {
+      const { data } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
+      setViewCatalogue({ type: 'cartes', title: mod.title, items: data || [], mod })
+    } else if (mod.catalogue_theme_id) {
+      const { data } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
+      setViewCatalogue({ type: 'questions', title: mod.title, items: data || [], mod })
+    }
+  }
+
+  async function activateCatalogue(mod) {
+    if (!currentUser) return
+    if (mod.catalogue_deck_id) {
+      const { data: existant } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
+      if (existant) { setActivated(prev => ({ ...prev, [mod.id]: true })); return }
+      const { data: deckPerso } = await supabase.from('napo_oracle_decks_perso').insert({ user_id: currentUser.id, nom: mod.title }).select().single()
+      const { data: cartesSrc } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
+      if (deckPerso && cartesSrc) {
+        await supabase.from('napo_oracle_cartes_perso').insert(cartesSrc.map(c => ({ deck_id: deckPerso.id, user_id: currentUser.id, numero: c.numero, nom: c.nom })))
+      }
+    } else if (mod.catalogue_theme_id) {
+      const { data: existant } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
+      if (existant) { setActivated(prev => ({ ...prev, [mod.id]: true })); return }
+      const { data: themePerso } = await supabase.from('napo_oracle_themes_perso').insert({ user_id: currentUser.id, nom: mod.title }).select().single()
+      const { data: questionsSrc } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
+      if (themePerso && questionsSrc) {
+        await supabase.from('napo_oracle_questions_perso').insert(questionsSrc.map(q => ({ theme_id: themePerso.id, user_id: currentUser.id, texte: q.question })))
+      }
+    }
+    setActivated(prev => ({ ...prev, [mod.id]: true }))
+  }
 
   function sendSuggestion() {
     if (!suggText.trim()) return
@@ -522,20 +560,38 @@ export default function NapoMarketplace() {
                         <p style={{ fontSize: 14, fontWeight: 500, margin: 0, color: 'var(--color-text-primary)' }}>{m.title}</p>
                       </div>
                       <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0, flex: 1 }}>{m.description}</p>
-                      <button
-                        disabled={m.status !== 'available'}
-                        style={{
-                          marginTop: 4, padding: '7px 0', fontSize: 12,
-                          cursor: m.status === 'available' ? 'pointer' : 'default',
-                          borderRadius: 8, width: '100%',
-                          border: m.status === 'available' ? 'none' : '0.5px solid var(--color-border-secondary)',
-                          background: m.status === 'available' ? '#185FA5' : 'transparent',
-                          color: m.status === 'available' ? '#fff' : 'var(--color-text-secondary)',
-                        }}
-                        onClick={() => { if (m.status === 'available' && m.path) window.location.hash = m.path }}
-                      >
-                        {m.cta}
-                      </button>
+                      {(m.catalogue_deck_id || m.catalogue_theme_id) ? (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            style={{ flex: 1, padding: '7px 0', fontSize: 12, cursor: 'pointer', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)' }}
+                            onClick={() => openCatalogueContent(m)}
+                          >
+                            Voir
+                          </button>
+                          <button
+                            disabled={!!activated[m.id]}
+                            style={{ flex: 1, padding: '7px 0', fontSize: 12, cursor: activated[m.id] ? 'default' : 'pointer', borderRadius: 8, border: 'none', background: activated[m.id] ? 'var(--color-border-secondary)' : '#185FA5', color: activated[m.id] ? 'var(--color-text-secondary)' : '#fff' }}
+                            onClick={() => activateCatalogue(m)}
+                          >
+                            {activated[m.id] ? 'Activé' : 'Activer'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          disabled={m.status !== 'available'}
+                          style={{
+                            marginTop: 4, padding: '7px 0', fontSize: 12,
+                            cursor: m.status === 'available' ? 'pointer' : 'default',
+                            borderRadius: 8, width: '100%',
+                            border: m.status === 'available' ? 'none' : '0.5px solid var(--color-border-secondary)',
+                            background: m.status === 'available' ? '#185FA5' : 'transparent',
+                            color: m.status === 'available' ? '#fff' : 'var(--color-text-secondary)',
+                          }}
+                          onClick={() => { if (m.status === 'available' && m.path) window.location.hash = m.path }}
+                        >
+                          {m.cta}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -597,6 +653,33 @@ export default function NapoMarketplace() {
               <button onClick={sendSuggestion} disabled={!suggText.trim()}
                 style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: suggText.trim() ? '#185FA5' : 'var(--color-border-secondary)', color: suggText.trim() ? '#fff' : 'var(--color-text-secondary)', fontSize: 13, fontWeight: 600, cursor: suggText.trim() ? 'pointer' : 'default' }}>
                 <i className="ti ti-send" style={{ marginRight: 6 }} />Envoyer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {viewCatalogue && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewCatalogue(null)}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 12, padding: 24, maxWidth: 480, maxHeight: '70vh', overflowY: 'auto', width: '90%' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>{viewCatalogue.title}</h3>
+            <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              {viewCatalogue.type === 'cartes' ? `${viewCatalogue.items.length} cartes` : `${viewCatalogue.items.length} questions`}
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {viewCatalogue.items.map(item => (
+                <li key={item.id} style={{ fontSize: 13, padding: '6px 10px', background: 'var(--color-background-secondary)', borderRadius: 6 }}>
+                  {viewCatalogue.type === 'cartes' ? `${item.numero} — ${item.nom}` : item.question}
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={() => setViewCatalogue(null)} style={{ flex: 1, padding: '6px 0', background: 'transparent', border: '0.5px solid var(--color-border-secondary)', color: 'var(--color-text-primary)', borderRadius: 8, cursor: 'pointer', fontSize: 12 }}>Fermer</button>
+              <button
+                disabled={!!activated[viewCatalogue.mod.id]}
+                onClick={() => { activateCatalogue(viewCatalogue.mod); setViewCatalogue(null) }}
+                style={{ flex: 1, padding: '6px 0', background: activated[viewCatalogue.mod.id] ? 'var(--color-border-secondary)' : '#185FA5', color: activated[viewCatalogue.mod.id] ? 'var(--color-text-secondary)' : '#fff', border: 'none', borderRadius: 8, cursor: activated[viewCatalogue.mod.id] ? 'default' : 'pointer', fontSize: 12 }}
+              >
+                {activated[viewCatalogue.mod.id] ? 'Activé' : 'Activer'}
               </button>
             </div>
           </div>
