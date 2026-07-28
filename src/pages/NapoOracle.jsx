@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import NapoOracleGestion from '../components/NapoOracleGestion'
 
 const MOIS = ['jan','éfv','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
@@ -31,6 +32,7 @@ export default function NapoOracle() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('liste')
+  const [showGestion, setShowGestion] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -80,9 +82,14 @@ export default function NapoOracle() {
             <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>{seances.length} séance(s) enregistrée(s)</div>
           </div>
         </div>
-        <button onClick={() => setActiveTab('nouvelle')} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:500, cursor:'pointer' }}>
-          <i className="ti ti-plus" style={{ fontSize:15 }} />Nouvelle séance
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={() => setShowGestion(true)} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'none', color:'var(--color-text-primary)', fontSize:13, fontWeight:500, cursor:'pointer' }}>
+            <i className="ti ti-settings" style={{ fontSize:15 }} />Gérer mes decks & thèmes
+          </button>
+          <button onClick={() => setActiveTab('nouvelle')} style={{ display:'flex', alignItems:'center', gap:6, padding:'8px 14px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:13, fontWeight:500, cursor:'pointer' }}>
+            <i className="ti ti-plus" style={{ fontSize:15 }} />Nouvelle séance
+          </button>
+        </div>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:18 }}>
@@ -173,6 +180,7 @@ export default function NapoOracle() {
           </div>
         </div>
       )}
+      {showGestion && <NapoOracleGestion onClose={() => setShowGestion(false)} />}
     </div>
   )
 }
