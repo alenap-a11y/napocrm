@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
+import { useNavigate } from 'react-router-dom'
 import SlotPicker from './SlotPicker'
 
 const TYPES_SEANCE = [
@@ -38,6 +39,7 @@ const lbl = {
  *   prefillClientId     — UUID pré-sélectionné (optionnel)
  */
 export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillClientId }) {
+  const navigate = useNavigate()
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const [clients,        setClients]        = useState([])
@@ -149,6 +151,24 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
             numero_seance: (count || 0) + 1,
           })
         } catch (e) { console.warn('Création séance Énergie liée:', e) }
+      }
+      let oracleSeanceId = null
+      if (['Cartomancienne', 'Cartomancien'].includes(typeSeance) && client?.id) {
+        try {
+          const { count } = await supabase
+            .from('napo_oracle_seances')
+            .select('id', { count: 'exact', head: true })
+            .eq('client_id', client.id)
+          const { data: oracleSeance } = await supabase.from('napo_oracle_seances').insert({
+            user_id:       user.id,
+            client_id:     client.id,
+            date_seance:   date,
+            heure_seance:  heure,
+            duree_minutes: parseInt(duree, 10) || 60,
+            numero_seance: (count || 0) + 1,
+          }).select().single()
+          if (oracleSeance) oracleSeanceId = oracleSeance.id
+        } catch (e) { console.warn('Création séance Oracle liée:', e) }
       }
 
       if (client?.id) {

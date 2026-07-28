@@ -458,6 +458,13 @@ export default function Agenda() {
                     window.location.href = es ? `/energie/${es.id}` : `/seances/${detail.id}/fiche`
                   } else if (detail.type_seance === '3D Humain') {
                     window.location.href = `/napo-3d/seance/${detail.id}`
+                  } else if (['Cartomancienne', 'Cartomancien'].includes(detail.type_seance) && detail.client_id) {
+                    const { data: os } = await supabase.from('napo_oracle_seances')
+                      .select('id')
+                      .eq('client_id', detail.client_id)
+                      .eq('date_seance', detail.date_rdv?.slice(0, 10))
+                      .maybeSingle()
+                    window.location.href = os ? `/napo-oracle/${os.id}` : `/seances/${detail.id}/fiche`
                   } else {
                     window.location.href = `/seances/${detail.id}/fiche`
                   }
