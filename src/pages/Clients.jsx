@@ -38,6 +38,10 @@ const SPEC_COLOR = {
 
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
+const SITUATION_FAMILIALE_LABEL = { marie: 'Marié(e)', divorce: 'Divorcé(e)', celibataire: 'Célibataire', veuf: 'Veuf', veuve: 'Veuve', separe: 'Séparé(e)' }
+const ENVIRONNEMENT_LABEL       = { toxique: 'Toxique', non_toxique: 'Non toxique' }
+const SITUATION_PRO_LABEL       = { actif: 'Actif', chomage: 'Chômage', retraite: 'Retraite', invalide_malade: 'Invalide / malade' }
+
 function toCSV(rows) {
   const header = 'Prénom,Nom,Email,Téléphone,Naissance,Spécialité,Ville,Statut,Notes'
   const lines  = rows.map(r =>
@@ -141,7 +145,13 @@ export default function Clients() {
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
 
-  const EMPTY = { prenom: '', nom: '', email: '', tel: '', date_naissance: '', specialite: 'Sophrologue', ville: '', statut: 'actif', notes: '' }
+  const EMPTY = {
+    prenom: '', nom: '', nom_naissance: '', email: '', tel: '', date_naissance: '',
+    specialite: 'Sophrologue',
+    adresse_numero: '', adresse_rue: '', adresse_complement: '', code_postal: '', ville: '',
+    situation_familiale: 'celibataire', environnement: 'non_toxique', situation_professionnelle: 'actif', nombre_enfants: 0,
+    statut: 'actif', notes: '',
+  }
   const [form,    setForm]    = useState(EMPTY)
   const [formMsg, setFormMsg] = useState('')
   const f  = (k) => e => setForm(prev => ({ ...prev, [k]: e.target.value }))
@@ -288,7 +298,12 @@ export default function Clients() {
   }
 
   function openEdit(c) {
-    setEditForm({ prenom: c.prenom||'', nom: c.nom||'', email: c.email||'', tel: c.tel||'', date_naissance: c.date_naissance||'', ville: c.ville||'', specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', notes: c.notes||'' })
+    setEditForm({
+      prenom: c.prenom||'', nom: c.nom||'', nom_naissance: c.nom_naissance||'', email: c.email||'', tel: c.tel||'', date_naissance: c.date_naissance||'',
+      adresse_numero: c.adresse_numero||'', adresse_rue: c.adresse_rue||'', adresse_complement: c.adresse_complement||'', code_postal: c.code_postal||'', ville: c.ville||'',
+      situation_familiale: c.situation_familiale||'celibataire', environnement: c.environnement||'non_toxique', situation_professionnelle: c.situation_professionnelle||'actif', nombre_enfants: c.nombre_enfants ?? 0,
+      specialite: c.specialite||'Sophrologie', statut: c.statut||'actif', notes: c.notes||'',
+    })
     setEditingDetail(true)
   }
 
@@ -436,10 +451,40 @@ export default function Clients() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
               <Field label="Prénom"><input value={form.prenom} onChange={f('prenom')} placeholder="Sophie" style={inp} /></Field>
               <Field label="Nom"><input value={form.nom} onChange={f('nom')} placeholder="Legrand" style={inp} /></Field>
+              <Field label="Nom de naissance" style={{ gridColumn: '1/-1' }}><input value={form.nom_naissance} onChange={f('nom_naissance')} placeholder="Dupont" style={inp} /></Field>
               <Field label="Email"><input type="email" value={form.email} onChange={f('email')} placeholder="email@exemple.com" style={inp} /></Field>
               <Field label="Téléphone"><input type="tel" value={form.tel} onChange={f('tel')} placeholder="06 00 00 00 00" style={inp} /></Field>
               <Field label="Date de naissance"><input type="date" value={form.date_naissance} onChange={f('date_naissance')} style={inp} /></Field>
+              <Field label="Situation familiale">
+                <select value={form.situation_familiale} onChange={f('situation_familiale')} style={inp}>
+                  <option value="celibataire">Célibataire</option>
+                  <option value="marie">Marié(e)</option>
+                  <option value="divorce">Divorcé(e)</option>
+                  <option value="separe">Séparé(e)</option>
+                  <option value="veuf">Veuf</option>
+                  <option value="veuve">Veuve</option>
+                </select>
+              </Field>
+              <Field label="N°"><input value={form.adresse_numero} onChange={f('adresse_numero')} placeholder="12" style={inp} /></Field>
+              <Field label="Rue"><input value={form.adresse_rue} onChange={f('adresse_rue')} placeholder="Rue des Lilas" style={inp} /></Field>
+              <Field label="Complément d'adresse"><input value={form.adresse_complement} onChange={f('adresse_complement')} placeholder="Bâtiment B, étage 2…" style={inp} /></Field>
+              <Field label="Code postal"><input value={form.code_postal} onChange={f('code_postal')} placeholder="75000" style={inp} /></Field>
               <Field label="Ville"><input value={form.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
+              <Field label="Situation professionnelle">
+                <select value={form.situation_professionnelle} onChange={f('situation_professionnelle')} style={inp}>
+                  <option value="actif">Actif</option>
+                  <option value="chomage">Chômage</option>
+                  <option value="retraite">Retraite</option>
+                  <option value="invalide_malade">Invalide / malade</option>
+                </select>
+              </Field>
+              <Field label="Environnement">
+                <select value={form.environnement} onChange={f('environnement')} style={inp}>
+                  <option value="non_toxique">Non toxique</option>
+                  <option value="toxique">Toxique</option>
+                </select>
+              </Field>
+              <Field label="Nombre d'enfants"><input type="number" min={0} value={form.nombre_enfants} onChange={f('nombre_enfants')} style={inp} /></Field>
               <Field label="Spécialité">
                 <select value={form.specialite} onChange={f('specialite')} style={inp}>
                   <option>Aromathérapeute</option>
@@ -608,10 +653,44 @@ export default function Clients() {
             {(detailTab === 'infos' || editingDetail) && (
               editingDetail ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+                  <MField label="Nom de naissance" style={{ gridColumn: '1/-1' }}>
+                    <input value={editForm.nom_naissance} onChange={ef('nom_naissance')} style={mInp} />
+                  </MField>
                   <MField label="Email">      <input type="email" value={editForm.email}          onChange={ef('email')}          style={mInp} /></MField>
                   <MField label="Téléphone">  <input type="tel"   value={editForm.tel}            onChange={ef('tel')}            style={mInp} /></MField>
                   <MField label="Naissance">  <input type="date"  value={editForm.date_naissance} onChange={ef('date_naissance')} style={mInp} /></MField>
+                  <MField label="Situation familiale">
+                    <select value={editForm.situation_familiale} onChange={ef('situation_familiale')} style={mInp}>
+                      <option value="celibataire">Célibataire</option>
+                      <option value="marie">Marié(e)</option>
+                      <option value="divorce">Divorcé(e)</option>
+                      <option value="separe">Séparé(e)</option>
+                      <option value="veuf">Veuf</option>
+                      <option value="veuve">Veuve</option>
+                    </select>
+                  </MField>
+                  <MField label="N°">   <input value={editForm.adresse_numero}     onChange={ef('adresse_numero')}     style={mInp} /></MField>
+                  <MField label="Rue">  <input value={editForm.adresse_rue}        onChange={ef('adresse_rue')}        style={mInp} /></MField>
+                  <MField label="Complément d'adresse"><input value={editForm.adresse_complement} onChange={ef('adresse_complement')} style={mInp} /></MField>
+                  <MField label="Code postal"><input value={editForm.code_postal}  onChange={ef('code_postal')}        style={mInp} /></MField>
                   <MField label="Ville">      <input              value={editForm.ville}          onChange={ef('ville')}          style={mInp} /></MField>
+                  <MField label="Situation professionnelle">
+                    <select value={editForm.situation_professionnelle} onChange={ef('situation_professionnelle')} style={mInp}>
+                      <option value="actif">Actif</option>
+                      <option value="chomage">Chômage</option>
+                      <option value="retraite">Retraite</option>
+                      <option value="invalide_malade">Invalide / malade</option>
+                    </select>
+                  </MField>
+                  <MField label="Environnement">
+                    <select value={editForm.environnement} onChange={ef('environnement')} style={mInp}>
+                      <option value="non_toxique">Non toxique</option>
+                      <option value="toxique">Toxique</option>
+                    </select>
+                  </MField>
+                  <MField label="Nombre d'enfants">
+                    <input type="number" min={0} value={editForm.nombre_enfants} onChange={ef('nombre_enfants')} style={mInp} />
+                  </MField>
                   <MField label="Notes" style={{ gridColumn: '1/-1' }}>
                     <textarea value={editForm.notes} onChange={ef('notes')} rows={3} style={{ ...mInp, resize: 'vertical', fontFamily: 'inherit' }} />
                   </MField>
@@ -622,8 +701,15 @@ export default function Clients() {
                     {[
                       ['ti-mail',           'Email',       detail.email || '—'],
                       ['ti-phone',          'Téléphone',   detail.tel || '—'],
-                      ['ti-map-pin',        'Ville',       detail.ville || '—'],
+                      ['ti-map-pin',        'Adresse',     [detail.adresse_numero, detail.adresse_rue].filter(Boolean).join(' ') || '—'],
+                      ['ti-map-pin',        'Complément',  detail.adresse_complement || '—'],
+                      ['ti-map-pin',        'Ville',       [detail.code_postal, detail.ville].filter(Boolean).join(' ') || '—'],
                       ['ti-cake',           'Âge',         age(detail.date_naissance)],
+                      ['ti-id',             'Nom de naissance', detail.nom_naissance || '—'],
+                      ['ti-heart',          'Situation familiale', SITUATION_FAMILIALE_LABEL[detail.situation_familiale] || '—'],
+                      ['ti-briefcase',      'Situation pro.', SITUATION_PRO_LABEL[detail.situation_professionnelle] || '—'],
+                      ['ti-mood-smile',     'Environnement', ENVIRONNEMENT_LABEL[detail.environnement] || '—'],
+                      ['ti-baby-carriage',  "Nombre d'enfants", detail.nombre_enfants ?? '—'],
                       ['ti-calendar-stats', 'Séances',     loadingSeances ? '…' : `${clientSeances.length} séance(s)`],
                       ['ti-coin',           'CA total',    loadingSeances ? '…' : `${clientSeances.reduce((a,s)=>a+(parseFloat(s.prix_euros)||0),0).toFixed(0)} €`],
                     ].map(([icon, label, val]) => (
@@ -1136,9 +1222,9 @@ function Sel({ value, onChange, options }) {
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, children, style }) {
   return (
-    <div>
+    <div style={style}>
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>{label}</div>
       {children}
     </div>
