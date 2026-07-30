@@ -1,4 +1,8 @@
+import { useNavigate } from 'react-router-dom'
+import Footer from '../components/Footer'
+
 export default function PolitiqueConfidentialite() {
+  const navigate = useNavigate()
   const section = { marginBottom: 28 };
   const h2 = { fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 10 };
   const h3 = { fontSize: 14, fontWeight: 700, color: '#111827', marginTop: 16, marginBottom: 8 };
@@ -23,6 +27,7 @@ export default function PolitiqueConfidentialite() {
   ];
 
   return (
+    <>
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '48px 24px 80px', fontFamily: 'Inter, sans-serif' }}>
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>Politique de Confidentialité</div>
@@ -162,5 +167,12 @@ export default function PolitiqueConfidentialite() {
         <div style={{ ...p, fontSize: 12, color: '#9ca3af', marginTop: 16 }}>Document généré conformément au RGPD (UE) 2016/679 et aux recommandations de la CNIL.</div>
       </div>
     </div>
+    <Footer />
+    <div style={{ textAlign: 'center', paddingBottom: 32 }}>
+      <button onClick={() => navigate('/')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 8, border: '0.5px solid #e5e5e5', background: 'transparent', color: '#374151', cursor: 'pointer', fontSize: 13 }}>
+        ← Retour à l'accueil
+      </button>
+    </div>
+    </>
   );
 }
