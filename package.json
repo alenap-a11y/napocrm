@@ -18,13 +18,14 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@supabase/supabase-js": "^2.106.2",
+    "@vercel/analytics": "^2.0.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1",
+    "react-router-dom": "^7.11.0",
     "three": "^0.184.0",
-    "vercel": "^55.0.0"
+    "vercel": "^54.17.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

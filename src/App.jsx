@@ -9,6 +9,7 @@ import AgendaSettings from './pages/AgendaSettings'
 import AgendaPublic from './pages/AgendaPublic'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import { supabase } from './lib/supabase'
+import { Analytics } from '@vercel/analytics/react'
 
 function clearNapoLocalPrefs() {
   const NAPO_LOCAL_KEYS_PREFIX = ['napo_', 'naposolo_'];
@@ -16,7 +17,6 @@ function clearNapoLocalPrefs() {
     .filter(k => NAPO_LOCAL_KEYS_PREFIX.some(p => k.startsWith(p)))
     .forEach(k => localStorage.removeItem(k));
 }
-
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -60,25 +60,35 @@ export default function App() {
     setUser(null)
   }
 
+  let content = null
+
   if (location.pathname.startsWith('/rdv/')) {
     const slug = location.pathname.split('/rdv/')[1]
-    return <AgendaPublic slug={slug} />
+    content = <AgendaPublic slug={slug} />
+  } else if (location.pathname === '/politique-confidentialite') {
+    content = <PolitiqueConfidentialite />
+  } else if (loading) {
+    content = null
+  } else if (isRecovery) {
+    content = <ResetPassword onDone={() => setIsRecovery(false)} />
+  } else if (location.pathname === '/set-password') {
+    content = <SetPassword />
+  } else if (!user) {
+    content = <LoginPage />
+  } else if (location.pathname === '/mon-agenda') {
+    content = <AgendaSettings />
+  } else if (location.pathname.startsWith('/napo-cockpit-7X')) {
+    if (adminLoading) content = null
+    else if (!isAdmin) content = <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
+    else content = <AdminLayout user={user} onSignOut={signOut} />
+  } else {
+    content = <AppShell key={user?.id ?? 'guest'} user={user} onSignOut={signOut} />
   }
-  if (location.pathname === '/politique-confidentialite') {
-    return <PolitiqueConfidentialite />
-  }
-  if (loading) return null
-  if (isRecovery) return <ResetPassword onDone={() => setIsRecovery(false)} />
-  if (location.pathname === '/set-password') return <SetPassword />
-  if (!user) return <LoginPage />
-  
-  // Route pour la gestion d'agenda (protégée)
-  if (location.pathname === '/mon-agenda') return <AgendaSettings />
 
-  if (location.pathname.startsWith('/napo-cockpit-7X')) {
-    if (adminLoading) return null
-    if (!isAdmin) return <div style={{padding:'2rem',color:'red'}}>Accès refusé.</div>
-    return <AdminLayout user={user} onSignOut={signOut} />
-  }
-  return <AppShell key={user?.id ?? 'guest'} user={user} onSignOut={signOut} />
+  return (
+    <>
+      {content}
+      <Analytics />
+    </>
+  )
 }

@@ -43,3 +43,4 @@ scope_localstorage_step1.py
 *.jsx.bak
 scope_localstorage_step2.py
 *.jsx.bak2
+supabase/.temp/
