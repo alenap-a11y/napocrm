@@ -123,18 +123,30 @@ export default function PolitiqueConfidentialite() {
       </div>
 
       <div style={section}>
-        <div style={h2}>7. Modifications de la politique</div>
+        <div style={h2}>7. Mesure d'audience (Vercel Analytics)</div>
+        <div style={p}>
+          Nous utilisons Vercel Web Analytics pour mesurer la fréquentation du site
+          (nombre de visiteurs, pages consultées). Cet outil ne dépose aucun cookie
+          et ne collecte aucune donnée permettant de vous identifier individuellement
+          ou de vous suivre d'un site à l'autre. Les données sont agrégées et utilisées
+          uniquement à des fins statistiques internes, pour comprendre l'usage général
+          du site.
+        </div>
+      </div>
+
+      <div style={section}>
+        <div style={h2}>8. Modifications de la politique</div>
         <div style={p}>Cette politique de confidentialité peut être mise à jour pour refléter des changements dans nos pratiques ou pour des raisons légales. La version la plus récente est toujours disponible sur cette page.</div>
         <div style={p}>En cas de modification substantielle, les utilisateurs seront notifiés par email (si un email valide est associé à leur compte).</div>
       </div>
 
       <div style={section}>
-        <div style={h2}>8. Contact</div>
+        <div style={h2}>9. Contact</div>
         <div style={p}>Pour toute question concernant cette politique ou l'utilisation de vos données, contactez-nous à : <a href="mailto:contact@naposolo.com" style={linkStyle}>contact@naposolo.com</a></div>
       </div>
 
       <div style={section}>
-        <div style={h2}>9. Annexes</div>
+        <div style={h2}>10. Annexes</div>
         <div style={h3}>9.1. Définitions</div>
         <ul style={{ ...p, paddingLeft: 20, marginTop: -4 }}>
           <li>Données personnelles : Toute information se rapportant à une personne physique identifiée ou identifiable (ex. : nom, email, téléphone).</li>
