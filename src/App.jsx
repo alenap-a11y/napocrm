@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import AppShell from './AppShell'
 import LoginPage from './pages/LoginPage'
+import Landing from './pages/Landing'
 import SetPassword from './pages/SetPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
@@ -74,7 +75,7 @@ export default function App() {
   } else if (location.pathname === '/set-password') {
     content = <SetPassword />
   } else if (!user) {
-    content = <LoginPage />
+    content = location.pathname === '/login' ? <LoginPage /> : <Landing />
   } else if (location.pathname === '/mon-agenda') {
     content = <AgendaSettings />
   } else if (location.pathname.startsWith('/napo-cockpit-7X')) {
