@@ -147,8 +147,13 @@ export default function Landing() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingBottom: 40 }}>
           <img src={dashboardHero} alt="Aperçu du tableau de bord Naposolo" style={{ width: '100%', maxWidth: 560, borderRadius: 16, boxShadow: '0 12px 48px rgba(0,0,0,0.12)', border: '0.5px solid rgba(14,165,233,0.15)' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: '8%', background: '#fff', borderRadius: 20, padding: 10, border: '1px solid #bae6fd', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}>
+            <div style={{ width: 78, height: 160, borderRadius: 14, border: '6px solid #111827', overflow: 'hidden', background: '#111827' }}>
+              <img src={dashboardHero} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+            </div>
+          </div>
         </div>
       </section>
 
