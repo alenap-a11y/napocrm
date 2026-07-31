@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AppShell from './AppShell'
 import LoginPage from './pages/LoginPage'
 import Landing from './pages/Landing'
@@ -26,6 +26,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminLoading, setAdminLoading] = useState(true)
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -60,6 +61,12 @@ export default function App() {
     await supabase.auth.signOut()
     setUser(null)
   }
+
+  useEffect(() => {
+    if (user && location.pathname === '/login') {
+      navigate('/', { replace: true })
+    }
+  }, [user, location.pathname])
 
   let content = null
 
