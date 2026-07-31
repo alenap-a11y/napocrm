@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
+import dashboardHero from '../assets/dashboard_hero.png'
 import MetiersCarousel from '../components/MetiersCarousel'
 import '../components/MetiersCarousel.css'
 
@@ -129,50 +130,25 @@ export default function Landing() {
       <section className="landing-hero">
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 24 }}>
-            <i className="ti ti-feather" style={{ fontSize: 13 }} />
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0EA5E9', display: 'inline-block' }} />
             <span style={cs('hero_badge')}>{cms.hero_badge}</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em', ...cs('hero_title') }}>
-            {cms.hero_title}
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em' }}>
+            Le CRM qui <span style={{ color: '#0EA5E9' }}>pense comme vous</span>, en plus organisé.
           </h1>
           <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480, ...cs('hero_subtitle') }}>{cms.hero_subtitle}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <button onClick={() => alphaOpen ? setBetaOpen(true) : scrollTo('rejoindre')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600 }}>
-              <i className="ti ti-rocket" style={{ fontSize: 15 }} />
-              <span style={cs('hero_cta')}>{cms.hero_cta}</span>
+            <button onClick={() => setBetaOpen(true)} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600 }}>
+              Rejoindre l'alpha
             </button>
-            <span style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', ...cs('hero_tagline') }}>{cms.hero_tagline}</span>
+            <button type="button" onClick={() => navigate('/login')} style={{ padding: '12px 24px', borderRadius: 10, border: '1px solid #d1d5db', cursor: 'pointer', background: 'transparent', color: '#111827', fontSize: 15, fontWeight: 600 }}>
+              Se connecter
+            </button>
           </div>
         </div>
 
-        {/* CARTE INSCRIPTION */}
-        <div id="rejoindre" style={{ background: '#fff', borderRadius: 16, padding: 32, border: '0.5px solid rgba(14,165,233,0.2)', boxShadow: '0 8px 40px rgba(0,0,0,0.07)' }}>
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Rejoindre l'alpha 🚀</div>
-            <div style={{ fontSize: 13, color: '#9ca3af' }}>Accès gratuit · Places limitées</div>
-          </div>
-          {alphaOpen ? (
-            <button type="button" onClick={() => setBetaOpen(true)} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#4BBFCE,#7C9A7E)', color: '#fff', fontSize: 14, fontWeight: 700, minHeight: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <i className="ti ti-rocket" style={{ fontSize: 15 }} />Je rejoins l'alpha
-            </button>
-          ) : (
-            <div style={{ width: '100%', padding: '14px 16px', borderRadius: 9, background: '#FEF3C7', border: '0.5px solid #FCD34D', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 6 }}>
-                Inscriptions alpha temporairement fermees
-              </div>
-              <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5, marginBottom: 10 }}>
-                Les places sont limitees. Contactez-nous pour rejoindre la liste d'attente.
-              </div>
-              <a href="mailto:contact@naposolo.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#111827', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                <i className="ti ti-mail" style={{ fontSize: 13 }} />
-                contact@naposolo.com
-              </a>
-            </div>
-          )}
-          <div style={{ textAlign: 'center', fontSize: 13, color: '#6b7280', marginTop: 16 }}>
-            Déjà un compte ?{' '}
-            <button type="button" onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0EA5E9', fontWeight: 600 }}>Se connecter</button>
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <img src={dashboardHero} alt="Aperçu du tableau de bord Naposolo" style={{ width: '100%', maxWidth: 560, borderRadius: 16, boxShadow: '0 12px 48px rgba(0,0,0,0.12)', border: '0.5px solid rgba(14,165,233,0.15)' }} />
         </div>
       </section>
 
@@ -256,7 +232,15 @@ export default function Landing() {
               </div>
               <button onClick={closeBeta} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', lineHeight: 1, padding: 0 }}>×</button>
             </div>
-            {betaSent ? (
+            {!alphaOpen ? (
+              <div style={{ padding: '16px', borderRadius: 9, background: '#FEF3C7', border: '0.5px solid #FCD34D', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#92400E', marginBottom: 6 }}>Inscriptions alpha temporairement fermées</div>
+                <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.5, marginBottom: 10 }}>Les places sont limitées. Contactez-nous pour rejoindre la liste d'attente.</div>
+                <a href="mailto:contact@naposolo.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: '#111827', color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                  <i className="ti ti-mail" style={{ fontSize: 13 }} />contact@naposolo.com
+                </a>
+              </div>
+            ) : betaSent ? (
               <div style={{ padding: '20px', borderRadius: 10, background: '#EAF3DE', color: '#3B6D11', fontSize: 14, lineHeight: 1.6, textAlign: 'center' }}>
                 <i className="ti ti-mail-check" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
                 <strong>Compte créé !</strong><br/>
