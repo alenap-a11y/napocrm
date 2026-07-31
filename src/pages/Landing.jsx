@@ -200,13 +200,45 @@ export default function Landing() {
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: '0.5px solid rgba(14,165,233,0.15)', padding: '28px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: '#f0f9ff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src={napopetit} alt="Naposolo" style={{ height: 20, opacity: 0.7 }} />
-          <span style={{ fontSize: 13, color: '#9ca3af' }}>Naposolo — naposolo.com</span>
+      <footer style={{ borderTop: '0.5px solid rgba(14,165,233,0.15)', background: '#f0f9ff', padding: '48px 40px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 32, marginBottom: 32 }}>
+          <div style={{ maxWidth: 320 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <img src={napopetit} alt="Naposolo" style={{ height: 26 }} />
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Naposolo</span>
+            </div>
+            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+              Le CRM pensé pour les praticiens indépendants du bien-être. Gérez clients, séances et notes, sans complexité inutile.
+            </p>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0EA5E9', letterSpacing: '.05em', marginBottom: 14 }}>PRODUIT</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => scrollTo('fonctionnalites')} style={footerLinkStyle}>Fonctionnalités</button>
+              <span style={{ ...footerLinkStyle, cursor: 'default', color: '#c1c9d2' }} title="Tarification pas encore publique">Tarifs</span>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0EA5E9', letterSpacing: '.05em', marginBottom: 14 }}>ENTREPRISE</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <a href="mailto:contact@naposolo.com" style={footerLinkStyle}>Contact</a>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0EA5E9', letterSpacing: '.05em', marginBottom: 14 }}>LÉGAL</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <a href="/politique-confidentialite" style={footerLinkStyle}>Politique de confidentialité</a>
+            </div>
+          </div>
         </div>
-        <span style={{ fontSize: 13, color: '#9ca3af', ...cs('footer_city') }}>Fait avec ❤️ à {cms.footer_city}</span>
-        <a href="/politique-confidentialite" style={{ fontSize: 12, color: '#9ca3af', textDecoration: 'underline', marginTop: 2 }}>Politique de confidentialité</a>
+
+        <div style={{ maxWidth: 1100, margin: '0 auto', borderTop: '0.5px solid rgba(14,165,233,0.15)', paddingTop: 20, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>© 2026 Naposolo. Fait avec ❤️ à {cms.footer_city}.</span>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>naposolo.com</span>
+        </div>
       </footer>
 
       {/* MODAL BETA */}
@@ -298,6 +330,8 @@ export default function Landing() {
     </div>
   )
 }
+
+const footerLinkStyle = { fontSize: 13, color: '#6b7280', textDecoration: 'none', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }
 
 const inputStyle = {
   width: '100%', padding: '9px 12px', borderRadius: 8, minHeight: 44,
