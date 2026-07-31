@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
 import dashboardHero from '../assets/dashboard_hero.png'
+import oracleImg from '../assets/oracle_blurred.png'
+import bachImg from '../assets/bach_blurred.png'
+import energieImg from '../assets/energie_blurred.png'
+import humain3dImg from '../assets/3dh_blurred.png'
 import MetiersCarousel from '../components/MetiersCarousel'
 import '../components/MetiersCarousel.css'
 
@@ -25,6 +29,18 @@ function scrollTo(id) {
 
 export default function Landing() {
   const navigate = useNavigate()
+  const heroSlides = [
+    { img: dashboardHero, label: 'Vue d\'ensemble' },
+    { img: energieImg, label: 'NapoÉnergie' },
+    { img: bachImg, label: 'Fleurs de Bach' },
+    { img: oracleImg, label: 'NapoOracle' },
+    { img: humain3dImg, label: '3D Humain' },
+  ]
+  const [heroSlide, setHeroSlide] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setHeroSlide(s => (s + 1) % heroSlides.length), 4500)
+    return () => clearInterval(t)
+  }, [])
   const [cms,          setCms]          = useState(DEFAULT_CMS)
   const [features,     setFeatures]     = useState([])
   const [betaOpen,     setBetaOpen]     = useState(false)
@@ -147,12 +163,22 @@ export default function Landing() {
           </div>
         </div>
 
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingBottom: 40 }}>
-          <img src={dashboardHero} alt="Aperçu du tableau de bord Naposolo" style={{ width: '100%', maxWidth: 560, borderRadius: 16, boxShadow: '0 12px 48px rgba(0,0,0,0.12)', border: '0.5px solid rgba(14,165,233,0.15)' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: '8%', background: '#fff', borderRadius: 20, padding: 10, border: '1px solid #bae6fd', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}>
-            <div style={{ width: 78, height: 160, borderRadius: 14, border: '6px solid #111827', overflow: 'hidden', background: '#111827' }}>
-              <img src={dashboardHero} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 20 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
+            <img src={heroSlides[heroSlide].img} alt={heroSlides[heroSlide].label} style={{ width: '100%', borderRadius: 16, boxShadow: '0 12px 48px rgba(0,0,0,0.12)', border: '0.5px solid rgba(14,165,233,0.15)', display: 'block' }} />
+            <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(17,24,39,0.85)', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20 }}>
+              {heroSlides[heroSlide].label}
             </div>
+            <div style={{ position: 'absolute', bottom: -30, left: '8%', background: '#fff', borderRadius: 20, padding: 10, border: '1px solid #bae6fd', boxShadow: '0 10px 30px rgba(0,0,0,0.12)' }}>
+              <div style={{ width: 78, height: 160, borderRadius: 14, border: '6px solid #111827', overflow: 'hidden', background: '#111827' }}>
+                <img src={heroSlides[heroSlide].img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 52 }}>
+            {heroSlides.map((s, i) => (
+              <button key={i} onClick={() => setHeroSlide(i)} aria-label={s.label} style={{ width: i === heroSlide ? 22 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', background: i === heroSlide ? '#0EA5E9' : '#d1d5db', transition: 'width .2s' }} />
+            ))}
           </div>
         </div>
       </section>
