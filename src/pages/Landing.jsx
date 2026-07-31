@@ -131,12 +131,12 @@ export default function Landing() {
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#0EA5E9', background: '#E0F2FE', padding: '4px 12px', borderRadius: 20, marginBottom: 24 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0EA5E9', display: 'inline-block' }} />
-            <span>Pensé pour les praticiens et leurs clients</span>
+            <span>NapoÉnergie, Fleurs de Bach, NapoOracle… un module pour chaque pratique</span>
           </div>
           <h1 style={{ fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, lineHeight: 1.15, color: '#111827', marginBottom: 20, letterSpacing: '-0.02em' }}>
-            Fait pour vous. Fait pour <span style={{ color: '#0EA5E9' }}>vos séances</span>. Enfin simple.
+            Le bon outil pour <span style={{ color: '#0EA5E9' }}>chaque pratique</span>, enfin réuni.
           </h1>
-          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>Gérez vos clients, séances et notes dans un espace pensé pour renforcer votre lien avec eux — pas pour vous en éloigner.</p>
+          <p style={{ fontSize: 17, color: '#6b7280', lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>Énergéticien, praticien Reiki, thérapeute en fleurs de Bach, cartomancien… Naposolo s'adapte à votre métier avec des modules pensés spécifiquement pour vous.</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <button onClick={() => setBetaOpen(true)} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#111827', color: '#fff', fontSize: 15, fontWeight: 600 }}>
               Rejoindre l'alpha
