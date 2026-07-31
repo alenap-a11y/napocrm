@@ -116,7 +116,11 @@ export default function Landing() {
           <span className="landing-tagline" style={{ fontSize: 11, fontStyle: 'italic', color: '#7dd3fc', fontWeight: 500, ...cs('header_tagline') }}>{cms.header_tagline}</span>
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <button className="landing-nav-features" onClick={() => scrollTo('fonctionnalites')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500 }}>Fonctionnalités</button>
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={navLinkStyle}>Accueil</button>
+          <button className="landing-nav-features" onClick={() => scrollTo('fonctionnalites')} style={navLinkStyle}>Fonctionnalités</button>
+          <span style={navDisabledStyle} title="Bientôt disponible">Sécurité</span>
+          <span style={navDisabledStyle} title="Tarification pas encore publique">Tarifs</span>
+          <span style={navDisabledStyle} title="Bientôt disponible">À Propos</span>
           <button onClick={() => navigate('/login')} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 600 }}>Connexion</button>
         </nav>
       </header>
@@ -331,6 +335,8 @@ export default function Landing() {
   )
 }
 
+const navLinkStyle = { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#6b7280', fontWeight: 500, fontFamily: 'inherit', padding: 0 }
+const navDisabledStyle = { fontSize: 14, color: '#c1c9d2', fontWeight: 500, cursor: 'default' }
 const footerLinkStyle = { fontSize: 13, color: '#6b7280', textDecoration: 'none', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }
 
 const inputStyle = {
