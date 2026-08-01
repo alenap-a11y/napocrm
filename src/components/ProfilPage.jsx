@@ -168,6 +168,26 @@ export default function ProfilPage({ accent, onSignOut }) {
         </div>
       )}
 
+      {profil.slug && (
+        <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--color-background-secondary, #f5f5f5)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>Votre lien de réservation</div>
+            <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              naposolo.com/rdv/{profil.slug}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`https://naposolo.com/rdv/${profil.slug}`)
+              setSaveMsg('✓ Lien copié')
+              setTimeout(() => setSaveMsg(''), 2000)
+            }}
+            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--color-border, #ddd)', background: 'transparent', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' }}
+          >
+            Copier
+          </button>
+        </div>
+      )}
       <div className="pf-section-title">Statistiques</div>
       <div className="pf-stats">
         <div className="pf-stat"><div className="pf-stat-val">{stats.nbClients}</div><div className="pf-stat-lbl">Clients</div></div>
