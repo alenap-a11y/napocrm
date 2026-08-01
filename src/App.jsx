@@ -11,14 +11,12 @@ import AgendaPublic from './pages/AgendaPublic'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import { supabase } from './lib/supabase'
 import { Analytics } from '@vercel/analytics/react'
-
 function clearNapoLocalPrefs() {
   const NAPO_LOCAL_KEYS_PREFIX = ['napo_', 'naposolo_'];
   Object.keys(localStorage)
     .filter(k => NAPO_LOCAL_KEYS_PREFIX.some(p => k.startsWith(p)))
     .forEach(k => localStorage.removeItem(k));
 }
-
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,7 +25,6 @@ export default function App() {
   const [adminLoading, setAdminLoading] = useState(true)
   const location = useLocation()
   const navigate = useNavigate()
-
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const u = session?.user ?? null
@@ -56,20 +53,25 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
-
   async function signOut() {
     await supabase.auth.signOut()
     setUser(null)
   }
-
   useEffect(() => {
     if (user && location.pathname === '/login') {
       navigate('/', { replace: true })
     }
   }, [user, location.pathname])
-
+  useEffect(() => {
+    if (!user && !document.querySelector('[data-website-id]')) {
+      const script = document.createElement('script')
+      script.defer = true
+      script.src = 'https://cloud.umami.is/script.js'
+      script.setAttribute('data-website-id', 'd83f993a-60e6-4bfc-a534-f1ecc3784b14')
+      document.head.appendChild(script)
+    }
+  }, [user])
   let content = null
-
   if (location.pathname.startsWith('/rdv/')) {
     const slug = location.pathname.split('/rdv/')[1]
     content = <AgendaPublic slug={slug} />
@@ -92,7 +94,6 @@ export default function App() {
   } else {
     content = <AppShell key={user?.id ?? 'guest'} user={user} onSignOut={signOut} />
   }
-
   return (
     <>
       {content}
