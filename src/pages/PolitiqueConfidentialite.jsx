@@ -24,6 +24,7 @@ export default function PolitiqueConfidentialite() {
     ['Vercel', "Hébergement de l'application", 'États-Unis', 'Logs techniques (sans données utilisateurs)', "SCC conformes à l'Art. 46 RGPD"],
     ['Resend', 'Envoi des emails transactionnels', 'États-Unis', "Emails et noms (uniquement pour l'envoi)", "SCC conformes à l'Art. 46 RGPD"],
     ['Anthropic', 'Traitement des requêtes via NapoAssistant', 'États-Unis', 'Messages échangés (traitement en temps réel, sans stockage permanent)', "SCC conformes à l'Art. 46 RGPD"],
+    ['Umami', "Mesure d'audience de la landing page publique", 'Union Européenne', 'Statistiques de fréquentation anonymisées (aucune donnée personnelle)', "Hébergement UE, pas de transfert hors UE"],
   ];
 
   return (
@@ -85,7 +86,7 @@ export default function PolitiqueConfidentialite() {
           </table>
         </div>
         <div style={{ ...p, marginTop: 12 }}>
-          Transfert hors UE : Certains sous-traitants (Anthropic, Vercel, Resend, Supabase) sont situés hors Union Européenne. Les transferts de données vers ces pays sont encadrés par des Clauses Contractuelles Types (SCC) signées entre Naposolo et ses sous-traitants, conformément à l'article 46 du RGPD.
+          Transfert hors UE : Certains sous-traitants (Anthropic, Vercel, Resend, Supabase) sont situés hors Union Européenne. Les transferts de données vers ces pays sont encadrés par des Clauses Contractuelles Types (SCC) signées entre Naposolo et ses sous-traitants, conformément à l'article 46 du RGPD. Umami est hébergé dans l'Union Européenne et n'est pas concerné par ce transfert.
         </div>
         <div style={p}>Preuves : Les copies des SCC signées sont disponibles sur demande à <a href="mailto:contact@naposolo.com" style={linkStyle}>contact@naposolo.com</a>.</div>
         <div style={p}>Aucune donnée n'est vendue ni partagée à des fins publicitaires.</div>
@@ -128,7 +129,7 @@ export default function PolitiqueConfidentialite() {
       </div>
 
       <div style={section}>
-        <div style={h2}>7. Mesure d'audience (Vercel Analytics)</div>
+        <div style={h2}>7. Mesure d'audience</div>
         <div style={p}>
           Nous utilisons Vercel Web Analytics pour mesurer la fréquentation du site
           (nombre de visiteurs, pages consultées). Cet outil ne dépose aucun cookie
@@ -136,6 +137,14 @@ export default function PolitiqueConfidentialite() {
           ou de vous suivre d'un site à l'autre. Les données sont agrégées et utilisées
           uniquement à des fins statistiques internes, pour comprendre l'usage général
           du site.
+        </div>
+        <div style={p}>
+          Nous utilisons également Umami, un outil de mesure d'audience hébergé
+          dans l'Union Européenne, sur les pages publiques du site uniquement.
+          Comme Vercel Analytics, Umami ne dépose aucun cookie et ne collecte aucune
+          donnée personnelle identifiable — seules des statistiques de fréquentation
+          anonymisées et agrégées (pages visitées, provenance géographique
+          approximative, appareil) sont recueillies.
         </div>
       </div>
 
