@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSeancesSync } from '../hooks/useSeancesSync'
+import { supabase } from '../lib/supabase'
 
 const MOIS_COURT = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
@@ -31,6 +32,17 @@ export default function Napo3D() {
 
   const [activeTab, setActiveTab] = useState('liste')
   const [search, setSearch]       = useState('')
+  const [clients, setClients]     = useState([])
+
+  useEffect(() => {
+    if (activeTab !== 'nouvelle' || clients.length > 0) return
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('clients').select('id, prenom, nom').eq('user_id', user.id).order('nom')
+      setClients(data || [])
+    })()
+  }, [activeTab])
 
   const seances3D = (seances || []).filter(s => s.type_seance === '3D Humain')
     .sort((a, b) => (b.date_seance || '').localeCompare(a.date_seance || ''))
@@ -72,7 +84,7 @@ export default function Napo3D() {
           </div>
         </div>
         <button
-          onClick={() => navigate('/napo-3d/nouvelle?type=3D%20Humain')}
+          onClick={() => setActiveTab('nouvelle')}
           style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff', background: 'var(--color-accent)' }}
         >
           <i className="ti ti-plus" style={{ fontSize: 14 }} />Nouvelle séance
@@ -90,7 +102,7 @@ export default function Napo3D() {
         {[['liste', 'Liste des séances', 'ti-list'], ['nouvelle', 'Nouvelle séance', 'ti-plus']].map(([id, label, icon]) => (
           <button
             key={id}
-            onClick={() => id === 'nouvelle' ? navigate('/napo-3d/nouvelle?type=3D%20Humain') : setActiveTab(id)}
+            onClick={() => setActiveTab(id)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === id ? 600 : 400, color: activeTab === id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: activeTab === id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1 }}
           >
             <i className={`ti ${icon}`} style={{ fontSize: 14 }} />{label}
@@ -98,6 +110,8 @@ export default function Napo3D() {
         ))}
       </div>
 
+      {activeTab === 'liste' && (
+      <>
       <div style={{ position: 'relative', marginBottom: 14 }}>
         <i className="ti ti-search" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: 'var(--color-text-secondary)', pointerEvents: 'none' }} />
         <input
@@ -151,6 +165,28 @@ export default function Napo3D() {
       {filtered.length > 0 && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, fontSize: 13, color: 'var(--color-text-secondary)' }}>
           {filtered.length} séance(s) affichée(s)
+        </div>
+      )}
+      </>
+      )}
+
+      {activeTab === 'nouvelle' && (
+        <div style={{ background: 'var(--color-background-secondary)', borderRadius: 12, padding: '20px', border: '0.5px solid var(--color-border-tertiary)' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 20 }}>Choisir un client</div>
+          {clients.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Aucun client enregistré.</div>
+          ) : clients.map(c => (
+            <div key={c.id} onClick={() => navigate(`/napo-3d/nouvelle?type=3D%20Humain&client_id=${c.id}`)}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', marginBottom: 8, border: '0.5px solid var(--color-border-tertiary)', background: 'var(--color-background-primary)', transition: 'background .1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-background-primary)'}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EEEDFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#534AB7' }}>{c.prenom[0]}{c.nom[0]}</span>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{c.prenom} {c.nom}</div>
+              <i className="ti ti-arrow-right" style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginLeft: 'auto' }} />
+            </div>
+          ))}
         </div>
       )}
     </div>

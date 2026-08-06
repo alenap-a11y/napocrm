@@ -409,6 +409,28 @@ export default function NouvelleSeance() {
   const [type,  setType]  = useState(searchParams.get('type') || 'Sophrologie')
   const isFrom3D = searchParams.get('type') === '3D Humain'
 
+  /* Pré-remplissage client depuis l'URL (arrivée via écran "Choisir un client") */
+  useEffect(() => {
+    const cid = searchParams.get('client_id')
+    if (!cid) return
+    ;(async () => {
+      const { data: c } = await supabase
+        .from('clients')
+        .select('id, prenom, nom, tel, email, date_naissance, genre')
+        .eq('id', cid)
+        .single()
+      if (!c) return
+      setSelectedClientId(c.id)
+      setPrenom(c.prenom || '')
+      setNom(c.nom || '')
+      setClientSearch(`${c.prenom || ''} ${c.nom || ''}`.trim())
+      setTel(c.tel || '')
+      setEmail(c.email || '')
+      setDateNaissance(c.date_naissance || '')
+      setGenre(c.genre || '')
+    })()
+  }, [])
+
   /* Créneaux disponibles — rechargés à chaque changement de date */
   useEffect(() => {
     if (!date) return
