@@ -118,6 +118,7 @@ export default function Clients() {
   const [filterStatut,   setFilterStatut]   = useState('Tous')
   const [detail,         setDetail]         = useState(null)
   const [detailTab,      setDetailTab]      = useState('infos')
+  const [confirmDeleteClient, setConfirmDeleteClient] = useState(false)
   const clientSeances = detail ? getSeancesByClient(detail.id) : []
   const [loadingSeances, setLoadingSeances] = useState(false)
   const [showNewSeance,  setShowNewSeance]  = useState(false)
@@ -270,6 +271,7 @@ export default function Clients() {
     setDetail(c)
     setDetailTab('infos')
     setEditingDetail(false)
+    setConfirmDeleteClient(false)
     setShowNewSeance(false)
     setSeanceMsg('')
   }
@@ -319,6 +321,14 @@ export default function Clients() {
         email: editForm.email || null,
       })
     }
+  }
+
+  async function confirmDeleteClientNow() {
+    const seancesClient = getSeancesByClient(detail.id)
+    for (const s of seancesClient) { await deleteSeance(s.id) }
+    await deleteClient(detail.id)
+    setConfirmDeleteClient(false)
+    setDetail(null)
   }
 
   async function handleAddClient() {
@@ -1132,12 +1142,7 @@ export default function Clients() {
                 </>
               ) : (
                 <>
-                  <button onClick={async () => {
-                    const seancesClient = getSeancesByClient(detail.id)
-                    for (const s of seancesClient) { await deleteSeance(s.id) }
-                    await deleteClient(detail.id)
-                    setDetail(null)
-                  }} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
+                  <button onClick={() => setConfirmDeleteClient(true)} style={{ padding: '8px 14px', borderRadius: 8, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 13 }}>
                     <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer
                   </button>
                   <button onClick={() => openEdit(detail)} style={{ flex: 1, padding: '8px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
@@ -1151,6 +1156,32 @@ export default function Clients() {
           </div>
         </div>
       )}
+
+      {/* ══ MODAL CONFIRMATION SUPPRESSION CLIENT ══ */}
+      {confirmDeleteClient && detail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+          onClick={e => e.target === e.currentTarget && setConfirmDeleteClient(false)}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 14, width: 420, maxWidth: '90vw', padding: 24, boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#FBEAF0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: 18, color: '#c0392b' }} />
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-primary)', lineHeight: 1.55 }}>
+                Supprimer {clientName(detail)} effacera définitivement le client et ses {getSeancesByClient(detail.id).length} séance(s) associée(s). Cette action est irréversible.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmDeleteClient(false)} style={{ padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>
+                Annuler
+              </button>
+              <button onClick={confirmDeleteClientNow} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#c0392b', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <i className="ti ti-trash" style={{ marginRight: 5 }} />Supprimer définitivement
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalSeance && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModalSeance(null)}>
           <div style={{ background: 'var(--color-background-primary)', borderRadius: 14, padding: 24, maxWidth: 480, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
