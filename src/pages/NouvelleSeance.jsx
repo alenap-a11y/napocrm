@@ -817,7 +817,7 @@ export default function NouvelleSeance() {
 
         {/* ── GAUCHE : 2 colonnes (60% form / 40% historique) ── */}
         <div style={{ width: 480, flexShrink: 0, background: '#f9fafb', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: '1px solid #e5e7eb' }}>
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '60% 40%', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: (prenom.trim() || nom.trim()) ? '60% 40%' : '100% 0%', overflow: 'hidden' }}>
 
             {/* ── Formulaire 60% ── */}
             <div style={{ overflowY: 'auto', padding: '14px 14px 0', borderRight: '1px solid #e5e7eb' }}>
