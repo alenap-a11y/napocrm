@@ -12,6 +12,7 @@ import AdminMarketplace from './AdminMarketplace'
 import AdminBugs from './AdminBugs'
 import AdminAnalytics from './AdminAnalytics'
 import AdminTaches from './AdminTaches'
+import AdminAmeliorations from './AdminAmeliorations'
 import AdminUsers from './AdminUsers'
 import AdminUserDetail from './AdminUserDetail'
 import AdminRgpd from './AdminRgpd'
@@ -42,6 +43,7 @@ export default function AdminLayout({ user }) {
     { id: 'bugs', label: 'Bugs', icon: 'ti-bug', group: null },
     { id: 'analytics', label: 'Analytics', icon: 'ti-chart-line', group: null },
     { id: 'taches', label: 'À faire', icon: 'ti-list-check', group: null },
+    { id: 'ameliorations', label: 'Améliorations', icon: 'ti-history', group: null },
     { id: 'users',       label: 'Utilisateurs', icon: 'ti-users',      group: null },
   ]
 
@@ -134,6 +136,7 @@ export default function AdminLayout({ user }) {
         {page === 'bugs' && <AdminBugs />}
         {page === 'analytics' && <AdminAnalytics />}
         {page === 'taches' && <AdminTaches />}
+        {page === 'ameliorations' && <AdminAmeliorations />}
         {page === 'users' && !selectedUser && <AdminUsers onSelectUser={u => setSelectedUser(u)} />}
         {page === 'users' && selectedUser && <AdminUserDetail user={selectedUser} onBack={() => setSelectedUser(null)} />}
       </div>
