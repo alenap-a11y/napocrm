@@ -8,6 +8,7 @@ import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
 import AgendaSettings from './pages/AgendaSettings'
 import AgendaPublic from './pages/AgendaPublic'
+import ProfilAbonnement from './components/ProfilAbonnement'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import { supabase } from './lib/supabase'
 import { Analytics } from '@vercel/analytics/react'
@@ -85,6 +86,8 @@ export default function App() {
     content = <SetPassword />
   } else if (!user) {
     content = location.pathname === '/login' ? <LoginPage /> : <Landing />
+  } else if (location.pathname === '/profil/abonnement') {
+    content = <ProfilAbonnement />
   } else if (location.pathname === '/mon-agenda') {
     content = <AgendaSettings />
   } else if (location.pathname.startsWith('/napo-cockpit-7X')) {

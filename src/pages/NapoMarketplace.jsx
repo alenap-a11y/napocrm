@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { checkActivatedModules, activateCatalogueModule, deactivateCatalogueModule } from '../lib/marketplaceAddons'
 
 const TABS = ['Tous', 'Intelligence Artificielle', 'Experts', 'Outils', 'Modules & Addons']
 
@@ -320,20 +321,7 @@ export default function NapoMarketplace() {
 
   useEffect(() => {
     if (!currentUser || modules.length === 0) return
-    async function checkActivated() {
-      const results = {}
-      for (const m of modules) {
-        if (m.catalogue_deck_id) {
-          const { data } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', m.title).maybeSingle()
-          if (data) results[m.id] = true
-        } else if (m.catalogue_theme_id) {
-          const { data } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', m.title).maybeSingle()
-          if (data) results[m.id] = true
-        }
-      }
-      setActivated(results)
-    }
-    checkActivated()
+    checkActivatedModules(currentUser.id, modules).then(setActivated)
   }, [currentUser, modules])
 
   async function openCatalogueContent(mod) {
@@ -349,41 +337,13 @@ export default function NapoMarketplace() {
 
   async function activateCatalogue(mod) {
     if (!currentUser) return
-    if (mod.catalogue_deck_id) {
-      const { data: existant } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
-      if (existant) { setActivated(prev => ({ ...prev, [mod.id]: true })); return }
-      const { data: deckPerso } = await supabase.from('napo_oracle_decks_perso').insert({ user_id: currentUser.id, nom: mod.title }).select().single()
-      const { data: cartesSrc } = await supabase.from('napo_oracle_cartes_catalogue').select('*').eq('deck_id', mod.catalogue_deck_id).order('numero')
-      if (deckPerso && cartesSrc) {
-        await supabase.from('napo_oracle_cartes_perso').insert(cartesSrc.map(c => ({ deck_id: deckPerso.id, user_id: currentUser.id, numero: c.numero, nom: c.nom })))
-      }
-    } else if (mod.catalogue_theme_id) {
-      const { data: existant } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
-      if (existant) { setActivated(prev => ({ ...prev, [mod.id]: true })); return }
-      const { data: themePerso } = await supabase.from('napo_oracle_themes_perso').insert({ user_id: currentUser.id, nom: mod.title }).select().single()
-      const { data: questionsSrc } = await supabase.from('napo_oracle_questions_catalogue').select('*').eq('theme_id', mod.catalogue_theme_id)
-      if (themePerso && questionsSrc) {
-        await supabase.from('napo_oracle_questions_perso').insert(questionsSrc.map(q => ({ theme_id: themePerso.id, user_id: currentUser.id, texte: q.question })))
-      }
-    }
+    await activateCatalogueModule(currentUser.id, mod)
     setActivated(prev => ({ ...prev, [mod.id]: true }))
   }
 
   async function deactivateCatalogue(mod) {
     if (!currentUser) return
-    if (mod.catalogue_deck_id) {
-      const { data: deckPerso } = await supabase.from('napo_oracle_decks_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
-      if (deckPerso) {
-        await supabase.from('napo_oracle_cartes_perso').delete().eq('deck_id', deckPerso.id).eq('user_id', currentUser.id)
-        await supabase.from('napo_oracle_decks_perso').delete().eq('id', deckPerso.id)
-      }
-    } else if (mod.catalogue_theme_id) {
-      const { data: themePerso } = await supabase.from('napo_oracle_themes_perso').select('id').eq('user_id', currentUser.id).eq('nom', mod.title).maybeSingle()
-      if (themePerso) {
-        await supabase.from('napo_oracle_questions_perso').delete().eq('theme_id', themePerso.id).eq('user_id', currentUser.id)
-        await supabase.from('napo_oracle_themes_perso').delete().eq('id', themePerso.id)
-      }
-    }
+    await deactivateCatalogueModule(currentUser.id, mod)
     setActivated(prev => ({ ...prev, [mod.id]: false }))
   }
 

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { HistoriqueAccordion, SectionBientot } from './HistoriqueEtBientot'
 
 const inpStyle = {
   width: '100%', padding: '5px 8px', borderRadius: 6,
@@ -12,6 +14,7 @@ const inpStyle = {
 const EMPTY = { prenom: '', nom: '', tel: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '' }
 
 export default function ProfilPage({ accent, onSignOut }) {
+  const navigate = useNavigate()
   const [user,            setUser]            = useState(null)
   const [profil,          setProfil]          = useState(EMPTY)
   const [stats,           setStats]           = useState({ nbClients: 0, nbSeances: 0, moisActif: 0 })
@@ -294,13 +297,16 @@ export default function ProfilPage({ accent, onSignOut }) {
           </>
         ) : (
           <>
+            <HistoriqueAccordion />
             <button className="pf-btn" onClick={startEdit}><i className="ti ti-edit" style={{ color: accent }} /><span>Modifier le profil</span></button>
             <button className="pf-btn"><i className="ti ti-lock" style={{ color: '#534AB7' }} /><span>Changer le mot de passe</span></button>
-            <button className="pf-btn"><i className="ti ti-credit-card" style={{ color: '#0F6E56' }} /><span>Gérer l'abonnement</span></button>
+            <button className="pf-btn" onClick={() => navigate('/profil/abonnement')}><i className="ti ti-credit-card" style={{ color: '#0F6E56' }} /><span>Gérer l'abonnement</span></button>
             <button className="pf-btn pf-btn-danger" onClick={onSignOut}><i className="ti ti-power" /><span>Se déconnecter</span></button>
           </>
         )}
       </div>
+
+      <SectionBientot />
     </div>
   )
 }
