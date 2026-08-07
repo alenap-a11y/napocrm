@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { checkActivatedModules, activateCatalogueModule, deactivateCatalogueModule } from '../lib/marketplaceAddons'
+import { checkActivatedModules, activateCatalogueModule, deactivateCatalogueModule, activateMetierModule, deactivateMetierModule } from '../lib/marketplaceAddons'
 
 const TABS = ['Tous', 'Intelligence Artificielle', 'Experts', 'Outils', 'Modules & Addons']
 
@@ -347,6 +347,18 @@ export default function NapoMarketplace() {
     setActivated(prev => ({ ...prev, [mod.id]: false }))
   }
 
+  async function activateMetier(mod) {
+    if (!currentUser) return
+    await activateMetierModule(currentUser.id, mod.id)
+    setActivated(prev => ({ ...prev, [mod.id]: true }))
+  }
+
+  async function deactivateMetier(mod) {
+    if (!currentUser) return
+    await deactivateMetierModule(currentUser.id, mod.id)
+    setActivated(prev => ({ ...prev, [mod.id]: false }))
+  }
+
   function sendSuggestion() {
     if (!suggText.trim()) return
     const subject = encodeURIComponent('Suggestion Napo Marketplace')
@@ -572,18 +584,28 @@ export default function NapoMarketplace() {
                             {activated[m.id] ? 'Désactiver' : 'Activer'}
                           </button>
                         </div>
+                      ) : m.status === 'available' ? (
+                        <button
+                          style={{
+                            marginTop: 4, padding: '7px 0', fontSize: 12, fontWeight: 600,
+                            cursor: 'pointer', borderRadius: 8, width: '100%',
+                            border: activated[m.id] ? '0.5px solid #c00' : 'none',
+                            background: activated[m.id] ? 'transparent' : '#185FA5',
+                            color: activated[m.id] ? '#c00' : '#fff',
+                          }}
+                          onClick={() => activated[m.id] ? deactivateMetier(m) : activateMetier(m)}
+                        >
+                          {activated[m.id] ? 'Désactiver' : 'Activer'}
+                        </button>
                       ) : (
                         <button
-                          disabled={m.status !== 'available'}
+                          disabled
                           style={{
                             marginTop: 4, padding: '7px 0', fontSize: 12,
-                            cursor: m.status === 'available' ? 'pointer' : 'default',
-                            borderRadius: 8, width: '100%',
-                            border: m.status === 'available' ? 'none' : '0.5px solid var(--color-border-secondary)',
-                            background: m.status === 'available' ? '#185FA5' : 'transparent',
-                            color: m.status === 'available' ? '#fff' : 'var(--color-text-secondary)',
+                            cursor: 'default', borderRadius: 8, width: '100%',
+                            border: '0.5px solid var(--color-border-secondary)',
+                            background: 'transparent', color: 'var(--color-text-secondary)',
                           }}
-                          onClick={() => { if (m.status === 'available' && m.path) window.location.hash = m.path }}
                         >
                           {m.cta}
                         </button>

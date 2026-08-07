@@ -32,6 +32,31 @@ const FicheSeance = lazy(() => import('./pages/FicheSeance'))
 const BilanMiParcours = lazy(() => import('./pages/BilanMiParcours'))
 const Energie = lazy(() => import('./pages/Energie'))
 const EnergieSéance = lazy(() => import('./pages/EnergieSéance'))
+const Magnetisme = lazy(() => import('./pages/Magnetisme'))
+const MagnetismeSeance = lazy(() => import('./pages/MagnetismeSeance'))
+const Mediumnite = lazy(() => import('./pages/Mediumnite'))
+const MediumniteSeance = lazy(() => import('./pages/MediumniteSeance'))
+const Radiesthesie = lazy(() => import('./pages/Radiesthesie'))
+const RadiesthesieSeance = lazy(() => import('./pages/RadiesthesieSeance'))
+const NapoLive = lazy(() => import('./components/NapoLive'))
+const Yoga = lazy(() => import('./pages/Yoga'))
+const YogaSeance = lazy(() => import('./pages/YogaSeance'))
+const Naturopathie = lazy(() => import('./pages/Naturopathie'))
+const NaturopathieSeance = lazy(() => import('./pages/NaturopathieSeance'))
+const Aromatherapie = lazy(() => import('./pages/Aromatherapie'))
+const AromatherapieSeance = lazy(() => import('./pages/AromatherapieSeance'))
+const Sonotherapie = lazy(() => import('./pages/Sonotherapie'))
+const SonotherapieSeance = lazy(() => import('./pages/SonotherapieSeance'))
+const Massage = lazy(() => import('./pages/Massage'))
+const MassageSeance = lazy(() => import('./pages/MassageSeance'))
+const Sophrologie = lazy(() => import('./pages/Sophrologie'))
+const SophrologieSeance = lazy(() => import('./pages/SophrologieSeance'))
+const Hypnotherapie = lazy(() => import('./pages/Hypnotherapie'))
+const HypnotherapieSeance = lazy(() => import('./pages/HypnotherapieSeance'))
+const Chamanisme = lazy(() => import('./pages/Chamanisme'))
+const ChamanismeSeance = lazy(() => import('./pages/ChamanismeSeance'))
+const Astrologie = lazy(() => import('./pages/Astrologie'))
+const AstrologieSeance = lazy(() => import('./pages/AstrologieSeance'))
 const NapoOracle = lazy(() => import('./pages/NapoOracle'))
 const NapoOracleSéance = lazy(() => import('./pages/NapoOracleSéance'))
 const Napo3D = lazy(() => import('./pages/Napo3D'))
@@ -59,13 +84,25 @@ class ChunkErrorBoundary extends React.Component {
 const ALL_SB_ITEMS = [
   { id: 'board',    label: 'Board',    icon: 'ti-layout-dashboard', to: '/board'    },
   { id: 'seances',  label: 'Séances',  icon: 'ti-calendar-plus',    to: '/seances'  },
-  { id: 'napo3d',   label: 'Napo-3D',  icon: 'ti-3d-cube-sphere',   to: '/napo-3d'  },
+  { id: 'napo3d',   label: 'Napo-3D',  icon: 'ti-3d-cube-sphere',   to: '/napo-3d', moduleTitle: '3D Humains'  },
   { id: 'clients',     label: 'Clients',        icon: 'ti-users',          to: '/clients'                        },
-  { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach'                 },
+  { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach', moduleTitle: 'Fleurs de Bach'                 },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
-  { id: 'energie',  label: 'Énergie',  icon: 'ti-sparkles',         to: '/energie'  },
-  { id: 'napo-oracle', label: 'Napo-Oracle', icon: 'ti-cards', to: '/napo-oracle' },
+  { id: 'energie',  label: 'Énergie',  icon: 'ti-sparkles',         to: '/energie', moduleTitle: 'NapoÉnergie' },
+  { id: 'magnetisme', label: 'Magnétisme', icon: 'ti-hand-stop',    to: '/magnetisme', moduleTitle: 'Napo-Magnétiseur' },
+  { id: 'mediumnite', label: 'Médium',     icon: 'ti-ghost',        to: '/mediumnite', moduleTitle: 'Napo-Médium' },
+  { id: 'radiesthesie', label: 'Radiesthésie', icon: 'ti-pendulum', to: '/radiesthesie', moduleTitle: 'Napo-Radiesthésie' },
+  { id: 'napo-yoga', label: 'Yoga', icon: 'ti-yoga', to: '/napo-yoga', moduleTitle: 'Napo-Yoga' },
+  { id: 'napo-naturopathie', label: 'Naturopathie', icon: 'ti-plant-2', to: '/napo-naturopathie', moduleTitle: 'Napo-Naturopathie' },
+  { id: 'napo-aromatherapie', label: 'Aromathérapie', icon: 'ti-droplet', to: '/napo-aromatherapie', moduleTitle: 'Napo-Aromathérapie' },
+  { id: 'napo-sonotherapie', label: 'Sonothérapie', icon: 'ti-wave-sine', to: '/napo-sonotherapie', moduleTitle: 'Napo-Sonothérapie' },
+  { id: 'napo-massage', label: 'Massage', icon: 'ti-hand-move', to: '/napo-massage', moduleTitle: 'Napo-Massage' },
+  { id: 'napo-sophrologie', label: 'Sophrologie', icon: 'ti-mood-smile', to: '/napo-sophrologie', moduleTitle: 'Napo-Sophrologie' },
+  { id: 'napo-hypnotherapie', label: 'Hypnothérapie', icon: 'ti-spiral', to: '/napo-hypnotherapie', moduleTitle: 'Napo-Hypnothérapie' },
+  { id: 'napo-chamanisme', label: 'Chamanisme', icon: 'ti-feather', to: '/napo-chamanisme', moduleTitle: 'Napo-Chamanisme' },
+  { id: 'napo-astrologie', label: 'Astrologie', icon: 'ti-moon-stars', to: '/napo-astrologie', moduleTitle: 'Napo-Astrologie' },
+  { id: 'napo-oracle', label: 'Napo-Oracle', icon: 'ti-cards', to: '/napo-oracle', moduleTitle: 'NapoOracle' },
   { id: 'factures', label: 'Facturation', icon: 'ti-file',       to: '/factures' },
   { id: 'fiscal',   label: 'Fiscalité', icon: 'ti-calculator',   to: '/fiscal'   },
   { id: 'marketplace',   label: 'Marketplace',  icon: 'ti-building-store',  to: '/marketplace'    },
@@ -133,6 +170,8 @@ export default function AppShell({ user, onSignOut }) {
   const [sbItems, setSbItems] = useState(() => loadSbItems(user?.id))
   const [sbRemoved, setSbRemoved] = useState(() => loadSbRemoved(user?.id))
   const [sbVis, setSbVis] = useState(() => loadSbVis(user?.id))
+  const [metierModuleMap, setMetierModuleMap] = useState({})
+  const [activeModuleIds, setActiveModuleIds] = useState(new Set())
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
@@ -165,6 +204,27 @@ export default function AppShell({ user, onSignOut }) {
       }
     })
   }, [])
+
+  // Gating sidebar : une entrée liée à un module Napo-Métiers (moduleTitle)
+  // n'est visible que si ce module est présent dans profil_modules_actifs
+  // pour ce praticien. Ré-vérifié à chaque montage (pas de state figé).
+  useEffect(() => {
+    if (!user?.id) return
+    async function loadGating() {
+      const { data: mods } = await supabase.from('marketplace_modules')
+        .select('id, title').eq('category', 'Napo-Métiers').eq('status', 'available')
+      const map = {}
+      ;(mods || []).forEach(m => { map[m.title] = m.id })
+      setMetierModuleMap(map)
+      const ids = (mods || []).map(m => m.id)
+      if (ids.length) {
+        const { data: actifs } = await supabase.from('profil_modules_actifs')
+          .select('module_id').eq('user_id', user.id).in('module_id', ids)
+        setActiveModuleIds(new Set((actifs || []).map(a => a.module_id)))
+      }
+    }
+    loadGating()
+  }, [user?.id])
 
   useEffect(() => {
     if (searchOpen && searchInputRef.current) searchInputRef.current.focus()
@@ -320,7 +380,14 @@ export default function AppShell({ user, onSignOut }) {
           accent={accent} bgCol={bgCol}
           activePanel={activePanel} setActivePanel={setActivePanel}
           username={username}
-          items={sbItems.filter(i => sbVis[i.id] !== false)} setItems={setSbItems}
+          items={sbItems.filter(i => {
+            if (sbVis[i.id] === false) return false
+            if (i.moduleTitle) {
+              const modId = metierModuleMap[i.moduleTitle]
+              if (modId && !activeModuleIds.has(modId)) return false
+            }
+            return true
+          })} setItems={setSbItems}
         />}
         {isMobile && <BottomNav accent={accent} />}
 
@@ -497,6 +564,31 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/notes"    element={<Notes />} />
               <Route path="/energie"              element={<Energie />} />
               <Route path="/energie/:id"          element={<EnergieSéance />} />
+              <Route path="/magnetisme"           element={<Magnetisme />} />
+              <Route path="/magnetisme/:id"       element={<MagnetismeSeance />} />
+              <Route path="/mediumnite"           element={<Mediumnite />} />
+              <Route path="/mediumnite/:id"       element={<MediumniteSeance />} />
+              <Route path="/radiesthesie"         element={<Radiesthesie />} />
+              <Route path="/radiesthesie/:id"     element={<RadiesthesieSeance />} />
+              <Route path="/live/:module/:id"     element={<NapoLive />} />
+              <Route path="/napo-yoga"            element={<Yoga />} />
+              <Route path="/napo-yoga/:id"        element={<YogaSeance />} />
+              <Route path="/napo-naturopathie"      element={<Naturopathie />} />
+              <Route path="/napo-naturopathie/:id"  element={<NaturopathieSeance />} />
+              <Route path="/napo-aromatherapie"     element={<Aromatherapie />} />
+              <Route path="/napo-aromatherapie/:id" element={<AromatherapieSeance />} />
+              <Route path="/napo-sonotherapie"      element={<Sonotherapie />} />
+              <Route path="/napo-sonotherapie/:id"  element={<SonotherapieSeance />} />
+              <Route path="/napo-massage"           element={<Massage />} />
+              <Route path="/napo-massage/:id"       element={<MassageSeance />} />
+              <Route path="/napo-sophrologie"       element={<Sophrologie />} />
+              <Route path="/napo-sophrologie/:id"   element={<SophrologieSeance />} />
+              <Route path="/napo-hypnotherapie"     element={<Hypnotherapie />} />
+              <Route path="/napo-hypnotherapie/:id" element={<HypnotherapieSeance />} />
+              <Route path="/napo-chamanisme"        element={<Chamanisme />} />
+              <Route path="/napo-chamanisme/:id"    element={<ChamanismeSeance />} />
+              <Route path="/napo-astrologie"        element={<Astrologie />} />
+              <Route path="/napo-astrologie/:id"    element={<AstrologieSeance />} />
               <Route path="/napo-oracle"              element={<NapoOracle />} />
               <Route path="/napo-oracle/:id"          element={<NapoOracleSéance />} />
               <Route path="/fleurs-de-bach"                element={<PageBach />} />
