@@ -191,27 +191,27 @@ export default function Clients() {
   }, [napoNavState, location.state, clients])
 
   useEffect(() => {
-    if (detailTab === 'energie' && detail) {
+    if ((detailTab === 'energie' || detailTab === 'recap' || detailTab === 'stats') && detail) {
       setLoadingEnergie(true)
       supabase.from('energie_seances').select('id, numero_seance, date_seance, heure_seance, outil, note_globale')
         .eq('client_id', detail.id).order('date_seance', { ascending: false })
         .then(({ data }) => { setEnergieSeances(data || []); setLoadingEnergie(false) })
-      return
     }
-    if (detailTab === 'oracle' && detail) {
+    if ((detailTab === 'oracle' || detailTab === 'recap' || detailTab === 'stats') && detail) {
       setLoadingOracle(true)
       supabase.from('napo_oracle_seances').select('id, numero_seance, date_seance, heure_seance, deck_utilise, note_globale')
         .eq('client_id', detail.id).order('date_seance', { ascending: false })
         .then(({ data }) => { setOracleSeances(data || []); setLoadingOracle(false) })
-      return
     }
-    if (detailTab !== 'bach' || !detail) { setBachFiches([]); return }
-    setLoadingBach(true)
-    supabase.from('fiches_bach')
-      .select('id, created_at, selection, client_info, persos')
-      .eq('client_id', detail.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => { setBachFiches(data || []); setLoadingBach(false) })
+    if ((detailTab === 'bach' || detailTab === 'recap' || detailTab === 'stats') && detail) {
+      setLoadingBach(true)
+      supabase.from('fiches_bach')
+        .select('id, created_at, selection, client_info, persos')
+        .eq('client_id', detail.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => { setBachFiches(data || []); setLoadingBach(false) })
+    }
+    if (detailTab !== 'bach' && detailTab !== 'recap' && detailTab !== 'stats') { setBachFiches([]) }
   }, [detailTab, detail?.id])
 
   async function handleAddSeanceFromFiche() {
@@ -648,7 +648,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18, overflowX: 'auto' }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['energie','⚡ Énergie','ti-sparkles'],['oracle','🔮 Oracle','ti-cards']].map(([id, label, icon]) => (
+                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['recap','Récap','ti-list-details'],['stats','Stats','ti-chart-bar'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['energie','⚡ Énergie','ti-sparkles'],['oracle','🔮 Oracle','ti-cards']].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -890,6 +890,76 @@ export default function Clients() {
             )}
 
             {/* ── Onglet NOTES ── */}
+            {detailTab === 'recap' && (
+              <div>
+                {(() => {
+                  const events = [
+                    ...clientSeances.map(s => ({ ...s, _type: 'Séance', _color: '#378ADD', _date: s.date_seance, _heure: s.heure_seance })),
+                    ...energieSeances.map(s => ({ ...s, _type: 'Énergie', _color: '#1D9E75', _date: s.date_seance, _heure: s.heure_seance })),
+                    ...oracleSeances.map(s => ({ ...s, _type: 'Oracle', _color: '#993556', _date: s.date_seance, _heure: s.heure_seance })),
+                    ...bachFiches.map(s => ({ ...s, _type: 'Bach', _color: '#854F0B', _date: s.created_at ? s.created_at.slice(0,10) : null, _heure: null }))
+                  ].filter(e => e._date).sort((a, b) => new Date(b._date) - new Date(a._date))
+
+                  if (events.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>Aucun événement enregistré</div>
+
+                  return events.map((e, idx) => {
+                    const d = e._date.slice(0,10).split('-')
+                    const dateStr = `${parseInt(d[2])} ${['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'][parseInt(d[1])-1]} ${d[0]}`
+                    return (
+                      <div key={`${e._type}-${e.id}`} style={{ display:'flex', gap:12, alignItems:'flex-start', padding:'10px 0', borderBottom: idx < events.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:e._color, flexShrink:0, marginTop:6 }} />
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontSize:13, fontWeight:500 }}>{dateStr}</span>
+                            {e._heure && <span style={{ fontSize:12, color:'var(--color-text-secondary)' }}>à {e._heure.slice(0,5)}</span>}
+                            <span style={{ fontSize:11, fontWeight:600, color:e._color, marginLeft:'auto' }}>{e._type}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            )}
+
+            {detailTab === 'stats' && (() => {
+              const allEvents = [...clientSeances, ...energieSeances, ...oracleSeances]
+              const totalCA = clientSeances.reduce((sum, s) => sum + (parseFloat(s.prix_euros) || 0), 0)
+              const dates = [
+                ...allEvents.map(s => s.date_seance).filter(Boolean),
+                ...bachFiches.map(s => s.created_at ? s.created_at.slice(0,10) : null).filter(Boolean)
+              ].sort()
+              const derniere = dates.length ? dates[dates.length - 1] : null
+              const derniereStr = derniere ? (() => {
+                const d = derniere.slice(0,10).split('-')
+                return `${parseInt(d[2])} ${['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'][parseInt(d[1])-1]} ${d[0]}`
+              })() : '—'
+
+              return (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(2, 1fr)', gap:12 }}>
+                  <div style={{ background:'var(--color-background-secondary)', borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>Séances totales (tous modules)</div>
+                    <div style={{ fontSize:24, fontWeight:600, marginTop:4 }}>{clientSeances.length + energieSeances.length + oracleSeances.length + bachFiches.length}</div>
+                  </div>
+                  <div style={{ background:'var(--color-background-secondary)', borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>Dernière activité</div>
+                    <div style={{ fontSize:24, fontWeight:600, marginTop:4 }}>{derniereStr}</div>
+                  </div>
+                  <div style={{ background:'var(--color-background-secondary)', borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>CA renseigné (séances classiques)</div>
+                    <div style={{ fontSize:24, fontWeight:600, marginTop:4 }}>{totalCA.toFixed(2)} €</div>
+                    <div style={{ fontSize:11, color:'var(--color-text-secondary)', marginTop:2 }}>Montants renseignés, pas paiements confirmés</div>
+                  </div>
+                  <div style={{ background:'var(--color-background-secondary)', borderRadius:10, padding:16 }}>
+                    <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>Répartition par module</div>
+                    <div style={{ fontSize:13, marginTop:4, lineHeight:1.8 }}>
+                      Séances {clientSeances.length} · Énergie {energieSeances.length} · Oracle {oracleSeances.length} · Bach {bachFiches.length}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
             {detailTab === 'notes' && !editingDetail && (
               <div>
                 {detail.notes ? (
