@@ -1,0 +1,61 @@
+.hero-glow {
+  position: absolute;
+  width: 900px;
+  height: 900px;
+  background: radial-gradient(circle, rgba(124, 92, 252, 0.10) 0%, rgba(22, 137, 232, 0.06) 40%, rgba(24, 183, 160, 0.04) 70%, transparent 85%);
+  z-index: 0;
+  top: -250px;
+  right: -200px;
+  pointer-events: none;
+}
+.glow-bottom {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(240, 160, 75, 0.10) 0%, rgba(124, 92, 252, 0.05) 50%, transparent 75%);
+  z-index: 0;
+  bottom: -250px;
+  left: -200px;
+  pointer-events: none;
+}
+.glow-center {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(22, 137, 232, 0.08) 0%, rgba(124, 92, 252, 0.04) 50%, transparent 70%);
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.marquee-container {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  opacity: 0.5;
+}
+.card-hover {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+}
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 30px 60px rgba(11, 24, 48, 0.12), 0 10px 25px rgba(124, 92, 252, 0.08);
+}
+.gradient-text {
+  background: linear-gradient(135deg, #1689E8 0%, #7C5CFC 50%, #18B7A0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
