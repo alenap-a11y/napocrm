@@ -151,7 +151,7 @@ button.sb-bot-btn { background: none; border: none; font: inherit; text-align: l
 .main { flex: 1; overflow-y: auto; background: var(--color-background-primary); }
 
 /* Dashboard */
-.dash { padding: 28px 32px; }
+.dash { padding: 18px 22px; }
 .dash-head { display: flex; align-items: center; gap: 12px; margin-bottom: 1.2rem; }
 .dash-head i { font-size: 24px; }
 .dash-title { font-size: 22px; font-weight: 600; color: var(--color-text-primary); }
@@ -351,15 +351,15 @@ button.sb-bot-btn { background: none; border: none; font: inherit; text-align: l
 }
 
 /* ─── DASHBOARD GRILLES ────────────────────────────────────────────────────── */
-.dash-metrics-row  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.dash-row-top      { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.dash-line2-grid   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-.dash-line3-grid   { display: grid; grid-template-columns: 1fr 1fr;     gap: 16px; }
-.dash-line4-grid   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.dash-metrics-row  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.dash-row-top      { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; margin-bottom: 9px; }
+.dash-line2-grid   { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+.dash-line3-grid   { display: grid; grid-template-columns: 1fr 1fr;     gap: 9px; }
+.dash-line4-grid   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
 
 /* Tablette 768–1023px */
 @media (max-width: 1023px) {
-  .dash              { padding: 20px 18px; }
+  .dash              { padding: 16px 18px; }
   .dash-metrics-row  { grid-template-columns: repeat(3, 1fr); }
   .dash-row-top      { grid-template-columns: 1fr 1fr; }
   .dash-line2-grid   { grid-template-columns: 1fr 1fr; }

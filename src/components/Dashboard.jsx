@@ -17,6 +17,14 @@ const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 const MONTHS_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
 
+// Couleurs des modules — source unique, réutilisée par le camembert et les barres empilées
+const MODULES = [
+  { key: 'energie', name: 'Énergétique', color: '#639922' },
+  { key: 'oracle',  name: 'Oracle',      color: '#993556' },
+  { key: 'bach',    name: 'Bach',        color: '#EF9F27' },
+  { key: 'autres',  name: 'Autres',      color: '#888780' },
+]
+
 
 // ─── Utilitaires ─────────────────────────────────────────────────────────────
 
@@ -111,7 +119,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
 
       {/* Calendrier */}
       <div style={cardStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <button onClick={prevMonth} style={iconBtnStyle} aria-label="Mois précédent">
             <i className="ti ti-chevron-left" style={{ fontSize: 15 }} aria-hidden="true" />
           </button>
@@ -146,7 +154,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
                 aria-label={`${day} ${MONTHS[currentMonth]}`}
                 aria-pressed={isSelected}
                 style={{
-                  position: 'relative', aspectRatio: '1', border: 'none', borderRadius: 6,
+                  position: 'relative', aspectRatio: '1.6', minHeight: 26, border: 'none', borderRadius: 6,
                   fontSize: 12, cursor: 'pointer',
                   background: isSelected ? accent : isToday ? `${accent}22` : 'transparent',
                   color: isSelected ? '#fff' : isToday ? accent : 'var(--color-text-primary)',
@@ -164,8 +172,8 @@ function AgendaCalendrier({ accent, onNavigate }) {
           })}
         </div>
 
-        <div style={{ marginTop: 12, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ marginTop: 8, paddingTop: 7, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
               {rdvDuMois.length} RDV ce mois
             </span>
@@ -187,7 +195,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
 
       {/* RDV du jour sélectionné */}
       <div style={cardStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
               {DAYS[selectedDay.getDay()]} {selectedDay.getDate()} {MONTHS[selectedDay.getMonth()]}
@@ -198,7 +206,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 260, overflowY: 'auto' }}>
           {rdvDuJour.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--color-text-secondary)', fontSize: 13 }}>
               <i className="ti ti-calendar-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} aria-hidden="true" />
@@ -209,9 +217,9 @@ function AgendaCalendrier({ accent, onNavigate }) {
               key={r.id}
               onClick={() => onNavigate?.('/seances')}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                borderRadius: 8, background: 'var(--color-background-secondary)',
-                borderLeft: `3px solid ${accent}`, cursor: 'pointer', transition: 'background .1s',
+                display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px',
+                borderRadius: 6, background: 'var(--color-background-secondary)',
+                borderLeft: `2px solid ${accent}`, cursor: 'pointer', transition: 'background .1s',
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--color-border-tertiary)'}
               onMouseLeave={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
@@ -230,7 +238,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
         </div>
 
         {notesDuJour.length > 0 && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+          <div style={{ marginTop: 7, paddingTop: 7, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500, marginBottom: 6 }}>NOTES</div>
             {notesDuJour.map(n => (
               <div
@@ -246,7 +254,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
         )}
 
         {rdvDuJour.length > 0 && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+          <div style={{ marginTop: 7, paddingTop: 7, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500, marginBottom: 6 }}>
               DERNIERS RDV
             </div>
@@ -260,7 +268,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
                   onClick={() => onNavigate?.('/clients', { state: { searchClient: r.client } })}
                   style={{
                     display: 'flex', justifyContent: 'space-between',
-                    fontSize: 12, padding: '5px 6px', borderRadius: 6,
+                    fontSize: 12, padding: '3px 6px', borderRadius: 6,
                     color: 'var(--color-text-secondary)', cursor: 'pointer',
                     transition: 'background .1s',
                   }}
@@ -350,7 +358,7 @@ const cardStyle = {
   background: 'var(--color-background-primary)',
   border: '0.5px solid var(--color-border-tertiary)',
   borderRadius: 10,
-  padding: 16,
+  padding: 9,
 }
 
 const iconBtnStyle = {
@@ -429,7 +437,7 @@ function AnniversairesWidget({ accent, clients, onNavigate }) {
     .sort((a, b) => a.joursRestants - b.joursRestants)
     .slice(0, 3)
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14 }}>
+    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <i className="ti ti-cake" style={{ fontSize: 14, color: accent }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>Anniversaires</span>
@@ -472,7 +480,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [lunePct,   setLunePct]   = useState(0)
   const [luneNom,   setLuneNom]   = useState('')
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)])
-  const [mantraApi, setMantraApi] = useState(null)
   const [prenom, setPrenom]               = useState('')
   const [recentSeances,   setRecentSeances]   = useState([])
   const [monthStats,      setMonthStats]      = useState({ count: 0, revenue: 0, clientsCount: 0 })
@@ -550,38 +557,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   }, [time])
 
   useEffect(() => {
-    async function fetchMantra() {
-      try {
-        const citations = [
-          { content: "Le succès c'est d'aller d'échec en échec sans perdre son enthousiasme.", author: "Winston Churchill" },
-          { content: "La vie, c'est ce qui arrive quand on est occupé à faire d'autres projets.", author: "John Lennon" },
-          { content: "Ce que l'esprit conçoit et croit, il peut l'accomplir.", author: "Napoleon Hill" },
-          { content: "Le mouvement crée la clarté.", author: "Sagesse" },
-          { content: "Un coup pratiqué dix mille fois vaut mieux que dix mille coups pratiqués une fois.", author: "Bruce Lee" },
-          { content: "La simplicité est la sophistication suprême.", author: "Léonard de Vinci" },
-          { content: "Agis comme si ce que tu fais faisait une différence. Ça en fait une.", author: "William James" },
-          { content: "Le seul moyen de faire du bon travail est d'aimer ce que vous faites.", author: "Steve Jobs" },
-          { content: "Tout ce dont vous avez besoin est déjà en vous.", author: "Sagesse" },
-          { content: "La discipline est le pont entre les objectifs et les accomplissements.", author: "Jim Rohn" },
-          { content: "Commence là où tu es, utilise ce que tu as, fais ce que tu peux.", author: "Arthur Ashe" },
-          { content: "Le secret du changement est de concentrer toute ton énergie non pas à lutter contre l'ancien, mais à construire le nouveau.", author: "Socrate" },
-        ]
-        const d = citations[Math.floor(Math.random() * citations.length)]
-        setMantraApi({ t: `"${d.content}"`, s: `— ${d.author}` })
-        return
-        const data = await r.json()
-        if (data && data[0]) {
-          setMantraApi({ t: `"${data[0].content}"`, s: `— ${data[0].author}` })
-        }
-      } catch {
-        // Fallback sur mantra local si API indispo
-        setMantraApi(null)
-      }
-    }
-    fetchMantra()
-  }, [])
-
-  useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       const p = user?.user_metadata?.prenom || user?.email
@@ -652,9 +627,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   useEffect(() => {
     async function loadStatsAvancees() {
       const now = new Date()
-      const debut4mois = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().slice(0, 10)
       const [
-        { data: seancesRecentes },
         { count: nbEnergie },
         { count: nbOracle },
         { count: nbBach },
@@ -665,7 +638,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         { data: oracleDates },
         { data: bachDates },
       ] = await Promise.all([
-        supabase.from('seances').select('date_seance').gte('date_seance', debut4mois),
         supabase.from('energie_seances').select('*', { count: 'exact', head: true }),
         supabase.from('napo_oracle_seances').select('*', { count: 'exact', head: true }),
         supabase.from('fiches_bach').select('*', { count: 'exact', head: true }),
@@ -676,20 +648,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         supabase.from('napo_oracle_seances').select('client_id, date_seance'),
         supabase.from('fiches_bach').select('client_id, created_at'),
       ])
-
-      const parMois = {}
-      ;(seancesRecentes || []).forEach(s => {
-        if (!s.date_seance) return
-        const mois = s.date_seance.slice(0, 7)
-        parMois[mois] = (parMois[mois] || 0) + 1
-      })
-      const moisLabels = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
-      const bars = Object.keys(parMois).sort().slice(-4).map(m => ({
-        label: moisLabels[parseInt(m.slice(5,7)) - 1],
-        fullLabel: `${MONTHS[parseInt(m.slice(5,7)) - 1]} ${m.slice(0,4)}`,
-        count: parMois[m],
-      }))
-      setMonthlyBars(bars)
 
       const energie = nbEnergie || 0
       const oracle = nbOracle || 0
@@ -763,6 +721,82 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     }
     loadPeriode()
   }, [filtrePeriode, filtreDate, filtreMoisNum, filtreAnnee])
+
+  // Barres "Séances par module" — regroupées jour/mois/année selon filtrePeriode
+  useEffect(() => {
+    async function loadBarsData() {
+      const now = new Date()
+      const moisLabels = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+      let granularity, buckets
+
+      if (filtrePeriode === 'année') {
+        granularity = 'year'
+        const startYear = now.getFullYear() - 4
+        buckets = Array.from({ length: 5 }, (_, i) => {
+          const y = startYear + i
+          return { key: String(y), label: String(y), fullLabel: String(y) }
+        })
+      } else if (filtrePeriode === 'mois') {
+        granularity = 'month'
+        buckets = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+          return {
+            key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+            label: moisLabels[d.getMonth()],
+            fullLabel: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+          }
+        })
+      } else {
+        // 'jour' et 'semaine' → 7 derniers jours
+        granularity = 'day'
+        buckets = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(now)
+          d.setDate(now.getDate() - (6 - i))
+          return {
+            key: d.toISOString().slice(0, 10),
+            label: `${DAYS_SHORT[d.getDay()]} ${d.getDate()}`,
+            fullLabel: `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`,
+          }
+        })
+      }
+
+      let debutStr
+      if (granularity === 'year') debutStr = `${buckets[0].key}-01-01`
+      else if (granularity === 'month') debutStr = `${buckets[0].key}-01`
+      else debutStr = buckets[0].key
+
+      const [{ data: seancesD }, { data: energieD }, { data: oracleD }, { data: bachD }] = await Promise.all([
+        supabase.from('seances').select('date_seance').gte('date_seance', debutStr),
+        supabase.from('energie_seances').select('date_seance').gte('date_seance', debutStr),
+        supabase.from('napo_oracle_seances').select('date_seance').gte('date_seance', debutStr),
+        supabase.from('fiches_bach').select('created_at').gte('created_at', debutStr),
+      ])
+
+      const keyOf = dateStr => {
+        if (!dateStr) return null
+        if (granularity === 'year') return dateStr.slice(0, 4)
+        if (granularity === 'month') return dateStr.slice(0, 7)
+        return dateStr.slice(0, 10)
+      }
+      const counts = {}
+      const bump = (dateStr, field) => {
+        const k = keyOf(dateStr)
+        if (!k) return
+        if (!counts[k]) counts[k] = { energie: 0, oracle: 0, bach: 0, autres: 0 }
+        counts[k][field]++
+      }
+      ;(seancesD || []).forEach(s => bump(s.date_seance, 'autres'))
+      ;(energieD || []).forEach(s => bump(s.date_seance, 'energie'))
+      ;(oracleD || []).forEach(s => bump(s.date_seance, 'oracle'))
+      ;(bachD || []).forEach(s => bump(s.created_at ? s.created_at.slice(0, 10) : null, 'bach'))
+
+      setMonthlyBars(buckets.map(b => {
+        const c = counts[b.key] || { energie: 0, oracle: 0, bach: 0, autres: 0 }
+        return { ...b, ...c, total: c.energie + c.oracle + c.bach + c.autres }
+      }))
+    }
+    loadBarsData()
+  }, [filtrePeriode])
 
   useEffect(() => {
     async function fetchRdv() {
@@ -851,7 +885,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     <div className="dash" style={{ width: '100%' }}>
 
       {/* Header */}
-      <div className="dash-head" style={{ marginBottom: 24 }}>
+      <div className="dash-head" style={{ marginBottom: 14 }}>
         <i className={`ti ${activeSbItem?.icon || 'ti-layout-dashboard'}`} style={{ color: accent, fontSize: 22 }} aria-hidden="true" />
         <div>
           <div className="dash-title" style={{ fontSize: 20, fontWeight: 500 }}>{activeSbItem?.label || 'Dashboard'}</div>
@@ -860,7 +894,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       </div>
 
       {/* Bandeau de métriques */}
-      <div className="dash-metrics-row" style={{ marginBottom: 16 }}>
+      <div className="dash-metrics-row" style={{ marginBottom: 9 }}>
         {[
           { label: "RDV aujourd'hui", val: rdvAujourdhui, icon: 'ti-calendar-event', color: '#639922' },
           { label: 'Clients ce mois', val: monthStats.clientsCount, icon: 'ti-users', color: '#1D9E75' },
@@ -868,7 +902,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           { label: "Chiffre d'affaires", val: `${monthStats.revenue.toFixed(0)} €`, icon: 'ti-coin', color: '#EF9F27', sub: 'ce mois-ci' },
           { label: 'Nouveaux clients', val: nouveauxClients, icon: 'ti-user-plus', color: '#993556', sub: `période : ${filtrePeriode}` },
         ].map(m => (
-          <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+          <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 9px' }}>
             <div style={{ width: 38, height: 38, borderRadius: 9, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <i className={`ti ${m.icon}`} style={{ fontSize: 17, color: m.color }} aria-hidden="true" />
             </div>
@@ -958,14 +992,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         {widgets.mantra && (
           <div style={{ ...cardStyle, borderLeft: `3px solid ${accent}`, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.5, marginBottom: 8 }}>{mantra.t}</div>
+            <div style={{ fontSize: 14, fontStyle: 'italic', color: 'var(--color-text-primary)', lineHeight: 1.4, marginBottom: 6 }}>{mantra.t}</div>
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{mantra.s}</div>
-            {mantraApi && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-                <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: 4 }}>{mantraApi.t}</div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{mantraApi.s}</div>
-              </div>
-            )}
           </div>
         )}
 
@@ -974,7 +1002,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             { label: 'Séances à venir', val: seancesAVenir, icon: 'ti-calendar-event', color: '#1D9E75' },
             { label: 'Notes', val: notesCount, icon: 'ti-notes', color: '#7F77DD' },
           ].map(m => (
-            <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '50%' }}>
+            <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, padding: '6px 9px', width: '50%' }}>
               <div style={{ width: 36, height: 36, borderRadius: 8, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <i className={`ti ${m.icon}`} style={{ fontSize: 16, color: m.color }} aria-hidden="true" />
               </div>
@@ -989,12 +1017,86 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
       </div>
 
+      {/* Ligne 2 : Agenda + Calendrier + À traiter */}
+      <div className="dash-line2-grid" style={{ marginBottom: 9 }}>
+
+        <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
+
+        {/* À traiter */}
+        <div style={cardStyle}>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404', marginBottom: 10 }}>À traiter</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+
+            {/* Clients à relancer */}
+            <div
+              onClick={() => onNavigate?.('/clients')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-clock-exclamation" style={{ fontSize: 16, color: '#993556', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Clients à relancer</div>
+                {clientsARelancer.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {clientsARelancer.slice(0, 2).map(c => c.nom).join(', ')}{clientsARelancer.length > 2 ? '…' : ''}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: clientsARelancer.length ? '#993556' : 'var(--color-text-secondary)', background: clientsARelancer.length ? '#FAEAEF' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {clientsARelancer.length}
+              </span>
+            </div>
+
+            {/* Anniversaires du jour */}
+            <div
+              onClick={() => onNavigate?.('/clients')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-cake" style={{ fontSize: 16, color: '#EF9F27', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Anniversaire aujourd'hui</div>
+                {anniversairesAujourdhui.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {anniversairesAujourdhui.map(c => `${c.prenom || ''} ${c.nom || ''}`.trim()).join(', ')}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: anniversairesAujourdhui.length ? '#EF9F27' : 'var(--color-text-secondary)', background: anniversairesAujourdhui.length ? '#FDF2E3' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {anniversairesAujourdhui.length}
+              </span>
+            </div>
+
+            {/* Séances à venir cette semaine */}
+            <div
+              onClick={() => onNavigate?.('/agenda')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-calendar-week" style={{ fontSize: 16, color: '#639922', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Séances à venir cette semaine</div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: seancesSemaineAVenir ? '#639922' : 'var(--color-text-secondary)', background: seancesSemaineAVenir ? '#EAF3E0' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {seancesSemaineAVenir}
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
       {/* Ligne 3 : Statistiques clés + Évolution du CA */}
-      <div className="dash-line3-grid" style={{ marginBottom: 16 }}>
+      <div className="dash-line3-grid" style={{ marginBottom: 9 }}>
 
         {/* Statistiques avancees */}
         <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404' }}>Statistiques avancees</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['semaine', 'mois', 'année'].map(p => (
@@ -1005,7 +1107,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px 20px', marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px 16px', marginBottom: 12 }}>
             <div>
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Total clients</div>
               <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{totalClients}</div>
@@ -1043,81 +1145,99 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           </div>
 
-          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Seances par mois</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 70, marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 6 }}>
+            Séances par {filtrePeriode === 'mois' ? 'mois' : filtrePeriode === 'année' ? 'année' : 'jour'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 54, marginBottom: 8 }}>
             {monthlyBars.map((b, i) => {
-              const maxVal = Math.max(...monthlyBars.map(x => x.count), 1)
-              const h = Math.max((b.count / maxVal) * 100, 8)
+              const maxVal = Math.max(...monthlyBars.map(x => x.total), 1)
+              const h = Math.max((b.total / maxVal) * 100, 8)
               const isHovered = barHoverIdx === i
               return (
                 <div
                   key={i}
-                  style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default' }}
+                  style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: 54, cursor: 'default' }}
                   onMouseEnter={() => setBarHoverIdx(i)}
                   onMouseLeave={() => setBarHoverIdx(null)}
                 >
                   {isHovered && (
                     <ChartTooltip style={{ bottom: '100%', left: '50%', transform: 'translate(-50%, -8px)', marginBottom: 0 }}>
-                      <strong>{b.fullLabel || b.label}</strong> — {b.count} séance{b.count > 1 ? 's' : ''}
+                      <strong>{b.fullLabel || b.label}</strong> — {b.total} séance{b.total > 1 ? 's' : ''}
+                      <br />
+                      {MODULES.map(m => `${m.name}: ${b[m.key] || 0}`).join(' · ')}
                     </ChartTooltip>
                   )}
-                  <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{b.count}</span>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{b.total}</span>
                   <div style={{
                     width: '100%',
-                    background: isHovered ? '#4d7519' : '#639922',
                     height: `${h}%`,
                     borderRadius: '3px 3px 0 0',
-                    transition: 'background .12s ease',
-                  }} />
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column-reverse',
+                    background: b.total === 0 ? 'var(--color-border-tertiary)' : undefined,
+                    filter: isHovered ? 'brightness(.85)' : 'none',
+                    transition: 'filter .12s ease',
+                  }}>
+                    {MODULES.map(m => {
+                      const val = b[m.key] || 0
+                      if (!val || !b.total) return null
+                      return <div key={m.key} style={{ width: '100%', height: `${(val / b.total) * 100}%`, background: m.color }} />
+                    })}
+                  </div>
                   <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{b.label}</span>
                 </div>
               )
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
-            <div ref={pieWrapRef} style={{ position: 'relative', flexShrink: 0, width: 88, height: 88 }}>
-              <svg width="88" height="88" viewBox="0 0 42 42" role="img" aria-label="Repartition par module">
+          {/* Légende des modules (barres) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', marginBottom: 12 }}>
+            {MODULES.map(m => (
+              <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: m.color }} />
+                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{m.name}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div ref={pieWrapRef} style={{ position: 'relative', flexShrink: 0, width: 76, height: 76 }}>
+              <svg width="76" height="76" viewBox="0 0 42 42" role="img" aria-label="Repartition par module">
                 <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--color-border-tertiary)" strokeWidth="6" />
                 {(() => {
                   const total = moduleBreakdown.energie + moduleBreakdown.oracle + moduleBreakdown.bach + moduleBreakdown.autres || 1
-                  const segs = [
-                    { name: 'Énergétique', val: moduleBreakdown.energie, color: '#639922' },
-                    { name: 'Oracle', val: moduleBreakdown.oracle, color: '#993556' },
-                    { name: 'Bach', val: moduleBreakdown.bach, color: '#EF9F27' },
-                    { name: 'Autres', val: moduleBreakdown.autres, color: '#888780' },
-                  ]
-                  let offset = 25
-                  return segs.map((s, i) => {
-                    const pct = (s.val / total) * 100
+                  const segs = MODULES.map(m => ({
+                    name: m.name,
+                    color: m.color,
+                    pct: (moduleBreakdown[m.key] / total) * 100,
+                  }))
+                  const withOffsets = segs.map((s, i) => ({
+                    ...s,
+                    offset: 25 - segs.slice(0, i).reduce((sum, x) => sum + x.pct, 0),
+                  }))
+                  return withOffsets.map((s, i) => {
                     const isHovered = pieHoverIdx === i
-                    const el = (
+                    return (
                       <circle
                         key={i}
                         cx="21" cy="21" r="15.9" fill="transparent"
                         stroke={s.color}
                         strokeWidth={isHovered ? 7.5 : 6}
-                        strokeDasharray={`${pct} ${100 - pct}`}
-                        strokeDashoffset={offset}
+                        strokeDasharray={`${s.pct} ${100 - s.pct}`}
+                        strokeDashoffset={s.offset}
                         transform="rotate(-90 21 21)"
                         style={{ transition: 'stroke-width .15s ease, filter .15s ease', filter: isHovered ? 'brightness(1.2)' : 'none', cursor: 'default' }}
                         onMouseEnter={() => setPieHoverIdx(i)}
                         onMouseLeave={() => setPieHoverIdx(null)}
                       />
                     )
-                    offset -= pct
-                    return el
                   })
                 })()}
               </svg>
               {pieHoverIdx !== null && (() => {
                 const total = moduleBreakdown.energie + moduleBreakdown.oracle + moduleBreakdown.bach + moduleBreakdown.autres || 1
-                const segs = [
-                  { name: 'Énergétique', val: moduleBreakdown.energie },
-                  { name: 'Oracle', val: moduleBreakdown.oracle },
-                  { name: 'Bach', val: moduleBreakdown.bach },
-                  { name: 'Autres', val: moduleBreakdown.autres },
-                ]
+                const segs = MODULES.map(m => ({ name: m.name, val: moduleBreakdown[m.key] }))
                 const s = segs[pieHoverIdx]
                 const pct = Math.round((s.val / total) * 100)
                 return (
@@ -1127,23 +1247,25 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
                 )
               })()}
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.9 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#639922' }} /><span>Energetique {moduleBreakdown.energie}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#993556' }} /><span>Oracle {moduleBreakdown.oracle}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#EF9F27' }} /><span>Bach {moduleBreakdown.bach}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#888780' }} /><span>Autres {moduleBreakdown.autres}</span></div>
+            <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+              {MODULES.map(m => (
+                <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: m.color }} />
+                  <span>{m.name} {moduleBreakdown[m.key]}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Courbe CA 8 mois */}
         <div style={cardStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404' }}>Évolution du chiffre d'affaires</div>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>8 derniers mois</div>
           </div>
           {(() => {
-            const w = 600, h = 160, padX = 8, padTop = 14, padBottom = 26
+            const w = 600, h = 140, padX = 8, padTop = 12, padBottom = 24
             const maxVal = Math.max(...caHistory.map(c => c.total), 1)
             const n = caHistory.length || 1
             const stepX = n > 1 ? (w - padX * 2) / (n - 1) : 0
@@ -1170,7 +1292,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
                 }}
                 onMouseLeave={() => setCaHover(null)}
               >
-                <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="160" role="img" aria-label="Évolution du chiffre d'affaires sur 8 mois" preserveAspectRatio="none">
+                <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="140" role="img" aria-label="Évolution du chiffre d'affaires sur 8 mois" preserveAspectRatio="none">
                   {areaPath && <path d={areaPath} fill="#639922" opacity="0.1" />}
                   {linePath && <path d={linePath} fill="none" stroke="#639922" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
                   {points.map((p, i) => (
@@ -1200,80 +1322,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
       </div>
 
-      {/* Ligne 2 : Agenda + Calendrier + À traiter */}
-      <div className="dash-line2-grid" style={{ marginBottom: 16 }}>
-
-        <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
-
-        {/* À traiter */}
-        <div style={cardStyle}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404', marginBottom: 14 }}>À traiter</div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-
-            {/* Clients à relancer */}
-            <div
-              onClick={() => onNavigate?.('/clients')}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <i className="ti ti-clock-exclamation" style={{ fontSize: 16, color: '#993556', flexShrink: 0 }} aria-hidden="true" />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Clients à relancer</div>
-                {clientsARelancer.length > 0 && (
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                    {clientsARelancer.slice(0, 2).map(c => c.nom).join(', ')}{clientsARelancer.length > 2 ? '…' : ''}
-                  </div>
-                )}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: clientsARelancer.length ? '#993556' : 'var(--color-text-secondary)', background: clientsARelancer.length ? '#FAEAEF' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
-                {clientsARelancer.length}
-              </span>
-            </div>
-
-            {/* Anniversaires du jour */}
-            <div
-              onClick={() => onNavigate?.('/clients')}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <i className="ti ti-cake" style={{ fontSize: 16, color: '#EF9F27', flexShrink: 0 }} aria-hidden="true" />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Anniversaire aujourd'hui</div>
-                {anniversairesAujourdhui.length > 0 && (
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                    {anniversairesAujourdhui.map(c => `${c.prenom || ''} ${c.nom || ''}`.trim()).join(', ')}
-                  </div>
-                )}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: anniversairesAujourdhui.length ? '#EF9F27' : 'var(--color-text-secondary)', background: anniversairesAujourdhui.length ? '#FDF2E3' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
-                {anniversairesAujourdhui.length}
-              </span>
-            </div>
-
-            {/* Séances à venir cette semaine */}
-            <div
-              onClick={() => onNavigate?.('/agenda')}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <i className="ti ti-calendar-week" style={{ fontSize: 16, color: '#639922', flexShrink: 0 }} aria-hidden="true" />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Séances à venir cette semaine</div>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: seancesSemaineAVenir ? '#639922' : 'var(--color-text-secondary)', background: seancesSemaineAVenir ? '#EAF3E0' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
-                {seancesSemaineAVenir}
-              </span>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-
       {/* Ligne 4 : Derniers clients + Dernières séances + Activité récente + Anniversaires */}
       <div className="dash-line4-grid">
 
@@ -1285,27 +1333,31 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
             {derniersClients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucun client</div>
-            ) : derniersClients.map(c => (
-              <div key={c.id}
-                onClick={() => onNavigate?.('/clients')}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                  {(c.prenom?.[0] || '?')}{(c.nom?.[0] || '')}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.prenom} {c.nom}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{c.specialite || c.ville || '—'}</div>
-                </div>
-                {c.statut && (
-                  <span style={{ fontSize: 10, fontWeight: 500, background: c.statut === 'actif' ? '#E1F5EE' : '#F5F5F5', color: c.statut === 'actif' ? '#0F6E56' : '#6B7280', padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
-                    {c.statut}
-                  </span>
-                )}
+            ) : (
+              <div style={{ maxHeight: 210, overflowY: 'auto' }}>
+                {derniersClients.map(c => (
+                  <div key={c.id}
+                    onClick={() => onNavigate?.('/clients')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                      {(c.prenom?.[0] || '?')}{(c.nom?.[0] || '')}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.prenom} {c.nom}</div>
+                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{c.specialite || c.ville || '—'}</div>
+                    </div>
+                    {c.statut && (
+                      <span style={{ fontSize: 10, fontWeight: 500, background: c.statut === 'actif' ? '#E1F5EE' : '#F5F5F5', color: c.statut === 'actif' ? '#0F6E56' : '#6B7280', padding: '1px 7px', borderRadius: 20, flexShrink: 0 }}>
+                        {c.statut}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
           {/* Dernières séances */}
@@ -1316,43 +1368,47 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
             {dernieresSeances.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucune séance</div>
-            ) : dernieresSeances.map(s => {
-              const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance.slice(0,10) + 'T00:00:00'); const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); const heureStr = s.heure_seance ? s.heure_seance.slice(0,5) : '—'; return `${dateStr}, ${heureStr}` })() : '—'
-              return (
-                <div key={s.id}
-                  onClick={() => onNavigate?.('/seances')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <div style={{ width: 30, height: 30, borderRadius: 8, background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                    {(s.prenom?.[0] || '?')}{(s.nom?.[0] || '')}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prenom} {s.nom}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.type_seance}</div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{dateLabel}</div>
-                    {s.prix_euros != null && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.prix_euros} €</div>}
-                  </div>
-                </div>
-              )
-            })}
+            ) : (
+              <div style={{ maxHeight: 210, overflowY: 'auto' }}>
+                {dernieresSeances.map(s => {
+                  const dateLabel = s.date_seance ? (() => { const d = new Date(s.date_seance.slice(0,10) + 'T00:00:00'); const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); const heureStr = s.heure_seance ? s.heure_seance.slice(0,5) : '—'; return `${dateStr}, ${heureStr}` })() : '—'
+                  return (
+                    <div key={s.id}
+                      onClick={() => onNavigate?.('/seances')}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 6px', borderRadius: 8, cursor: 'pointer', transition: 'background .1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: `${accent}18`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                        {(s.prenom?.[0] || '?')}{(s.nom?.[0] || '')}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.prenom} {s.nom}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{s.type_seance}</div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{dateLabel}</div>
+                        {s.prix_euros != null && <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.prix_euros} €</div>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Activité récente */}
           <div style={cardStyle}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 12 }}>Activité récente</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 8 }}>Activité récente</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 11px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
                 <i className="ti ti-calendar-stats" style={{ fontSize: 20, color: accent }} aria-hidden="true" />
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Séances ce mois</div>
                   <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.count}</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 11px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
                 <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
                 <div>
                   <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
