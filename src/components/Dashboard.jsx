@@ -436,6 +436,13 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [derniersClients, setDerniersClients] = useState([])
   const [dernieresSeances,setDernieresSeances]= useState([])
   const [clientsActifs,   setClientsActifs]   = useState(0)
+  const [totalClients,    setTotalClients]    = useState(0)
+  const [totalSeances,    setTotalSeances]    = useState(0)
+  const [monthlyBars,     setMonthlyBars]      = useState([])
+  const [moduleBreakdown, setModuleBreakdown]  = useState({ energie: 0, oracle: 0, bach: 0, autres: 0 })
+  const [clientsARelancer, setClientsARelancer] = useState([])
+  const [totalSeancesTousModules, setTotalSeancesTousModules] = useState(0)
+  const [seancesPeriode, setSeancesPeriode] = useState(0)
   const [seancesAVenir,   setSeancesAVenir]   = useState(0)
   const [notesCount,      setNotesCount]      = useState(0)
   const [rdvList, setRdvList] = useState([])
@@ -557,6 +564,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         supabase.from('clients').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
         supabase.from('seances').select('*', { count: 'exact', head: true }).gte('date_seance', todayStr),
         supabase.from('notes').select('*', { count: 'exact', head: true }),
+        supabase.from('clients').select('*', { count: 'exact', head: true }),
+        supabase.from('seances').select('*', { count: 'exact', head: true }),
       ]
 
       const [
@@ -568,6 +577,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         { count: actifs },
         { count: avenir },
         { count: notes },
+        { count: totClients },
+        { count: totSeances },
       ] = await Promise.all(queries)
 
       setRecentSeances(recent || [])
@@ -583,8 +594,87 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       setClientsActifs(actifs ?? 0)
       setSeancesAVenir(avenir ?? 0)
       setNotesCount(notes ?? 0)
+      setTotalClients(totClients ?? 0)
+      setTotalSeances(totSeances ?? 0)
     }
     loadStats()
+  }, [])
+  useEffect(() => {
+    async function loadStatsAvancees() {
+      const now = new Date()
+      const debut4mois = new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().slice(0, 10)
+      const [
+        { data: seancesRecentes },
+        { count: nbEnergie },
+        { count: nbOracle },
+        { count: nbBach },
+        { count: nbSeancesTotal },
+        { data: clientsList },
+        { data: seancesDates },
+        { data: energieDates },
+        { data: oracleDates },
+        { data: bachDates },
+      ] = await Promise.all([
+        supabase.from('seances').select('date_seance').gte('date_seance', debut4mois),
+        supabase.from('energie_seances').select('*', { count: 'exact', head: true }),
+        supabase.from('napo_oracle_seances').select('*', { count: 'exact', head: true }),
+        supabase.from('fiches_bach').select('*', { count: 'exact', head: true }),
+        supabase.from('seances').select('*', { count: 'exact', head: true }),
+        supabase.from('clients').select('id, prenom, nom'),
+        supabase.from('seances').select('client_id, date_seance'),
+        supabase.from('energie_seances').select('client_id, date_seance'),
+        supabase.from('napo_oracle_seances').select('client_id, date_seance'),
+        supabase.from('fiches_bach').select('client_id, created_at'),
+      ])
+
+      const parMois = {}
+      ;(seancesRecentes || []).forEach(s => {
+        if (!s.date_seance) return
+        const mois = s.date_seance.slice(0, 7)
+        parMois[mois] = (parMois[mois] || 0) + 1
+      })
+      const moisLabels = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+      const bars = Object.keys(parMois).sort().slice(-4).map(m => ({
+        label: moisLabels[parseInt(m.slice(5,7)) - 1],
+        count: parMois[m],
+      }))
+      setMonthlyBars(bars)
+
+      const energie = nbEnergie || 0
+      const oracle = nbOracle || 0
+      const bach = nbBach || 0
+      const total = nbSeancesTotal || 0
+      const autres = nbSeancesTotal || 0
+      setModuleBreakdown({ energie, oracle, bach, autres })
+      setTotalSeancesTousModules(energie + oracle + bach + autres)
+
+      const dernierParClient = {}
+      const majDate = (clientId, dateStr) => {
+        if (!clientId || !dateStr) return
+        if (!dernierParClient[clientId] || dateStr > dernierParClient[clientId]) {
+          dernierParClient[clientId] = dateStr
+        }
+      }
+      ;(seancesDates || []).forEach(s => majDate(s.client_id, s.date_seance))
+      ;(energieDates || []).forEach(s => majDate(s.client_id, s.date_seance))
+      ;(oracleDates || []).forEach(s => majDate(s.client_id, s.date_seance))
+      ;(bachDates || []).forEach(s => majDate(s.client_id, s.created_at ? s.created_at.slice(0,10) : null))
+
+      const seuil = new Date()
+      seuil.setDate(seuil.getDate() - 45)
+      const seuilStr = seuil.toISOString().slice(0, 10)
+      const relance = (clientsList || [])
+        .map(c => ({ ...c, derniere: dernierParClient[c.id] || null }))
+        .filter(c => c.derniere && c.derniere < seuilStr)
+        .sort((a, b) => a.derniere.localeCompare(b.derniere))
+        .slice(0, 6)
+        .map(c => {
+          const jours = Math.floor((now - new Date(c.derniere)) / (1000 * 60 * 60 * 24))
+          return { nom: `${c.prenom || ''} ${c.nom || ''}`.trim(), jours }
+        })
+      setClientsARelancer(relance)
+    }
+    loadStatsAvancees()
   }, [])
 
   useEffect(() => {
@@ -609,12 +699,16 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
         debutStr = `${filtreAnnee}-01-01`
         finStr   = `${filtreAnnee}-12-31`
       }
-      const [{ data: seancesP }, { data: clientsP }] = await Promise.all([
+      const [{ data: seancesP }, { data: clientsP }, { count: energieP }, { count: oracleP }, { count: bachP }] = await Promise.all([
         supabase.from('seances').select('prix_euros').gte('date_seance', debutStr).lte('date_seance', finStr),
         supabase.from('clients').select('id').gte('date_creation', debutStr).lte('date_creation', finStr),
+        supabase.from('energie_seances').select('*', { count: 'exact', head: true }).gte('date_seance', debutStr).lte('date_seance', finStr),
+        supabase.from('napo_oracle_seances').select('*', { count: 'exact', head: true }).gte('date_seance', debutStr).lte('date_seance', finStr),
+        supabase.from('fiches_bach').select('*', { count: 'exact', head: true }).gte('created_at', debutStr).lte('created_at', finStr + 'T23:59:59'),
       ])
       setCaFiltre((seancesP || []).reduce((s, x) => s + (parseFloat(x.prix_euros) || 0), 0))
       setNouveauxClients((clientsP || []).length)
+      setSeancesPeriode((seancesP || []).length + (energieP || 0) + (oracleP || 0) + (bachP || 0))
     }
     loadPeriode()
   }, [filtrePeriode, filtreDate, filtreMoisNum, filtreAnnee])
@@ -767,7 +861,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
-            { label: 'Clients actifs', val: clientsActifs, icon: 'ti-users', color: accent },
             { label: 'Séances à venir', val: seancesAVenir, icon: 'ti-calendar-event', color: '#1D9E75' },
             { label: 'Notes', val: notesCount, icon: 'ti-notes', color: '#7F77DD' },
           ].map(m => (
@@ -782,6 +875,108 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           ))}
 
+        </div>
+
+        {/* Statistiques avancees */}
+        <div style={{ ...cardStyle, marginTop: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404' }}>Statistiques avancees</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['semaine', 'mois', 'année'].map(p => (
+                <button key={p} onClick={() => setFiltrePeriode(p)} style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 20, border: 'none', cursor: 'pointer', background: filtrePeriode === p ? '#639922' : 'var(--color-background-secondary)', color: filtrePeriode === p ? '#fff' : 'var(--color-text-secondary)' }}>
+                  {p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px 20px', marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Total clients</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{totalClients}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 1 }}>Tous statuts confondus</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Clients actifs</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{clientsActifs}</div>
+              <div style={{ fontSize: 10, color: '#639922', marginTop: 1 }}>Séance récente</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Nouveaux clients</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{nouveauxClients}</div>
+              <div style={{ fontSize: 10, color: '#639922', marginTop: 1 }}>Période sélectionnée ci-dessous</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Séances</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{seancesPeriode}</div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 1 }}>Sur la période sélectionnée</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Facturation</div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: 3 }}>Bientot disponible</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Annulations</div>
+              <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-secondary)', marginTop: 3 }}>Bientot disponible</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Seances par mois</div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 70, marginBottom: 20 }}>
+            {monthlyBars.map((b, i) => {
+              const maxVal = Math.max(...monthlyBars.map(x => x.count), 1)
+              const h = Math.max((b.count / maxVal) * 100, 8)
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{b.count}</span>
+                  <div style={{ width: '100%', background: '#639922', height: `${h}%`, borderRadius: '3px 3px 0 0' }} />
+                  <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{b.label}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
+            <svg width="88" height="88" viewBox="0 0 42 42" role="img" aria-label="Repartition par module">
+              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--color-border-tertiary)" strokeWidth="6" />
+              {(() => {
+                const total = moduleBreakdown.energie + moduleBreakdown.oracle + moduleBreakdown.bach + moduleBreakdown.autres || 1
+                const segs = [
+                  { val: moduleBreakdown.energie, color: '#639922' },
+                  { val: moduleBreakdown.oracle, color: '#993556' },
+                  { val: moduleBreakdown.bach, color: '#EF9F27' },
+                  { val: moduleBreakdown.autres, color: '#888780' },
+                ]
+                let offset = 25
+                return segs.map((s, i) => {
+                  const pct = (s.val / total) * 100
+                  const el = <circle key={i} cx="21" cy="21" r="15.9" fill="transparent" stroke={s.color} strokeWidth="6" strokeDasharray={`${pct} ${100 - pct}`} strokeDashoffset={offset} transform="rotate(-90 21 21)" />
+                  offset -= pct
+                  return el
+                })
+              })()}
+            </svg>
+            <div style={{ fontSize: 12, lineHeight: 1.9 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#639922' }} /><span>Energetique {moduleBreakdown.energie}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#993556' }} /><span>Oracle {moduleBreakdown.oracle}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#EF9F27' }} /><span>Bach {moduleBreakdown.bach}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#888780' }} /><span>Autres {moduleBreakdown.autres}</span></div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 11, color: '#993556', textTransform: 'uppercase', marginBottom: 8 }}>A relancer</div>
+          {clientsARelancer.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Aucun client a relancer</div>
+          ) : (
+            <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+              {clientsARelancer.map((c, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < clientsARelancer.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <span style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>{c.nom}</span>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Derniere activite : {c.jours}j</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Anniversaires prochains */}
