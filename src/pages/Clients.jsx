@@ -582,7 +582,7 @@ export default function Clients() {
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
           onClick={e => e.target === e.currentTarget && !editingDetail && setDetail(null)}>
-          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: 'var(--color-background-primary)', borderRadius: 16, width: 1100, maxWidth: '95vw', maxHeight: '92vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
 
             {/* Avatar + nom */}
             {(() => {
