@@ -341,7 +341,9 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 }
 
 /* ─── DASHBOARD GRILLES ────────────────────────────────────────────────────── */
+.dash-metrics-row  { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .dash-row-top      { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.dash-ca-row       { display: grid; grid-template-columns: 2fr 1fr;     gap: 16px; }
 .dash-agenda-grid  { display: grid; grid-template-columns: 1fr 1fr;     gap: 16px; }
 .dash-overview-grid{ display: grid; grid-template-columns: 1fr 1fr;     gap: 12px; margin-bottom: 12px; }
 .dash-lists-grid   { display: grid; grid-template-columns: 1fr 1fr;     gap: 12px; }
@@ -350,13 +352,17 @@ body { font-family: var(--font-sans); background: var(--color-background-primary
 /* Tablette 768–1023px */
 @media (max-width: 1023px) {
   .dash              { padding: 20px 18px; }
+  .dash-metrics-row  { grid-template-columns: repeat(3, 1fr); }
   .dash-row-top      { grid-template-columns: 1fr 1fr; }
+  .dash-ca-row       { grid-template-columns: 1fr; }
 }
 
 /* Mobile < 768px */
 @media (max-width: 767px) {
   .dash              { padding: 14px 12px; }
+  .dash-metrics-row  { grid-template-columns: 1fr 1fr; }
   .dash-row-top      { grid-template-columns: 1fr; }
+  .dash-ca-row       { grid-template-columns: 1fr; }
   .dash-agenda-grid  { grid-template-columns: 1fr; }
   .dash-overview-grid{ grid-template-columns: 1fr; }
   .dash-lists-grid   { grid-template-columns: 1fr; }

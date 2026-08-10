@@ -373,13 +373,7 @@ const inputStyle = {
 
 
 // ─── Widget Anniversaires compact ────────────────────────────────────────────
-function AnniversairesWidget({ accent, onNavigate }) {
-  const [clients, setClients] = useState([])
-  useEffect(() => {
-    supabase.from('clients').select('id, prenom, nom, date_naissance')
-      .not('date_naissance', 'is', null)
-      .then(({ data }) => setClients(data || []))
-  }, [])
+function AnniversairesWidget({ accent, clients, onNavigate }) {
   const prochains = clients
     .map(c => { const a = getProchainAnniversaire(c); return a ? { ...c, ...a } : null })
     .filter(Boolean)
@@ -452,6 +446,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [filtreDate,      setFiltreDate]       = useState(new Date().toISOString().slice(0,10))
   const [filtreMoisNum,   setFiltreMoisNum]    = useState(new Date().getMonth() + 1)
   const [filtreAnnee,     setFiltreAnnee]      = useState(new Date().getFullYear())
+  const [caHistory,       setCaHistory]        = useState([])
+  const [anniversaireClients, setAnniversaireClients] = useState([])
 
   useEffect(() => {
     function fetchMeteoCoords(lat, lon) {
@@ -715,13 +711,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
   useEffect(() => {
     async function fetchRdv() {
-      const { data } = await supabase.from('seances').select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros').order('date_seance', { ascending: false })
-      setRdvList(data || [])
-    }
-    fetchRdv()
-  }, [])
-  useEffect(() => {
-    async function fetchRdv() {
       const { data } = await supabase
         .from('seances')
         .select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros')
@@ -731,15 +720,46 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     fetchRdv()
   }, [])
 
+  // Historique CA sur 8 mois (pour la courbe)
   useEffect(() => {
-    async function fetchRdv() {
+    async function loadCaHistory() {
+      const now = new Date()
+      const debut8mois = new Date(now.getFullYear(), now.getMonth() - 7, 1).toISOString().slice(0, 10)
       const { data } = await supabase
         .from('seances')
-        .select('id, client_id, prenom, nom, type_seance, date_seance, heure_seance, duree_minutes, prix_euros')
-        .order('date_seance', { ascending: false })
-      setRdvList(data || [])
+        .select('date_seance, prix_euros')
+        .gte('date_seance', debut8mois)
+
+      const parMois = {}
+      ;(data || []).forEach(s => {
+        if (!s.date_seance) return
+        const mois = s.date_seance.slice(0, 7)
+        parMois[mois] = (parMois[mois] || 0) + (parseFloat(s.prix_euros) || 0)
+      })
+
+      const moisLabels = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
+      const cles = Array.from({ length: 8 }).map((_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 7 + i, 1)
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      })
+      setCaHistory(cles.map(cle => ({
+        label: moisLabels[parseInt(cle.slice(5, 7)) - 1],
+        total: parMois[cle] || 0,
+      })))
     }
-    fetchRdv()
+    loadCaHistory()
+  }, [])
+
+  // Anniversaires (partagé entre le widget "Prochains anniversaires" et le bloc "À traiter")
+  useEffect(() => {
+    async function loadAnniversaireClients() {
+      const { data } = await supabase
+        .from('clients')
+        .select('id, prenom, nom, date_naissance')
+        .not('date_naissance', 'is', null)
+      setAnniversaireClients(data || [])
+    }
+    loadAnniversaireClients()
   }, [])
 
   function weatherLabel(code) {
@@ -759,6 +779,18 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const dateStr = `${DAYS[time.getDay()]} ${time.getDate()} ${MONTHS[time.getMonth()]} ${time.getFullYear()}`
   const showClockBot = widgets.fete || widgets.ferie
 
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const finSemaine = new Date()
+  finSemaine.setDate(finSemaine.getDate() + 6)
+  const finSemaineStr = finSemaine.toISOString().slice(0, 10)
+
+  const rdvAujourdhui = rdvList.filter(r => r.date_seance === todayStr).length
+  const seancesSemaineAVenir = rdvList.filter(r => r.date_seance >= todayStr && r.date_seance <= finSemaineStr).length
+
+  const anniversairesAujourdhui = anniversaireClients
+    .map(c => { const a = getProchainAnniversaire(c); return a ? { ...c, ...a } : null })
+    .filter(c => c && c.joursRestants === 0)
+
   return (
     <div className="dash" style={{ maxWidth: 1200, margin: '0 auto' }}>
 
@@ -769,6 +801,28 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           <div className="dash-title" style={{ fontSize: 20, fontWeight: 500 }}>{activeSbItem?.label || 'Dashboard'}</div>
           <div className="dash-sub" style={{ fontSize: 13 }}>Bonjour {prenom} — {dateStr}</div>
         </div>
+      </div>
+
+      {/* Bandeau de métriques */}
+      <div className="dash-metrics-row" style={{ marginBottom: 16 }}>
+        {[
+          { label: "RDV aujourd'hui", val: rdvAujourdhui, icon: 'ti-calendar-event', color: '#639922' },
+          { label: 'Clients ce mois', val: monthStats.clientsCount, icon: 'ti-users', color: '#1D9E75' },
+          { label: 'Séances ce mois', val: monthStats.count, icon: 'ti-notes', color: '#7F77DD' },
+          { label: "Chiffre d'affaires", val: `${monthStats.revenue.toFixed(0)} €`, icon: 'ti-coin', color: '#EF9F27', sub: 'ce mois-ci' },
+          { label: 'Nouveaux clients', val: nouveauxClients, icon: 'ti-user-plus', color: '#993556', sub: `période : ${filtrePeriode}` },
+        ].map(m => (
+          <div key={m.label} style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 9, background: `${m.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className={`ti ${m.icon}`} style={{ fontSize: 17, color: m.color }} aria-hidden="true" />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{m.label}</div>
+              <div style={{ fontSize: 21, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{m.val}</div>
+              {m.sub && <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 1 }}>{m.sub}</div>}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Ligne 1 : Horloge + Mantra + Métriques */}
@@ -970,25 +1024,118 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#888780' }} /><span>Autres {moduleBreakdown.autres}</span></div>
             </div>
           </div>
-
-          <div style={{ fontSize: 11, color: '#993556', textTransform: 'uppercase', marginBottom: 8 }}>A relancer</div>
-          {clientsARelancer.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Aucun client a relancer</div>
-          ) : (
-            <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-              {clientsARelancer.map((c, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < clientsARelancer.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-                  <span style={{ fontSize: 12, color: 'var(--color-text-primary)' }}>{c.nom}</span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Derniere activite : {c.jours}j</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Anniversaires prochains */}
-        <AnniversairesWidget accent={accent} onNavigate={onNavigate} />
+        <AnniversairesWidget accent={accent} clients={anniversaireClients} onNavigate={onNavigate} />
 
+
+      </div>
+
+      {/* Ligne 1bis : CA (courbe) + À traiter */}
+      <div className="dash-ca-row" style={{ marginBottom: 16 }}>
+
+        {/* Courbe CA 8 mois */}
+        <div style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404' }}>Évolution du chiffre d'affaires</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>8 derniers mois</div>
+          </div>
+          {(() => {
+            const w = 600, h = 160, padX = 8, padTop = 14, padBottom = 26
+            const maxVal = Math.max(...caHistory.map(c => c.total), 1)
+            const n = caHistory.length || 1
+            const stepX = n > 1 ? (w - padX * 2) / (n - 1) : 0
+            const points = caHistory.map((c, i) => {
+              const x = padX + i * stepX
+              const y = padTop + (1 - c.total / maxVal) * (h - padTop - padBottom)
+              return { x, y, ...c }
+            })
+            const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
+            const areaPath = points.length
+              ? `${linePath} L${points[points.length - 1].x},${h - padBottom} L${points[0].x},${h - padBottom} Z`
+              : ''
+            return (
+              <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="160" role="img" aria-label="Évolution du chiffre d'affaires sur 8 mois" preserveAspectRatio="none">
+                {areaPath && <path d={areaPath} fill="#639922" opacity="0.1" />}
+                {linePath && <path d={linePath} fill="none" stroke="#639922" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+                {points.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#639922" />
+                ))}
+                {points.map((p, i) => (
+                  <text key={`l${i}`} x={p.x} y={h - 6} fontSize="10" fill="var(--color-text-secondary)" textAnchor="middle">{p.label}</text>
+                ))}
+              </svg>
+            )
+          })()}
+        </div>
+
+        {/* À traiter */}
+        <div style={cardStyle}>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404', marginBottom: 14 }}>À traiter</div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+
+            {/* Clients à relancer */}
+            <div
+              onClick={() => onNavigate?.('/clients')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-clock-exclamation" style={{ fontSize: 16, color: '#993556', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Clients à relancer</div>
+                {clientsARelancer.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {clientsARelancer.slice(0, 2).map(c => c.nom).join(', ')}{clientsARelancer.length > 2 ? '…' : ''}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: clientsARelancer.length ? '#993556' : 'var(--color-text-secondary)', background: clientsARelancer.length ? '#FAEAEF' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {clientsARelancer.length}
+              </span>
+            </div>
+
+            {/* Anniversaires du jour */}
+            <div
+              onClick={() => onNavigate?.('/clients')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-cake" style={{ fontSize: 16, color: '#EF9F27', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Anniversaire aujourd'hui</div>
+                {anniversairesAujourdhui.length > 0 && (
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {anniversairesAujourdhui.map(c => `${c.prenom || ''} ${c.nom || ''}`.trim()).join(', ')}
+                  </div>
+                )}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: anniversairesAujourdhui.length ? '#EF9F27' : 'var(--color-text-secondary)', background: anniversairesAujourdhui.length ? '#FDF2E3' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {anniversairesAujourdhui.length}
+              </span>
+            </div>
+
+            {/* Séances à venir cette semaine */}
+            <div
+              onClick={() => onNavigate?.('/agenda')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <i className="ti ti-calendar-week" style={{ fontSize: 16, color: '#639922', flexShrink: 0 }} aria-hidden="true" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Séances à venir cette semaine</div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: seancesSemaineAVenir ? '#639922' : 'var(--color-text-secondary)', background: seancesSemaineAVenir ? '#EAF3E0' : 'var(--color-background-secondary)', padding: '2px 9px', borderRadius: 20, flexShrink: 0 }}>
+                {seancesSemaineAVenir}
+              </span>
+            </div>
+
+          </div>
+        </div>
 
       </div>
 
