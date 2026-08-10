@@ -143,6 +143,16 @@ function loadSbVis(userId) {
   return { factures: false, fiscal: false }
 }
 
+const SB_COLLAPSED_KEY = 'napo_sb_collapsed_v1'
+
+function loadSbCollapsed(userId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(scopedKey(SB_COLLAPSED_KEY, userId)))
+    if (typeof saved === 'boolean') return saved
+  } catch {}
+  return false
+}
+
 const DEFAULT_TB_ITEMS = [
   { id: 'faq',  label: 'FAQ',  icon: 'ti-help-circle',  vis: true },
   { id: 'aide', label: 'Aide', icon: 'ti-lifebuoy',     vis: true },
@@ -152,16 +162,16 @@ const DEFAULT_TB_ITEMS = [
 const DEFAULT_WIDGETS = { clock: true, meteo: true, lune: true, fete: true, ferie: true, mantra: true }
 
 const THEMES = [
+  { bg: '#173404', ac: '#8FBF4F', name: 'Zen sauge' },
   { bg: '#111827', ac: '#B8961E', name: 'Navy gold' },
-  { bg: '#085041', ac: '#5DCAA5', name: 'Zen sauge' },
   { bg: '#26215C', ac: '#AFA9EC', name: 'Violet' },
   { bg: '#4A1B0C', ac: '#F0997B', name: 'Corail' },
   { bg: '#2C2C2A', ac: '#B4B2A9', name: 'Ardoise' },
   { bg: '#4B1528', ac: '#ED93B1', name: 'Rose' },
 ]
 
-const ACCENT_SWATCHES = ['#B8961E', '#534AB7', '#0F6E56', '#993C1D', '#185FA5', '#993556']
-const BG_SWATCHES = ['#111827', '#1e293b', '#26215C', '#4A1B0C', '#085041', '#2C2C2A']
+const ACCENT_SWATCHES = ['#8FBF4F', '#B8961E', '#534AB7', '#0F6E56', '#993C1D', '#185FA5', '#993556']
+const BG_SWATCHES = ['#173404', '#111827', '#1e293b', '#26215C', '#4A1B0C', '#2C2C2A']
 
 export default function AppShell({ user, onSignOut }) {
   useActivityTracker()
@@ -170,6 +180,7 @@ export default function AppShell({ user, onSignOut }) {
   const [sbItems, setSbItems] = useState(() => loadSbItems(user?.id))
   const [sbRemoved, setSbRemoved] = useState(() => loadSbRemoved(user?.id))
   const [sbVis, setSbVis] = useState(() => loadSbVis(user?.id))
+  const [sbCollapsed, setSbCollapsed] = useState(() => loadSbCollapsed(user?.id))
   const [metierModuleMap, setMetierModuleMap] = useState({})
   const [activeModuleIds, setActiveModuleIds] = useState(new Set())
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
@@ -177,7 +188,7 @@ export default function AppShell({ user, onSignOut }) {
   const [tbActif, setTbActif] = useState('')
   const [curView, setCurView] = useState('dash')
   const [accent, setAccent] = useState(() => localStorage.getItem(scopedKey('napo_accent', user?.id)) || '#B8961E')
-  const [bgCol, setBgCol] = useState(() => localStorage.getItem(scopedKey('napo_bgcol', user?.id)) || '#1E1A4E')
+  const [bgCol, setBgCol] = useState(() => localStorage.getItem(scopedKey('napo_bgcol', user?.id)) || '#173404')
   const [widgets, setWidgets] = useState(() => {
     const saved = localStorage.getItem(scopedKey('napo_widgets', user?.id))
     return saved ? JSON.parse(saved) : DEFAULT_WIDGETS
@@ -318,6 +329,10 @@ export default function AppShell({ user, onSignOut }) {
     localStorage.setItem(scopedKey(SB_VIS_KEY, user?.id), JSON.stringify(sbVis))
   }, [sbVis])
 
+  useEffect(() => {
+    localStorage.setItem(scopedKey(SB_COLLAPSED_KEY, user?.id), JSON.stringify(sbCollapsed))
+  }, [sbCollapsed])
+
   // Sauvegarde auto Supabase (debounce 1s)
   useEffect(() => {
     if (!userId || !prefsLoaded) return
@@ -380,6 +395,7 @@ export default function AppShell({ user, onSignOut }) {
           accent={accent} bgCol={bgCol}
           activePanel={activePanel} setActivePanel={setActivePanel}
           username={username}
+          collapsed={sbCollapsed} onToggleCollapse={() => setSbCollapsed(c => !c)}
           items={sbItems.filter(i => {
             if (sbVis[i.id] === false) return false
             if (i.moduleTitle) {
@@ -541,7 +557,7 @@ export default function AppShell({ user, onSignOut }) {
                 <i className="ti ti-refresh" style={{ color: '#5F5E5A' }} aria-hidden="true" />
               </div>
               <div className="ptxt"><div className="plbl">Réinitialiser</div></div>
-              <button className="rst-btn" onClick={() => { setFs(100); setAccent('#B8961E'); setBgCol('#1E1A4E') }}>Reset</button>
+              <button className="rst-btn" onClick={() => { setFs(100); setAccent('#B8961E'); setBgCol('#173404') }}>Reset</button>
             </div>
           </div>
         </div>

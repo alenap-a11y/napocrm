@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { useRealtimeDashboard } from '../hooks/useRealtimeDashboard'
@@ -107,7 +107,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
   }
 
   return (
-    <div className="dash-agenda-grid">
+    <>
 
       {/* Calendrier */}
       <div style={cardStyle}>
@@ -274,7 +274,7 @@ function AgendaCalendrier({ accent, onNavigate }) {
           </div>
         )}
       </div>
-      </div>
+    </>
   )
 }
 
@@ -371,6 +371,55 @@ const inputStyle = {
   color: 'var(--color-text-primary)', boxSizing: 'border-box',
 }
 
+// ─── Tooltip de graphique (survol) ────────────────────────────────────────────
+function ChartTooltip({ style, children }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        background: 'var(--color-background-primary)',
+        border: '0.5px solid var(--color-border-tertiary)',
+        borderRadius: 6,
+        padding: '6px 10px',
+        fontSize: 12,
+        color: 'var(--color-text-primary)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+        pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        zIndex: 10,
+        lineHeight: 1.4,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ─── Chiffre avec fondu au changement de valeur ───────────────────────────────
+function FadeValue({ value, style }) {
+  const [display, setDisplay] = useState(value)
+  const [visible, setVisible] = useState(true)
+  const prevValue = useRef(value)
+
+  useEffect(() => {
+    if (prevValue.current === value) return
+    prevValue.current = value
+    setVisible(false)
+    const timer = setTimeout(() => {
+      setDisplay(value)
+      setVisible(true)
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [value])
+
+  return (
+    <span style={{ display: 'inline-block', transition: 'opacity 150ms ease', opacity: visible ? 1 : 0, ...style }}>
+      {display}
+    </span>
+  )
+}
+
 
 // ─── Widget Anniversaires compact ────────────────────────────────────────────
 function AnniversairesWidget({ accent, clients, onNavigate }) {
@@ -380,7 +429,7 @@ function AnniversairesWidget({ accent, clients, onNavigate }) {
     .sort((a, b) => a.joursRestants - b.joursRestants)
     .slice(0, 3)
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14, marginTop: 0, width: '50%' }}>
+    <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <i className="ti ti-cake" style={{ fontSize: 14, color: accent }} />
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>Anniversaires</span>
@@ -448,6 +497,11 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
   const [filtreAnnee,     setFiltreAnnee]      = useState(new Date().getFullYear())
   const [caHistory,       setCaHistory]        = useState([])
   const [anniversaireClients, setAnniversaireClients] = useState([])
+  const [caHover,      setCaHover]      = useState(null)
+  const [barHoverIdx,  setBarHoverIdx]  = useState(null)
+  const [pieHoverIdx,  setPieHoverIdx]  = useState(null)
+  const caChartRef = useRef(null)
+  const pieWrapRef = useRef(null)
 
   useEffect(() => {
     function fetchMeteoCoords(lat, lon) {
@@ -632,6 +686,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       const moisLabels = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
       const bars = Object.keys(parMois).sort().slice(-4).map(m => ({
         label: moisLabels[parseInt(m.slice(5,7)) - 1],
+        fullLabel: `${MONTHS[parseInt(m.slice(5,7)) - 1]} ${m.slice(0,4)}`,
         count: parMois[m],
       }))
       setMonthlyBars(bars)
@@ -744,6 +799,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
       })
       setCaHistory(cles.map(cle => ({
         label: moisLabels[parseInt(cle.slice(5, 7)) - 1],
+        fullLabel: `${MONTHS[parseInt(cle.slice(5, 7)) - 1]} ${cle.slice(0, 4)}`,
         total: parMois[cle] || 0,
       })))
     }
@@ -792,7 +848,7 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
     .filter(c => c && c.joursRestants === 0)
 
   return (
-    <div className="dash" style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <div className="dash" style={{ width: '100%' }}>
 
       {/* Header */}
       <div className="dash-head" style={{ marginBottom: 24 }}>
@@ -931,8 +987,13 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
         </div>
 
+      </div>
+
+      {/* Ligne 3 : Statistiques clés + Évolution du CA */}
+      <div className="dash-line3-grid" style={{ marginBottom: 16 }}>
+
         {/* Statistiques avancees */}
-        <div style={{ ...cardStyle, marginTop: 10 }}>
+        <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontWeight: 500, color: '#173404' }}>Statistiques avancees</div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -957,17 +1018,17 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
             <div>
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Nouveaux clients</div>
-              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{nouveauxClients}</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}><FadeValue value={nouveauxClients} /></div>
               <div style={{ fontSize: 10, color: '#639922', marginTop: 1 }}>Période sélectionnée ci-dessous</div>
             </div>
             <div>
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Séances</div>
-              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{seancesPeriode}</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}><FadeValue value={seancesPeriode} /></div>
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 1 }}>Sur la période sélectionnée</div>
             </div>
             <div>
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Chiffre d'affaires</div>
-              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}>{caFiltre.toFixed(0)} €</div>
+              <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginTop: 3 }}><FadeValue value={`${caFiltre.toFixed(0)} €`} /></div>
               <div style={{ display: 'flex', gap: 2, marginTop: 4, flexWrap: 'wrap' }}>
                 {['jour','semaine','mois','année'].map(p => (
                   <button key={p} onClick={() => setFiltrePeriode(p)} style={{ fontSize: 9, padding: '1px 6px', borderRadius: 12, border: 'none', cursor: 'pointer', background: filtrePeriode === p ? '#639922' : 'var(--color-background-secondary)', color: filtrePeriode === p ? '#fff' : 'var(--color-text-secondary)' }}>
@@ -987,10 +1048,27 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             {monthlyBars.map((b, i) => {
               const maxVal = Math.max(...monthlyBars.map(x => x.count), 1)
               const h = Math.max((b.count / maxVal) * 100, 8)
+              const isHovered = barHoverIdx === i
               return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                  key={i}
+                  style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'default' }}
+                  onMouseEnter={() => setBarHoverIdx(i)}
+                  onMouseLeave={() => setBarHoverIdx(null)}
+                >
+                  {isHovered && (
+                    <ChartTooltip style={{ bottom: '100%', left: '50%', transform: 'translate(-50%, -8px)', marginBottom: 0 }}>
+                      <strong>{b.fullLabel || b.label}</strong> — {b.count} séance{b.count > 1 ? 's' : ''}
+                    </ChartTooltip>
+                  )}
                   <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 3 }}>{b.count}</span>
-                  <div style={{ width: '100%', background: '#639922', height: `${h}%`, borderRadius: '3px 3px 0 0' }} />
+                  <div style={{
+                    width: '100%',
+                    background: isHovered ? '#4d7519' : '#639922',
+                    height: `${h}%`,
+                    borderRadius: '3px 3px 0 0',
+                    transition: 'background .12s ease',
+                  }} />
                   <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 4 }}>{b.label}</span>
                 </div>
               )
@@ -998,25 +1076,57 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
           </div>
 
           <div style={{ display: 'flex', gap: 18, alignItems: 'center', marginBottom: 16 }}>
-            <svg width="88" height="88" viewBox="0 0 42 42" role="img" aria-label="Repartition par module">
-              <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--color-border-tertiary)" strokeWidth="6" />
-              {(() => {
+            <div ref={pieWrapRef} style={{ position: 'relative', flexShrink: 0, width: 88, height: 88 }}>
+              <svg width="88" height="88" viewBox="0 0 42 42" role="img" aria-label="Repartition par module">
+                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--color-border-tertiary)" strokeWidth="6" />
+                {(() => {
+                  const total = moduleBreakdown.energie + moduleBreakdown.oracle + moduleBreakdown.bach + moduleBreakdown.autres || 1
+                  const segs = [
+                    { name: 'Énergétique', val: moduleBreakdown.energie, color: '#639922' },
+                    { name: 'Oracle', val: moduleBreakdown.oracle, color: '#993556' },
+                    { name: 'Bach', val: moduleBreakdown.bach, color: '#EF9F27' },
+                    { name: 'Autres', val: moduleBreakdown.autres, color: '#888780' },
+                  ]
+                  let offset = 25
+                  return segs.map((s, i) => {
+                    const pct = (s.val / total) * 100
+                    const isHovered = pieHoverIdx === i
+                    const el = (
+                      <circle
+                        key={i}
+                        cx="21" cy="21" r="15.9" fill="transparent"
+                        stroke={s.color}
+                        strokeWidth={isHovered ? 7.5 : 6}
+                        strokeDasharray={`${pct} ${100 - pct}`}
+                        strokeDashoffset={offset}
+                        transform="rotate(-90 21 21)"
+                        style={{ transition: 'stroke-width .15s ease, filter .15s ease', filter: isHovered ? 'brightness(1.2)' : 'none', cursor: 'default' }}
+                        onMouseEnter={() => setPieHoverIdx(i)}
+                        onMouseLeave={() => setPieHoverIdx(null)}
+                      />
+                    )
+                    offset -= pct
+                    return el
+                  })
+                })()}
+              </svg>
+              {pieHoverIdx !== null && (() => {
                 const total = moduleBreakdown.energie + moduleBreakdown.oracle + moduleBreakdown.bach + moduleBreakdown.autres || 1
                 const segs = [
-                  { val: moduleBreakdown.energie, color: '#639922' },
-                  { val: moduleBreakdown.oracle, color: '#993556' },
-                  { val: moduleBreakdown.bach, color: '#EF9F27' },
-                  { val: moduleBreakdown.autres, color: '#888780' },
+                  { name: 'Énergétique', val: moduleBreakdown.energie },
+                  { name: 'Oracle', val: moduleBreakdown.oracle },
+                  { name: 'Bach', val: moduleBreakdown.bach },
+                  { name: 'Autres', val: moduleBreakdown.autres },
                 ]
-                let offset = 25
-                return segs.map((s, i) => {
-                  const pct = (s.val / total) * 100
-                  const el = <circle key={i} cx="21" cy="21" r="15.9" fill="transparent" stroke={s.color} strokeWidth="6" strokeDasharray={`${pct} ${100 - pct}`} strokeDashoffset={offset} transform="rotate(-90 21 21)" />
-                  offset -= pct
-                  return el
-                })
+                const s = segs[pieHoverIdx]
+                const pct = Math.round((s.val / total) * 100)
+                return (
+                  <ChartTooltip style={{ left: '50%', top: -6, transform: 'translate(-50%, -100%)' }}>
+                    <strong>{s.name}</strong> — {s.val} ({pct}%)
+                  </ChartTooltip>
+                )
               })()}
-            </svg>
+            </div>
             <div style={{ fontSize: 12, lineHeight: 1.9 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#639922' }} /><span>Energetique {moduleBreakdown.energie}</span></div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 8, height: 8, borderRadius: 2, background: '#993556' }} /><span>Oracle {moduleBreakdown.oracle}</span></div>
@@ -1025,15 +1135,6 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             </div>
           </div>
         </div>
-
-        {/* Anniversaires prochains */}
-        <AnniversairesWidget accent={accent} clients={anniversaireClients} onNavigate={onNavigate} />
-
-
-      </div>
-
-      {/* Ligne 1bis : CA (courbe) + À traiter */}
-      <div className="dash-ca-row" style={{ marginBottom: 16 }}>
 
         {/* Courbe CA 8 mois */}
         <div style={cardStyle}>
@@ -1055,20 +1156,54 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             const areaPath = points.length
               ? `${linePath} L${points[points.length - 1].x},${h - padBottom} L${points[0].x},${h - padBottom} Z`
               : ''
+            const hovered = caHover !== null ? points[caHover] : null
             return (
-              <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="160" role="img" aria-label="Évolution du chiffre d'affaires sur 8 mois" preserveAspectRatio="none">
-                {areaPath && <path d={areaPath} fill="#639922" opacity="0.1" />}
-                {linePath && <path d={linePath} fill="none" stroke="#639922" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
-                {points.map((p, i) => (
-                  <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#639922" />
-                ))}
-                {points.map((p, i) => (
-                  <text key={`l${i}`} x={p.x} y={h - 6} fontSize="10" fill="var(--color-text-secondary)" textAnchor="middle">{p.label}</text>
-                ))}
-              </svg>
+              <div
+                ref={caChartRef}
+                style={{ position: 'relative' }}
+                onMouseMove={e => {
+                  if (!points.length) return
+                  const rect = caChartRef.current.getBoundingClientRect()
+                  const fracX = (e.clientX - rect.left) / rect.width
+                  const idx = Math.max(0, Math.min(points.length - 1, Math.round(fracX * (points.length - 1))))
+                  setCaHover(idx)
+                }}
+                onMouseLeave={() => setCaHover(null)}
+              >
+                <svg viewBox={`0 0 ${w} ${h}`} width="100%" height="160" role="img" aria-label="Évolution du chiffre d'affaires sur 8 mois" preserveAspectRatio="none">
+                  {areaPath && <path d={areaPath} fill="#639922" opacity="0.1" />}
+                  {linePath && <path d={linePath} fill="none" stroke="#639922" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />}
+                  {points.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r="3.5" fill="#639922" />
+                  ))}
+                  {hovered && (
+                    <circle cx={hovered.x} cy={hovered.y} r="5.5" fill="#639922" stroke="var(--color-background-primary)" strokeWidth="2" />
+                  )}
+                  {points.map((p, i) => (
+                    <text key={`l${i}`} x={p.x} y={h - 6} fontSize="10" fill="var(--color-text-secondary)" textAnchor="middle">{p.label}</text>
+                  ))}
+                </svg>
+                {hovered && (
+                  <ChartTooltip style={{
+                    left: `${(hovered.x / w) * 100}%`,
+                    top: `${(hovered.y / h) * 100}%`,
+                    transform: 'translate(-50%, calc(-100% - 10px))',
+                  }}>
+                    <strong>{hovered.fullLabel || hovered.label}</strong><br />
+                    {hovered.total.toFixed(0)} €
+                  </ChartTooltip>
+                )}
+              </div>
             )
           })()}
         </div>
+
+      </div>
+
+      {/* Ligne 2 : Agenda + Calendrier + À traiter */}
+      <div className="dash-line2-grid" style={{ marginBottom: 16 }}>
+
+        <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
 
         {/* À traiter */}
         <div style={cardStyle}>
@@ -1139,45 +1274,11 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
 
       </div>
 
-      {/* Ligne 2 : Agenda */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-          AGENDA
-        </div>
-        <AgendaCalendrier accent={accent} onNavigate={onNavigate} />
-      </div>
+      {/* Ligne 4 : Derniers clients + Dernières séances + Activité récente + Anniversaires */}
+      <div className="dash-line4-grid">
 
-      {/* Vue d'ensemble */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>VUE D'ENSEMBLE</div>
-
-        {/* Compteurs */}
-        <div className="dash-overview-grid">
-          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '50%' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="ti ti-users" style={{ fontSize: 18, color: accent }} aria-hidden="true" />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Clients ce mois</div>
-              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.clientsCount}</div>
-            </div>
-          </div>
-          <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', width: '50%' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#E1F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="ti ti-coin" style={{ fontSize: 18, color: '#1D9E75' }} aria-hidden="true" />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Revenus ce mois</div>
-              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Listes côte à côte */}
-        <div className="dash-lists-grid">
-
-          {/* 5 derniers clients */}
-          <div style={{ ...cardStyle, width: '50%' }}>
+          {/* Derniers clients */}
+          <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Derniers clients</span>
               <button onClick={() => onNavigate?.('/clients')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
@@ -1207,8 +1308,8 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             ))}
           </div>
 
-          {/* 5 dernières séances */}
-          <div style={{ ...cardStyle, width: '50%' }}>
+          {/* Dernières séances */}
+          <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Dernières séances</span>
               <button onClick={() => onNavigate?.('/seances')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Voir tout →</button>
@@ -1240,78 +1341,29 @@ export default function Dashboard({ accent, sbActif, sbItems, widgets, setWidget
             })}
           </div>
 
-        </div>
-      </div>
-
-      {/* Activité récente */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>ACTIVITÉ RÉCENTE</div>
-        <div style={{ ...cardStyle, width: '50%' }}>
-          {/* Compteurs du mois */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
-              <i className="ti ti-calendar-stats" style={{ fontSize: 20, color: accent }} aria-hidden="true" />
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Séances ce mois</div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.count}</div>
-              </div>
-            </div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
-              <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
-                <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ligne 3 : Clients récents + Anniversaires */}
-      <div className="dash-row-bottom">
-
-        <div style={{ ...cardStyle, width: '50%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>Clients récents</span>
-            <button onClick={() => onNavigate?.('/clients')} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              Voir tout →
-            </button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {derniersClients.length === 0 ? (
-              <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                <i className="ti ti-users" style={{ fontSize: 22, display: 'block', marginBottom: 6 }} />Aucun client récent
-              </div>
-            ) : derniersClients.map(c => {
-              const initials = `${(c.prenom||'')[0]||''}${(c.nom||'')[0]||''}`.toUpperCase()
-              const name = `${c.prenom||''} ${c.nom||''}`.trim()
-              const meta = `${c.specialite || '—'} · ${c.nb_seances || 0} séance(s)`
-              return (
-                <div
-                  key={c.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.12s' }}
-                  onClick={() => onNavigate?.('/clients')}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  role="button" tabIndex={0}
-                  onKeyDown={e => e.key === 'Enter' && onNavigate?.('/clients')}
-                  aria-label={`Voir la fiche de ${name}`}
-                >
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: `${accent}22`, color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                    {initials}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{meta}</div>
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: '#1D9E75', background: '#E1F5EE', padding: '2px 8px', borderRadius: 20 }}>
-                    {c.statut === 'actif' ? 'Actif' : c.statut === 'inactif' ? 'Inactif' : 'Archivé'}
-                  </span>
+          {/* Activité récente */}
+          <div style={cardStyle}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 12 }}>Activité récente</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+                <i className="ti ti-calendar-stats" style={{ fontSize: 20, color: accent }} aria-hidden="true" />
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Séances ce mois</div>
+                  <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{monthStats.count}</div>
                 </div>
-              )
-            })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, background: 'var(--color-background-secondary)' }}>
+                <i className="ti ti-coin" style={{ fontSize: 20, color: '#1D9E75' }} aria-hidden="true" />
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Encaissés ce mois</div>
+                  <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.2 }}>{revenusCeMois.toFixed(0)} €</div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Anniversaires prochains */}
+          <AnniversairesWidget accent={accent} clients={anniversaireClients} onNavigate={onNavigate} />
 
       </div>
     </div>

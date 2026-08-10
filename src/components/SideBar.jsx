@@ -1,12 +1,24 @@
 import { useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 
+function SbLabel({ collapsed, className, style, children }) {
+  return (
+    <span
+      className={`sb-label${collapsed ? ' collapsed' : ''}${className ? ` ${className}` : ''}`}
+      style={style}
+    >
+      {children}
+    </span>
+  )
+}
+
 export default function SideBar({
   accent, bgCol,
   activePanel, setActivePanel,
   username,
   items,
   setItems,
+  collapsed, onToggleCollapse,
 }) {
   const [hoveredTo, setHoveredTo] = useState(null)
   const [dragOverTo, setDragOverTo] = useState(null)
@@ -48,17 +60,11 @@ export default function SideBar({
   const initials = username ? username.charAt(0).toUpperCase() : 'U'
 
   return (
-    <aside className="sidebar" style={{ background: bgCol }}>
+    <aside className={`sidebar${collapsed ? ' collapsed' : ''}`} style={{ background: bgCol }}>
 
-      <div className="sb-logo" style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 0 8px'}}>
-        <div style={{
-          width:'36px',height:'36px',borderRadius:'10px',
-          background:'rgba(255,255,255,0.15)',
-          display:'flex',alignItems:'center',justifyContent:'center',
-          fontSize:'18px',fontWeight:'800',color:'#fff',
-          letterSpacing:'-1px',marginBottom:'4px'
-        }}>N</div>
-        <span style={{fontSize:'9px',fontWeight:'600',color:'rgba(255,255,255,0.5)',letterSpacing:'2px',textTransform:'uppercase'}}>naposolo</span>
+      <div className="sb-logo">
+        <div className="sb-logo-mark" style={{ background: `${accent}33`, color: accent }}>N</div>
+        <SbLabel collapsed={collapsed} className="sb-logo-word">NAPOSOLO</SbLabel>
       </div>
 
       <div className="sb-items">
@@ -84,11 +90,11 @@ export default function SideBar({
               <>
                 <div
                   className="sb-icon-sq"
-                  style={{ background: isActive || hoveredTo === to ? '#534AB7' : 'transparent' }}
+                  style={{ background: isActive || hoveredTo === to ? accent : 'transparent' }}
                 >
                   <i className={`ti ${icon}`} aria-hidden="true" />
                 </div>
-                <span className="sb-item-lbl">{label}</span>
+                <SbLabel collapsed={collapsed} className="sb-item-lbl">{label}</SbLabel>
               </>
             )}
           </NavLink>
@@ -102,8 +108,8 @@ export default function SideBar({
           onClick={() => togglePanel('perso')}
           onKeyDown={e => e.key === 'Enter' && togglePanel('perso')}
         >
-          <i className="ti ti-adjustments-horizontal" style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
-          <span style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.4)' }}>Perso</span>
+          <i className="ti ti-adjustments-horizontal" style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.5)' }} aria-hidden="true" />
+          <SbLabel collapsed={collapsed} style={{ color: activePanel === 'perso' ? accent : 'rgba(255,255,255,0.5)' }}>Perso</SbLabel>
         </div>
         <div
           className={`sb-bot-btn${activePanel === 'settings' ? ' active' : ''}`}
@@ -111,14 +117,24 @@ export default function SideBar({
           onClick={() => togglePanel('settings')}
           onKeyDown={e => e.key === 'Enter' && togglePanel('settings')}
         >
-          <i className="ti ti-settings" style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.4)' }} aria-hidden="true" />
-          <span style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.4)' }}>Réglages</span>
+          <i className="ti ti-settings" style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.5)' }} aria-hidden="true" />
+          <SbLabel collapsed={collapsed} style={{ color: activePanel === 'settings' ? accent : 'rgba(255,255,255,0.5)' }}>Réglages</SbLabel>
         </div>
-        <div className="sb-avatar">
+        <div className="sb-bot-btn sb-avatar-row">
           <div className="sb-av-circle">
             <span>{initials}</span>
           </div>
+          <SbLabel collapsed={collapsed} style={{ color: 'rgba(255,255,255,0.5)' }}>{username || 'Mon compte'}</SbLabel>
         </div>
+        <button
+          type="button"
+          className="sb-bot-btn sb-collapse-btn"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? 'Déployer la barre latérale' : 'Réduire la barre latérale'}
+          title={collapsed ? 'Déployer' : 'Réduire'}
+        >
+          <i className={`ti ${collapsed ? 'ti-chevron-right' : 'ti-chevron-left'}`} style={{ color: 'rgba(255,255,255,0.5)' }} aria-hidden="true" />
+        </button>
       </div>
     </aside>
   )
