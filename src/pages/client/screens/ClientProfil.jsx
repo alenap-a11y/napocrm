@@ -10,7 +10,9 @@ export default function ClientProfil() {
 
   async function handleSignOut() {
     await supabaseClient.auth.signOut();
-    navigate('/');
+    // /accueil force la landing publique même si une session praticien est
+    // active dans le même navigateur (/ basculerait sur son dashboard).
+    navigate('/accueil');
   }
 
   return (

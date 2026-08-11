@@ -98,6 +98,12 @@ export default function App() {
     content = <PolitiqueConfidentialite />
   } else if (location.pathname === '/confirmer') {
     content = <ConfirmEmail />
+  } else if (location.pathname === '/accueil') {
+    // Landing publique forcée, quel que soit l'état de connexion praticien
+    // — utilisée par le lien "Naposolo" depuis l'espace client, pour ne
+    // jamais atterrir sur le dashboard praticien si une session praticien
+    // est active dans le même navigateur (/ bascule sur AppShell si connecté).
+    content = <Landing />
   } else if (location.pathname.startsWith('/client')) {
     content = <EspaceClientRouter />
   } else if (loading) {

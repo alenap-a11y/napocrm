@@ -49,7 +49,7 @@ export default function ClientConnexion({ errorMessage, onErrorShown }) {
 
   return (
     <div className="min-h-screen bg-creme flex flex-col items-center justify-center px-6">
-      <Link to="/" className="font-clientSerif text-2xl text-saugeDark mb-6">Naposolo</Link>
+      <Link to="/accueil" className="font-clientSerif text-2xl text-saugeDark mb-6">Naposolo</Link>
       <form onSubmit={handleSubmit} className="max-w-sm w-full bg-white rounded-2xl shadow-sm border border-sauge/15 p-8">
         <h1 className="font-clientSerif text-3xl text-saugeDark mb-1">Espace client</h1>
         <p className="text-sauge text-sm mb-6">Connectez-vous à votre compte.</p>
