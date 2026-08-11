@@ -11,6 +11,8 @@ import ClientEvenements from './screens/ClientEvenements';
 import ClientFavoris from './screens/ClientFavoris';
 import ClientLive from './screens/ClientLive';
 import ClientProfil from './screens/ClientProfil';
+import ClientMonProfil from './screens/ClientMonProfil';
+import ClientBientotDisponible from './screens/ClientBientotDisponible';
 
 const AUTHENTICATED_SCREENS = [
   { path: '/client/accueil', element: (session) => <ClientAccueil session={session} /> },
@@ -20,6 +22,9 @@ const AUTHENTICATED_SCREENS = [
   { path: '/client/favoris', element: (session) => <ClientFavoris session={session} /> },
   { path: '/client/live', element: () => <ClientLive /> },
   { path: '/client/profil', element: () => <ClientProfil /> },
+  { path: '/client/profil/moi', element: (session) => <ClientMonProfil session={session} /> },
+  { path: '/client/profil/notifications', element: () => <ClientBientotDisponible titre="Notifications" /> },
+  { path: '/client/profil/aide', element: () => <ClientBientotDisponible titre="Aide / FAQ" /> },
 ];
 
 // Racine de routage de l'espace client, montée sur /client/* dans App.jsx.
