@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AdminDashboard from './AdminDashboard'
 import SupabaseStats from './SupabaseStats'
@@ -26,9 +27,43 @@ function clearNapoLocalPrefs() {
 
 
 export default function AdminLayout({ user }) {
-  const [page, setPage] = useState('dashboard')
+  const location = useLocation()
+  const navigate = useNavigate()
+  // Routage hybride (comme le reste de l'app) : /napo-cockpit-7X/users/:id
+  // donne une URL propre à AdminUserDetail (partageable, survit au refresh)
+  // sans réécrire tout le shell admin en <Routes> — le reste des pages
+  // (dashboard, bugs, etc.) garde son état interne inchangé.
+  const userIdFromUrl = location.pathname.match(/^\/napo-cockpit-7X\/users\/([0-9a-f-]{36})$/i)?.[1] || null
+
+  const [page, setPage] = useState(userIdFromUrl ? 'users' : 'dashboard')
   const [decoOpen, setDecoOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+
+  useEffect(() => {
+    if (userIdFromUrl && selectedUser?.id !== userIdFromUrl) {
+      setPage('users')
+      supabase.rpc('get_admin_users_view').eq('id', userIdFromUrl).single()
+        .then(({ data }) => { if (data) setSelectedUser(data) })
+    }
+    if (!userIdFromUrl && selectedUser) {
+      setSelectedUser(null)
+    }
+  }, [userIdFromUrl])
+
+  function goToPage(id) {
+    setPage(id)
+    navigate('/napo-cockpit-7X')
+  }
+
+  function selectUser(u) {
+    setSelectedUser(u)
+    navigate(`/napo-cockpit-7X/users/${u.id}`)
+  }
+
+  function backFromUser() {
+    setSelectedUser(null)
+    navigate('/napo-cockpit-7X')
+  }
 
   async function signOut() {
     clearNapoLocalPrefs();
@@ -62,7 +97,7 @@ export default function AdminLayout({ user }) {
     const isRgpd = item.id === 'admin-rgpd'
     const iconColor = isRgpd ? '#E24B4A' : (active ? '#B8961E' : 'rgba(255,255,255,0.5)')
     return (
-      <div onClick={() => setPage(item.id)}
+      <div onClick={() => goToPage(item.id)}
         style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 1rem', cursor: 'pointer',
           background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
           borderLeft: active ? `2px solid ${isRgpd ? '#E24B4A' : '#B8961E'}` : '2px solid transparent' }}>
@@ -137,8 +172,8 @@ export default function AdminLayout({ user }) {
         {page === 'analytics' && <AdminAnalytics />}
         {page === 'taches' && <AdminTaches />}
         {page === 'ameliorations' && <AdminAmeliorations />}
-        {page === 'users' && !selectedUser && <AdminUsers onSelectUser={u => setSelectedUser(u)} />}
-        {page === 'users' && selectedUser && <AdminUserDetail user={selectedUser} onBack={() => setSelectedUser(null)} />}
+        {page === 'users' && !selectedUser && <AdminUsers onSelectUser={selectUser} />}
+        {page === 'users' && selectedUser && <AdminUserDetail user={selectedUser} onBack={backFromUser} />}
       </div>
 
       {decoOpen && (
