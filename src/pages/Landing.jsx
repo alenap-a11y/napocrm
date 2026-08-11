@@ -14,6 +14,28 @@ import napoLiveImg from '../assets/napo-live.png';
 //   "Camille Lemoine" ont été supprimés : chiffres fictifs = risque pratique commerciale trompeuse
 //   (art. L121-2 Code conso), sans lien avec le fait d'avoir ou non un SIRET.
 
+const DEFAULT_MODULES = [
+  { emoji: '⚡', title: 'NapoÉnergie', description: 'Magnétisme & soins énergétiques' },
+  { emoji: '🌸', title: 'Fleurs de Bach', description: 'Élixirs floraux & suivi' },
+  { emoji: '🔮', title: 'NapoOracle', description: 'Cartomancie & tirages' },
+  { emoji: '📹', title: 'Napo-live', description: 'Séances en visio intégrées' },
+  { emoji: '🌐', title: 'Napo-landing', description: 'Page pro & présentation', badge: 'En cours' },
+  { emoji: '📇', title: 'Napo-annuaire', description: 'Trouvez un praticien', badge: 'En cours' },
+  { emoji: '📅', title: 'Napo-Événement', description: 'Ateliers & formations', badge: 'En cours' },
+  { emoji: '🌍', title: 'Napo-live traduction', description: 'Traduction en temps réel', badge: 'En création' },
+]
+
+const DEFAULT_FEATURES = [
+  { icon: 'ti-users', title: 'Fiches clients', description: 'Coordonnées, historique, notes et documents centralisés.' },
+  { icon: 'ti-calendar-stats', title: 'Suivi des séances', description: 'Contenu, durée, tarif et progression de chaque client.' },
+  { icon: 'ti-notebook', title: 'Notes', description: 'Notes libres ou structurées après chaque séance.' },
+  { icon: 'ti-calendar', title: 'Agenda', description: 'Visualisez vos RDV, évitez les conflits, planifiez sereinement.' },
+  { icon: 'ti-bell', title: 'Relances automatiques', description: 'Rappels et relances personnalisés sans effort.', optional: true },
+  { icon: 'ti-shield-check', title: 'RGPD natif', description: 'Hébergement européen, consentements gérés, export.' },
+  { icon: 'ti-world', title: 'Agenda en ligne', description: 'Réservation 24h/24 par vos clients.' },
+  { icon: 'ti-messages', title: 'Email de confirmation', description: 'Confirmation automatique avec lien calendrier.' },
+]
+
 export default function Landing() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [betaPrenom,   setBetaPrenom]   = useState('');
@@ -26,11 +48,36 @@ export default function Landing() {
   const [betaPassword, setBetaPassword] = useState('');
   const [betaConsent,  setBetaConsent]  = useState(false);
   const [alphaOpen,    setAlphaOpen]    = useState(true);
+  const [cms,          setCms]          = useState({});
+  const [dynFeatures,  setDynFeatures]  = useState([]);
+  const [dynModules,   setDynModules]   = useState([]);
 
   useEffect(() => {
     supabase.from('app_config').select('value').eq('key', 'alpha_open').single()
       .then(({ data }) => { if (data) setAlphaOpen(data.value === 'true') })
+    supabase.from('landing_content').select('key, value, color, font_size, font_family')
+      .then(({ data }) => {
+        if (!data) return
+        const map = {}
+        data.forEach(r => { map[r.key] = r })
+        setCms(map)
+      })
+    supabase.from('landing_features').select('*').order('ordre')
+      .then(({ data }) => { if (data && data.length) setDynFeatures(data) })
+    supabase.from('landing_modules').select('*').order('ordre')
+      .then(({ data }) => { if (data && data.length) setDynModules(data) })
   }, []);
+
+  const cmsText = (key, fallback) => cms[key]?.value || fallback;
+  const cmsStyle = (key) => {
+    const row = cms[key]
+    if (!row) return {}
+    const style = {}
+    if (row.color) style.color = row.color
+    if (row.font_size) style.fontSize = row.font_size
+    if (row.font_family && row.font_family !== 'inherit') style.fontFamily = row.font_family
+    return style
+  }
 
   async function handleBeta() {
     if (!betaPrenom.trim() || !betaNom.trim() || !betaEmail.trim()) { setBetaError('Nom, prénom et email requis.'); return }
@@ -79,6 +126,13 @@ export default function Landing() {
   return (
     <div className="bg-bg text-navy antialiased overflow-x-hidden">
 
+      {/* BANDEAU HEADER (CMS) — masqué si vide */}
+      {cmsText('header_tagline', '') && (
+        <div className="bg-pale text-center py-2 px-6 text-sm" style={cmsStyle('header_tagline')}>
+          {cmsText('header_tagline', '')}
+        </div>
+      )}
+
       {/* NAVBAR */}
       <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-gray-100/50">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -88,6 +142,9 @@ export default function Landing() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
               </div>
               <span className="bg-gradient-to-r from-navy to-navy/80 bg-clip-text">Naposolo</span>
+              {cmsText('header_badge', '') && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-mystic/10 text-mystic normal-case tracking-normal">{cmsText('header_badge', '')}</span>
+              )}
             </Link>
             <div className="hidden lg:flex items-center gap-8 font-medium text-gray-600 text-sm">
               <Link to="/" className="hover:text-primary transition-colors duration-200">Accueil</Link>
@@ -113,22 +170,22 @@ export default function Landing() {
         <div className="orb w-48 h-48 bg-warm/10 bottom-40 left-1/3"></div>
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center relative z-10">
           <div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose text-mystic rounded-full text-sm font-semibold mb-8 border border-mystic/15">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose text-mystic rounded-full text-sm font-semibold mb-8 border border-mystic/15" style={cmsStyle('hero_badge')}>
               <span className="w-2 h-2 bg-mystic rounded-full animate-pulse-soft"></span>
-              Alpha ouverte • Accès anticipé
+              {cmsText('hero_badge', 'Alpha ouverte • Accès anticipé')}
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-[54px] font-extrabold text-navy leading-[1.08] tracking-tight mb-6">
-              Le <span className="gradient-text">bon outil</span> pour chaque pratique, enfin réuni.
+            <h1 className="text-4xl md:text-5xl lg:text-[54px] font-extrabold text-navy leading-[1.08] tracking-tight mb-6" style={cmsStyle('hero_title')}>
+              {cmsText('hero_title', "Le bon outil pour chaque pratique, enfin réuni.")}
             </h1>
-            <p className="text-lg text-gray-600 leading-relaxed mb-4 max-w-lg">
-              Énergéticien, praticien Reiki, thérapeute en fleurs de Bach, cartomancien… Naposolo s'adapte à votre métier avec des modules pensés spécifiquement pour vous.
+            <p className="text-lg text-gray-600 leading-relaxed mb-4 max-w-lg" style={cmsStyle('hero_subtitle')}>
+              {cmsText('hero_subtitle', "Énergéticien, praticien Reiki, thérapeute en fleurs de Bach, cartomancien… Naposolo s'adapte à votre métier avec des modules pensés spécifiquement pour vous.")}
             </p>
-            <p className="text-base text-gray-500 mb-10 max-w-md italic">
-              "Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands."
+            <p className="text-base text-gray-500 mb-10 max-w-md italic" style={cmsStyle('hero_tagline')}>
+              "{cmsText('hero_tagline', 'Fait pour les indépendants qui pensent en grand — et qui savent que les petits font les grands.')}"
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button type="button" onClick={() => setShowRegisterModal(true)} className="inline-flex justify-center items-center gap-2 bg-gradient-to-r from-primary to-mystic text-white px-8 py-4 rounded-xl font-semibold shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-mystic/30 hover:scale-[1.02] transition-all duration-300">
-                Rejoindre l'alpha
+                <span style={cmsStyle('hero_cta')}>{cmsText('hero_cta', "Rejoindre l'alpha")}</span>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
               </button>
               <a href="#modules" className="inline-flex justify-center items-center gap-2 bg-white border border-gray-200 text-navy px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm">
@@ -194,38 +251,27 @@ export default function Landing() {
       {/* TITRE MODULES */}
       <section id="modules" className="pt-20 pb-8 px-6">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Un module pour chaque pratique</h2>
-          <p className="text-lg text-gray-600 mb-6">Choisissez les modules adaptés à votre métier — magnétisme, yoga, sophrologie, astrologie et bien d'autres. Activez uniquement ce dont vous avez besoin.</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight" style={cmsStyle('modules_title')}>{cmsText('modules_title', 'Un module pour chaque pratique')}</h2>
+          <p className="text-lg text-gray-600 mb-6" style={cmsStyle('modules_sub')}>{cmsText('modules_sub', "Choisissez les modules adaptés à votre métier — magnétisme, yoga, sophrologie, astrologie et bien d'autres. Activez uniquement ce dont vous avez besoin.")}</p>
         </div>
       </section>
 
       {/* MODULES GRID */}
       <section className="pb-16 px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {[
-            { emoji: '⚡', bg: 'bg-warm/10', color: 'text-warm', title: 'NapoÉnergie', desc: 'Magnétisme & soins énergétiques' },
-            { emoji: '🌸', bg: 'bg-pink-50', color: 'text-pink-400', title: 'Fleurs de Bach', desc: 'Élixirs floraux & suivi' },
-            { emoji: '🔮', bg: 'bg-mystic/10', color: 'text-mystic', title: 'NapoOracle', desc: 'Cartomancie & tirages' },
-            { emoji: '📹', bg: 'bg-accent/10', color: 'text-accent', title: 'Napo-live', desc: 'Séances en visio intégrées' },
-            { emoji: '🌐', bg: 'bg-primary/10', color: 'text-primary', title: 'Napo-landing', desc: 'Page pro & présentation', badge: 'En cours' },
-            { emoji: '📇', bg: 'bg-mystic/10', color: 'text-mystic', title: 'Napo-annuaire', desc: 'Trouvez un praticien', badge: 'En cours' },
-            { emoji: '📅', bg: 'bg-warm/10', color: 'text-warm', title: 'Napo-Événement', desc: 'Ateliers & formations', badge: 'En cours' },
-          ].map((m, i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover cursor-pointer group relative overflow-hidden">
-              <div className={`absolute top-0 right-0 w-20 h-20 ${m.bg} rounded-bl-3xl -mr-4 -mt-4 group-hover:scale-150 transition-transform duration-500`}></div>
-              <div className={`w-11 h-11 ${m.bg} ${m.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10 text-xl`}>{m.emoji}</div>
-              <h3 className="font-bold text-navy mb-1.5 relative z-10">{m.title}</h3>
-              <p className="text-sm text-gray-500 relative z-10">{m.desc}</p>
-              {m.badge && <span className="absolute top-3 right-3 bg-warm/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-20">{m.badge}</span>}
-            </div>
-          ))}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover cursor-pointer group relative overflow-hidden border-dashed border-mystic/30 bg-gradient-to-br from-white to-rose/30">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-mystic/10 rounded-bl-3xl -mr-4 -mt-4 group-hover:scale-150 transition-transform duration-500"></div>
-            <div className="w-11 h-11 bg-mystic/15 text-mystic rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10 text-xl">🌍</div>
-            <h3 className="font-bold text-navy mb-1.5 relative z-10">Napo-live traduction</h3>
-            <p className="text-sm text-gray-500 relative z-10">Traduction en temps réel</p>
-            <span className="absolute top-3 right-3 bg-mystic/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-20">En création</span>
-          </div>
+          {(dynModules.length ? dynModules : DEFAULT_MODULES).map((m, i) => {
+            const palette = ['bg-warm/10 text-warm', 'bg-pink-50 text-pink-400', 'bg-mystic/10 text-mystic', 'bg-accent/10 text-accent', 'bg-primary/10 text-primary']
+            const [bg, color] = palette[i % palette.length].split(' ')
+            return (
+              <div key={m.id || i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm card-hover cursor-pointer group relative overflow-hidden">
+                <div className={`absolute top-0 right-0 w-20 h-20 ${bg} rounded-bl-3xl -mr-4 -mt-4 group-hover:scale-150 transition-transform duration-500`}></div>
+                <div className={`w-11 h-11 ${bg} ${color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10 text-xl`}>{m.emoji}</div>
+                <h3 className="font-bold text-navy mb-1.5 relative z-10">{m.title}</h3>
+                <p className="text-sm text-gray-500 relative z-10">{m.description}</p>
+                {m.badge && <span className="absolute top-3 right-3 bg-warm/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-20">{m.badge}</span>}
+              </div>
+            )
+          })}
         </div>
       </section>
 
@@ -234,29 +280,29 @@ export default function Landing() {
         <div className="glow-center"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Ce que Naposolo fait pour vous</h2>
-            <p className="text-lg text-gray-600">Tout ce dont vous avez besoin, rien de superflu.</p>
+            {cmsText('features_badge', '') && (
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-pale text-primary rounded-full text-sm font-semibold mb-6" style={cmsStyle('features_badge')}>
+                {cmsText('features_badge', '')}
+              </div>
+            )}
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight" style={cmsStyle('features_title')}>{cmsText('features_title', 'Ce que Naposolo fait pour vous')}</h2>
+            <p className="text-lg text-gray-600" style={cmsStyle('features_sub')}>{cmsText('features_sub', 'Tout ce dont vous avez besoin, rien de superflu.')}</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {[
-              { bg: 'bg-primary/10', color: 'text-primary', title: 'Fiches clients', desc: 'Coordonnées, historique, notes et documents centralisés.', path: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
-              { bg: 'bg-accent/10', color: 'text-accent', title: 'Suivi des séances', desc: 'Contenu, durée, tarif et progression de chaque client.', path: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-              { bg: 'bg-warm/10', color: 'text-warm', title: 'Notes', desc: 'Notes libres ou structurées après chaque séance.', path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-              { bg: 'bg-mystic/10', color: 'text-mystic', title: 'Agenda', desc: 'Visualisez vos RDV, évitez les conflits, planifiez sereinement.', path: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-              { bg: 'bg-primary/10', color: 'text-primary', title: 'Relances automatiques', desc: 'Rappels et relances personnalisés sans effort.', path: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', tag: 'Optionnel' },
-              { bg: 'bg-accent/10', color: 'text-accent', title: 'RGPD natif', desc: 'Hébergement européen, consentements gérés, export.', path: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-              { bg: 'bg-mystic/10', color: 'text-mystic', title: 'Agenda en ligne', desc: 'Réservation 24h/24 par vos clients.', path: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9', tag: 'En cours' },
-              { bg: 'bg-warm/10', color: 'text-warm', title: 'Email de confirmation', desc: 'Confirmation automatique avec lien calendrier.', path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-            ].map((f, i) => (
-              <div key={i} id={f.title === 'RGPD natif' ? 'securite' : undefined} className="bg-bg rounded-2xl p-6 border border-gray-100/80 card-hover text-center group">
-                <div className={`w-12 h-12 ${f.bg} ${f.color} rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={f.path}></path></svg>
+            {(dynFeatures.length ? dynFeatures : DEFAULT_FEATURES).map((f, i) => {
+              const palette = ['bg-primary/10 text-primary', 'bg-accent/10 text-accent', 'bg-warm/10 text-warm', 'bg-mystic/10 text-mystic']
+              const [bg, color] = palette[i % palette.length].split(' ')
+              return (
+                <div key={f.id || i} id={f.title === 'RGPD natif' ? 'securite' : undefined} className="bg-bg rounded-2xl p-6 border border-gray-100/80 card-hover text-center group">
+                  <div className={`w-12 h-12 ${bg} ${color} rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                    <i className={`ti ${f.icon || 'ti-star'} text-xl`}></i>
+                  </div>
+                  <h3 className="font-bold text-navy mb-2">{f.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{f.description}</p>
+                  {f.optional && <span className="text-[10px] text-warm font-semibold">Optionnel</span>}
                 </div>
-                <h3 className="font-bold text-navy mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-                {f.tag && <span className="text-[10px] text-warm font-semibold">{f.tag}</span>}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
@@ -372,7 +418,7 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">À propos de Naposolo</h2>
           <p className="text-lg text-gray-600 leading-relaxed mb-4">
-            Naposolo est développé en solo, à Vandœuvre-lès-Nancy, par un fondateur qui construit
+            Naposolo est développé en solo, à {cmsText('footer_city', 'Vandœuvre-lès-Nancy')}, par un fondateur qui construit
             l'outil directement avec les retours des praticiens qui l'utilisent au quotidien.
           </p>
           <p className="text-lg text-gray-600 leading-relaxed">
@@ -448,7 +494,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-            <p>&copy; 2026 Naposolo. Fait avec <span className="text-red-400">❤️</span> à Vandœuvre-lès-Nancy.</p>
+            <p>&copy; 2026 Naposolo. Fait avec <span className="text-red-400">❤️</span> à {cmsText('footer_city', 'Vandœuvre-lès-Nancy')}.</p>
             <p>naposolo.com</p>
           </div>
         </div>

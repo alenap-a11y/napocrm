@@ -11,6 +11,10 @@ const FIELDS = [
     { key: 'hero_cta', label: 'Bouton CTA' },
     { key: 'hero_tagline', label: 'Tagline sous CTA' },
   ]},
+  { section: 'Modules (textes section)', fields: [
+    { key: 'modules_title', label: 'Titre section' },
+    { key: 'modules_sub', label: 'Sous-titre section', textarea: true },
+  ]},
   { section: 'Fonctionnalités (textes section)', fields: [
     { key: 'features_badge', label: 'Badge section' },
     { key: 'features_title', label: 'Titre section' },
@@ -29,6 +33,7 @@ const FONTS = ['inherit','Georgia, serif','system-ui, sans-serif','Montserrat, s
 const SIZES = ['11px','12px','13px','14px','15px','16px','17px','18px','20px','24px','28px','32px','36px','46px']
 const ICONS = ['ti-users','ti-calendar-stats','ti-notebook','ti-calendar','ti-bell','ti-shield-check','ti-star','ti-heart','ti-brain','ti-leaf','ti-sparkles','ti-bolt','ti-lock','ti-chart-bar','ti-messages','ti-world']
 const EMPTY_FEAT = { icon: 'ti-star', title: '', description: '', optional: false, ordre: 99 }
+const EMPTY_MODULE = { emoji: '✨', title: '', description: '', badge: '', ordre: 99 }
 
 const inp = { width: '100%', padding: '7px 10px', borderRadius: 7, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 12, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }
 
@@ -169,27 +174,109 @@ function FeatCard({ feat, onSave, onDelete }) {
   )
 }
 
+function ModuleCard({ mod, onSave, onDelete }) {
+  const [editing, setEditing] = useState(!mod.id)
+  const [draft, setDraft] = useState(mod)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+  async function save() {
+    if (!draft.title.trim()) { setMsg('✗ Titre requis'); setTimeout(() => setMsg(''), 2000); return }
+    setSaving(true)
+    const payload = { emoji: draft.emoji || '✨', title: draft.title, description: draft.description, badge: draft.badge || null, ordre: Number(draft.ordre) }
+    let error
+    if (mod.id) {
+      ({ error } = await supabase.from('landing_modules').update(payload).eq('id', mod.id))
+    } else {
+      ({ error } = await supabase.from('landing_modules').insert(payload))
+    }
+    setSaving(false)
+    if (error) { setMsg('✗ ' + error.message); setTimeout(() => setMsg(''), 2500); return }
+    setMsg('✓ Sauvegardé'); setEditing(false); setTimeout(() => setMsg(''), 2500); onSave()
+  }
+  async function del() {
+    if (!mod.id) { onDelete(mod._tmp); return }
+    if (!confirm('Supprimer ce module ?')) return
+    await supabase.from('landing_modules').delete().eq('id', mod.id)
+    onDelete(mod.id)
+  }
+  return (
+    <div style={{ background: 'var(--color-background-secondary)', borderRadius: 10, border: '0.5px solid var(--color-border-tertiary)', overflow: 'hidden', marginBottom: 10 }}>
+      <div style={{ padding: '12px 16px', borderBottom: editing ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 18 }}>{mod.emoji || '✨'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              {mod.title || <span style={{ fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>Nouveau module</span>}
+              {mod.badge && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: '#FEF3C7', color: '#B45309', marginLeft: 8 }}>{mod.badge}</span>}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{mod.description}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => { setDraft(mod); setEditing(e => !e) }} style={{ padding: '4px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 11, cursor: 'pointer' }}>{editing ? 'Annuler' : '✎ Éditer'}</button>
+            <button onClick={del} style={{ padding: '4px 10px', borderRadius: 6, border: '0.5px solid #E24B4A', background: 'transparent', color: '#E24B4A', fontSize: 11, cursor: 'pointer' }}>Suppr.</button>
+          </div>
+        </div>
+        {msg && <div style={{ marginTop: 8, fontSize: 11, color: msg.startsWith('✓') ? '#3B6D11' : '#993556' }}>{msg}</div>}
+      </div>
+      {editing && (
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Emoji</div>
+              <input value={draft.emoji} onChange={e => setDraft(d => ({ ...d, emoji: e.target.value }))} style={{ ...inp, textAlign: 'center', fontSize: 16 }} maxLength={4} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Titre</div>
+              <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))} style={inp} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Description</div>
+            <textarea value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} rows={2} style={{ ...inp, resize: 'vertical', lineHeight: 1.5 }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Badge (ex: En cours) — vide = aucun</div>
+              <input value={draft.badge || ''} onChange={e => setDraft(d => ({ ...d, badge: e.target.value }))} style={inp} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Ordre</div>
+              <input type="number" value={draft.ordre} onChange={e => setDraft(d => ({ ...d, ordre: e.target.value }))} style={inp} />
+            </div>
+          </div>
+          <button onClick={save} disabled={saving} style={{ alignSelf: 'flex-start', padding: '7px 20px', borderRadius: 7, border: 'none', background: '#D4A853', color: '#fff', fontSize: 12, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? .7 : 1 }}>{saving ? 'Sauvegarde…' : '✓ Sauvegarder'}</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminLanding() {
   const [data, setData] = useState({})
   const [features, setFeatures] = useState([])
+  const [modules, setModules] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('textes')
 
   useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
-    const [{ data: rows }, { data: feats }] = await Promise.all([
+    const [{ data: rows }, { data: feats }, { data: mods }] = await Promise.all([
       supabase.from('landing_content').select('key, value, color, font_size, font_family'),
       supabase.from('landing_features').select('*').order('ordre'),
+      supabase.from('landing_modules').select('*').order('ordre'),
     ])
     if (rows) { const map = {}; rows.forEach(r => { map[r.key] = r }); setData(map) }
     if (feats) setFeatures(feats)
+    if (mods) setModules(mods)
     setLoading(false)
   }
 
   function handleSaved(key, draft) { setData(d => ({ ...d, [key]: { ...d[key], ...draft } })) }
   function addFeature() { setFeatures(f => [...f, { ...EMPTY_FEAT, _tmp: Date.now() }]) }
   function removeFeature(id) { setFeatures(f => f.filter(x => (x.id || x._tmp) !== id)); loadAll() }
+  function addModule() { setModules(m => [...m, { ...EMPTY_MODULE, _tmp: Date.now() }]) }
+  function removeModule(id) { setModules(m => m.filter(x => (x.id || x._tmp) !== id)); loadAll() }
 
   if (loading) return <div style={{ padding: 40, fontSize: 13, color: 'var(--color-text-secondary)' }}>Chargement…</div>
 
@@ -203,6 +290,7 @@ export default function AdminLanding() {
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, background: 'var(--color-background-secondary)', padding: 6, borderRadius: 10, width: 'fit-content' }}>
         <button style={tabStyle(tab === 'textes')} onClick={() => setTab('textes')}>✎ Textes</button>
+        <button style={tabStyle(tab === 'modules')} onClick={() => setTab('modules')}>⊞ Cartes modules</button>
         <button style={tabStyle(tab === 'features')} onClick={() => setTab('features')}>⊞ Cartes features</button>
       </div>
       {tab === 'textes' && FIELDS.map(({ section, fields }) => (
@@ -211,6 +299,15 @@ export default function AdminLanding() {
           {fields.map(f => <FieldCard key={f.key} fieldKey={f.key} label={f.label} textarea={f.textarea} data={data} onSaved={handleSaved} />)}
         </div>
       ))}
+      {tab === 'modules' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{modules.length} module{modules.length > 1 ? 's' : ''}</div>
+            <button onClick={addModule} style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#0F6E56', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>+ Nouveau module</button>
+          </div>
+          {modules.map(m => <ModuleCard key={m.id || m._tmp} mod={m} onSave={loadAll} onDelete={removeModule} />)}
+        </div>
+      )}
       {tab === 'features' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
