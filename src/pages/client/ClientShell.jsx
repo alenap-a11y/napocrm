@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useHorlogeEnDirect } from './useHorlogeEnDirect';
 
 const NAV_ITEMS = [
   { path: '/client/accueil', icon: 'ti-home', label: 'Accueil' },
@@ -10,12 +11,39 @@ const NAV_ITEMS = [
   { path: '/client/profil', icon: 'ti-user', label: 'Profil' },
 ];
 
-// Shell des écrans connectés de l'espace client — bottom nav à 7 icônes,
-// volontairement construite telle quelle malgré la zone tactile réduite
-// (~54px vs 44px recommandés), décision utilisateur assumée.
+function TopBar() {
+  const navigate = useNavigate();
+  const now = useHorlogeEnDirect();
+  return (
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-sauge/15 flex items-center justify-between px-4 py-2.5">
+      <span className="text-xs text-saugeDark capitalize">
+        {now.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+        {' · '}
+        {now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+      </span>
+      <div className="flex items-center gap-4 text-saugeDark">
+        <button onClick={() => navigate('/client/annuaire')} aria-label="Recherche">
+          <i className="ti ti-search" style={{ fontSize: 18 }} aria-hidden="true" />
+        </button>
+        <button onClick={() => navigate('/client/favoris')} aria-label="Favoris">
+          <i className="ti ti-heart" style={{ fontSize: 18 }} aria-hidden="true" />
+        </button>
+        <button onClick={() => navigate('/client/profil/notifications')} aria-label="Notifications">
+          <i className="ti ti-bell" style={{ fontSize: 18 }} aria-hidden="true" />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+// Shell des écrans connectés de l'espace client — top bar persistante +
+// bottom nav à 7 icônes, volontairement construite telle quelle malgré la
+// zone tactile réduite (~54px vs 44px recommandés), décision utilisateur
+// assumée.
 export default function ClientShell({ children }) {
   return (
     <div className="min-h-screen bg-creme flex flex-col">
+      <TopBar />
       <main className="flex-1 pb-20">{children}</main>
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-sauge/15 flex justify-around z-40">
         {NAV_ITEMS.map((item) => (

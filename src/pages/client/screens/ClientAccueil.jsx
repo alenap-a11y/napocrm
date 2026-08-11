@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabaseClient } from '../../../lib/supabaseClient';
-
-function useHorlogeEnDirect() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-  return now;
-}
+import { useHorlogeEnDirect } from '../useHorlogeEnDirect';
 
 export default function ClientAccueil({ session }) {
   const prenom = session?.user?.user_metadata?.prenom || '';
