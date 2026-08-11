@@ -85,6 +85,12 @@ export default function Landing() {
     if (!betaConsent) { setBetaError('Merci de cocher la case de consentement RGPD.'); return }
     setBetaLoading(true); setBetaError('')
     try {
+      const { data: role } = await supabase.rpc('check_email_role', { check_email: betaEmail.trim() })
+      if (role === 'client') {
+        setBetaError('Cet email est déjà associé à un compte client Naposolo.')
+        setBetaLoading(false)
+        return
+      }
       const { error } = await supabase.auth.signUp({
         email: betaEmail.trim(),
         password: betaPassword,

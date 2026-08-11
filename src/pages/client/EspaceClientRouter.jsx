@@ -30,8 +30,19 @@ const AUTHENTICATED_SCREENS = [
 // Racine de routage de l'espace client, montée sur /client/* dans App.jsx.
 // Session gérée via supabaseClient (storageKey dédiée) — totalement
 // indépendante de l'état `user` praticien géré par App.jsx.
+//
+// auth.users est PARTAGÉ entre l'espace client et l'espace praticien (même
+// projet Supabase) : la storageKey dédiée isole seulement le stockage de
+// session côté navigateur, pas l'authentification elle-même. N'importe
+// quelles identifiants valides (y compris ceux d'un praticien) réussiraient
+// un signInWithPassword ici. roleStatus vérifie donc l'appartenance à
+// clients_portail AVANT tout rendu de contenu authentifié — tant que ce
+// n'est pas confirmé ('ok'), rien ne s'affiche (pas de fenêtre où les
+// données du mauvais espace apparaissent brièvement).
 export default function EspaceClientRouter() {
   const [session, setSession] = useState(undefined); // undefined = chargement initial
+  const [roleStatus, setRoleStatus] = useState('idle'); // idle | checking | ok | denied
+  const [deniedMessage, setDeniedMessage] = useState('');
 
   useEffect(() => {
     supabaseClient.auth.getSession().then(({ data }) => setSession(data.session));
@@ -41,29 +52,65 @@ export default function EspaceClientRouter() {
     return () => subscription.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (session === undefined) return;
+    if (!session) {
+      setRoleStatus('idle');
+      return;
+    }
+    let cancelled = false;
+    setRoleStatus('checking');
+    supabaseClient
+      .from('clients_portail')
+      .select('id')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data) {
+          setRoleStatus('ok');
+        } else {
+          setDeniedMessage("Ce compte n'est pas un compte client.");
+          supabaseClient.auth.signOut().then(() => {
+            if (!cancelled) setRoleStatus('denied');
+          });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [session]);
+
   if (session === undefined) return null;
+  // Session présente mais rôle pas encore confirmé (ou refusé, signOut en
+  // cours) : ne rien rendre, plutôt que de rendre puis corriger après coup.
+  if (session && roleStatus !== 'ok') return null;
+
+  const authorized = !!session && roleStatus === 'ok';
 
   return (
     <div className="font-clientSans min-h-screen bg-creme">
       <Routes>
         <Route
           path="/client/inscription"
-          element={session ? <Navigate to="/client/accueil" replace /> : <ClientInscription />}
+          element={authorized ? <Navigate to="/client/accueil" replace /> : <ClientInscription />}
         />
         <Route
           path="/client/connexion"
-          element={session ? <Navigate to="/client/accueil" replace /> : <ClientConnexion />}
+          element={
+            authorized
+              ? <Navigate to="/client/accueil" replace />
+              : <ClientConnexion errorMessage={deniedMessage} onErrorShown={() => setDeniedMessage('')} />
+          }
         />
         {AUTHENTICATED_SCREENS.map(({ path, element }) => (
           <Route
             key={path}
             path={path}
-            element={session ? <ClientShell>{element(session)}</ClientShell> : <Navigate to="/client/connexion" replace />}
+            element={authorized ? <ClientShell>{element(session)}</ClientShell> : <Navigate to="/client/connexion" replace />}
           />
         ))}
         <Route
           path="*"
-          element={<Navigate to={session ? '/client/accueil' : '/client/connexion'} replace />}
+          element={<Navigate to={authorized ? '/client/accueil' : '/client/connexion'} replace />}
         />
       </Routes>
     </div>

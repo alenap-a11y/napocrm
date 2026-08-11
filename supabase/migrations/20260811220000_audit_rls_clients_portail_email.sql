@@ -1,0 +1,13 @@
+-- Espace client Naposolo — audit RLS avant push.
+--
+-- clients_portail a une seule policy "for all using (auth.uid() = id)" :
+-- cela protège bien la ligne (un client ne peut toucher que la sienne) mais
+-- ne protège AUCUNE colonne individuellement. Or clients.email/seances sont
+-- liés au compte client via clients_portail.email (cf. 20260811180000) : un
+-- client pourrait changer son propre email vers celui d'une autre personne
+-- réelle (fiche CRM praticien) et se mettre ainsi à voir ses séances, sans
+-- jamais avoir prouvé la possession de cette adresse. Retrait du droit de
+-- modifier cette colonne précise (les autres champs du profil restent
+-- éditables normalement, cf. ClientMonProfil.jsx qui n'inclut déjà pas
+-- email dans son payload d'update).
+revoke update (email) on clients_portail from authenticated;

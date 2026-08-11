@@ -25,33 +25,49 @@ export default function App() {
   const [isRecovery, setIsRecovery] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [adminLoading, setAdminLoading] = useState(true)
+  const [authDeniedMessage, setAuthDeniedMessage] = useState('')
   const location = useLocation()
   const navigate = useNavigate()
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // auth.users est partagé avec l'espace client (même projet Supabase) :
+    // un compte client_portail peut réussir un signInWithPassword ici tout
+    // autant qu'un praticien. resolveSession vérifie donc l'absence d'une
+    // ligne clients_portail AVANT de considérer la session comme praticien
+    // et de rendre AppShell — sinon déconnexion immédiate.
+    async function resolveSession(session) {
       const u = session?.user ?? null
-      setUser(u)
-      if (u) {
-        const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single()
-        setIsAdmin(data?.role === 'admin')
+      if (!u) {
+        setUser(null)
+        setAdminLoading(false)
+        setLoading(false)
+        return
       }
+      const { data: clientRow } = await supabase.from('clients_portail').select('id').eq('id', u.id).maybeSingle()
+      if (clientRow) {
+        await supabase.auth.signOut()
+        setUser(null)
+        setAuthDeniedMessage("Ce compte n'est pas un compte praticien.")
+        setAdminLoading(false)
+        setLoading(false)
+        return
+      }
+      const { data } = await supabase.from('profiles').select('role').eq('id', u.id).single()
+      setIsAdmin(data?.role === 'admin')
+      setUser(u)
       setAdminLoading(false)
       setLoading(false)
-    })
+    }
+    supabase.auth.getSession().then(({ data: { session } }) => resolveSession(session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') setIsRecovery(true)
       if (event === 'SIGNED_IN') {
         const params = new URLSearchParams(window.location.hash.replace('#', '?'))
-        if (params.get('type') === 'signup') {
-          setUser(session?.user ?? null)
-          return
-        }
         if (params.get('type') === 'invite') {
           window.location.replace('/set-password')
           return
         }
       }
-      setUser(session?.user ?? null)
+      resolveSession(session)
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -88,7 +104,9 @@ export default function App() {
   } else if (location.pathname === '/set-password') {
     content = <SetPassword />
   } else if (!user) {
-    content = location.pathname === '/login' ? <LoginPage /> : <Landing />
+    content = location.pathname === '/login'
+      ? <LoginPage deniedMessage={authDeniedMessage} onDeniedShown={() => setAuthDeniedMessage('')} />
+      : <Landing />
   } else if (location.pathname === '/profil/abonnement') {
     content = <ProfilAbonnement />
   } else if (location.pathname === '/mon-agenda') {

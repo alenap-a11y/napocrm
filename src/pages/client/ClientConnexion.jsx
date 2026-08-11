@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabaseClient } from '../../lib/supabaseClient';
 
-export default function ClientConnexion() {
+export default function ClientConnexion({ errorMessage, onErrorShown }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Message de refus de rôle remonté par EspaceClientRouter (ex. connexion
+  // réussie mais compte praticien, pas client) — arrive après coup, une fois
+  // le signOut effectué, donc on doit aussi réarmer le bouton.
+  useEffect(() => {
+    if (errorMessage) {
+      setError(errorMessage);
+      setLoading(false);
+      onErrorShown?.();
+    }
+  }, [errorMessage, onErrorShown]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,9 +42,9 @@ export default function ClientConnexion() {
       }
       return;
     }
-    // Pas de navigate() ici : EspaceClientRouter redirige seul dès que
-    // l'état de session se propage (évite la course entre navigate() et
-    // onAuthStateChange qui renverrait sur /client/connexion trop tôt).
+    // Pas de navigate() ici : EspaceClientRouter vérifie le rôle puis
+    // redirige seul dès que l'état de session se propage (évite la course
+    // entre navigate() et onAuthStateChange/vérification de rôle).
   }
 
   return (

@@ -1,15 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
 
-export default function LoginPage() {
+export default function LoginPage({ deniedMessage, onDeniedShown }) {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Message de refus de rôle remonté par App.jsx (connexion réussie mais
+  // compte client, pas praticien) — arrive après le signOut.
+  useEffect(() => {
+    if (deniedMessage) {
+      setError(deniedMessage)
+      onDeniedShown?.()
+    }
+  }, [deniedMessage, onDeniedShown])
   const [resetOpen, setResetOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent, setResetSent] = useState(false)

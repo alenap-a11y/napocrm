@@ -56,6 +56,17 @@ export default function ClientInscription() {
     setLoading(true);
     setError('');
     try {
+      const { data: role } = await supabaseClient.rpc('check_email_role', { check_email: email.trim() });
+      if (role === 'praticien') {
+        setError('Cet email est déjà associé à un compte praticien Naposolo.');
+        setLoading(false);
+        return;
+      }
+      if (role === 'client') {
+        setError('Cet email est déjà inscrit.');
+        setLoading(false);
+        return;
+      }
       const { error: signUpError } = await supabaseClient.auth.signUp({
         email: email.trim(),
         password,
