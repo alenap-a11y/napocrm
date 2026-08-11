@@ -10,6 +10,7 @@ import AgendaSettings from './pages/AgendaSettings'
 import AgendaPublic from './pages/AgendaPublic'
 import ProfilAbonnement from './components/ProfilAbonnement'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
+import ConfirmEmail from './pages/ConfirmEmail'
 import EspaceClientRouter from './pages/client/EspaceClientRouter'
 import { supabase } from './lib/supabase'
 import { Analytics } from '@vercel/analytics/react'
@@ -95,6 +96,8 @@ export default function App() {
     content = <AgendaPublic slug={slug} />
   } else if (location.pathname === '/politique-confidentialite') {
     content = <PolitiqueConfidentialite />
+  } else if (location.pathname === '/confirmer') {
+    content = <ConfirmEmail />
   } else if (location.pathname.startsWith('/client')) {
     content = <EspaceClientRouter />
   } else if (loading) {
