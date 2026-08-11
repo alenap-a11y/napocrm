@@ -155,6 +155,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Link to="/client/connexion" className="block font-medium text-mystic hover:text-primary transition-colors duration-200 text-sm px-3 py-1.5 rounded-lg border border-mystic/20 hover:border-primary/30">Espace client</Link>
             <Link to="/login" className="block font-medium text-navy/80 hover:text-primary transition-colors duration-200 text-sm">Se connecter</Link>
             <button type="button" onClick={() => setShowRegisterModal(true)} className="bg-gradient-to-r from-navy to-[#1a2d4a] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-lg shadow-navy/15 hover:shadow-xl hover:shadow-navy/25 hover:scale-[1.03] transition-all duration-300">
               Rejoindre l'alpha
