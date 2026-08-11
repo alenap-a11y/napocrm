@@ -90,10 +90,11 @@ export default function Landing() {
               <span className="bg-gradient-to-r from-navy to-navy/80 bg-clip-text">Naposolo</span>
             </Link>
             <div className="hidden lg:flex items-center gap-8 font-medium text-gray-600 text-sm">
-              <a href="#modules" className="hover:text-primary transition-colors duration-200">Modules métiers</a>
+              <Link to="/" className="hover:text-primary transition-colors duration-200">Accueil</Link>
               <a href="#features" className="hover:text-primary transition-colors duration-200">Fonctionnalités</a>
-              <a href="#" className="hover:text-primary transition-colors duration-200">Tarifs</a>
-              <a href="#" className="hover:text-primary transition-colors duration-200">Ressources</a>
+              <a href="#securite" className="hover:text-primary transition-colors duration-200">Sécurité</a>
+              <a href="#tarifs" className="hover:text-primary transition-colors duration-200">Tarifs</a>
+              <a href="#a-propos" className="hover:text-primary transition-colors duration-200">À Propos</a>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -247,7 +248,7 @@ export default function Landing() {
               { bg: 'bg-mystic/10', color: 'text-mystic', title: 'Agenda en ligne', desc: 'Réservation 24h/24 par vos clients.', path: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9', tag: 'En cours' },
               { bg: 'bg-warm/10', color: 'text-warm', title: 'Email de confirmation', desc: 'Confirmation automatique avec lien calendrier.', path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
             ].map((f, i) => (
-              <div key={i} className="bg-bg rounded-2xl p-6 border border-gray-100/80 card-hover text-center group">
+              <div key={i} id={f.title === 'RGPD natif' ? 'securite' : undefined} className="bg-bg rounded-2xl p-6 border border-gray-100/80 card-hover text-center group">
                 <div className={`w-12 h-12 ${f.bg} ${f.color} rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}>
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={f.path}></path></svg>
                 </div>
@@ -336,6 +337,51 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* TARIFS */}
+      <section id="tarifs" className="py-20 px-6 bg-bg">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Des tarifs pensés pour les indépendants</h2>
+            <p className="text-lg text-gray-600">Trois paliers, sans engagement.</p>
+          </div>
+          <div className="text-center mb-12">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-rose text-mystic rounded-full text-sm font-semibold border border-mystic/15">
+              ✨ Gratuit pendant toute la période alpha — tarifs ci-dessous applicables après le lancement officiel
+            </span>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { name: 'Napo-Réflexion', price: '19,99€', desc: 'Pour démarrer sereinement.' },
+              { name: 'Napo-Bâtisseur', price: '29,99€', desc: 'Pour structurer votre activité au quotidien.', highlight: true },
+              { name: 'Napo-Visionnaire', price: '39,99€', desc: 'Pour aller plus loin, sans limite.' },
+            ].map((tier, i) => (
+              <div key={i} className={`rounded-2xl p-8 border card-hover relative ${tier.highlight ? 'bg-navy text-white border-navy shadow-xl scale-105' : 'bg-white border-gray-100'}`}>
+                {tier.highlight && <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-mystic text-white text-xs font-bold px-4 py-1 rounded-full">Le plus choisi</span>}
+                <h3 className={`text-xl font-bold mb-2 ${tier.highlight ? 'text-white' : 'text-navy'}`}>{tier.name}</h3>
+                <p className={`text-3xl font-extrabold mb-1 ${tier.highlight ? 'text-white' : 'text-navy'}`}>{tier.price}<span className="text-sm font-medium opacity-60">/mois</span></p>
+                <p className={`text-sm mb-6 ${tier.highlight ? 'text-gray-300' : 'text-gray-500'}`}>{tier.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm text-gray-400 mt-8">Addons à la carte disponibles : NapoOracle +5€, Fleurs de Bach +3€, Export PDF +3€.</p>
+        </div>
+      </section>
+
+      {/* À PROPOS */}
+      <section id="a-propos" className="py-20 px-6 bg-white border-t border-gray-100">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">À propos de Naposolo</h2>
+          <p className="text-lg text-gray-600 leading-relaxed mb-4">
+            Naposolo est développé en solo, à Vandœuvre-lès-Nancy, par un fondateur qui construit
+            l'outil directement avec les retours des praticiens qui l'utilisent au quotidien.
+          </p>
+          <p className="text-lg text-gray-600 leading-relaxed">
+            "Les petits font les grands" — l'idée n'est pas de tout faire d'un coup, mais
+            d'avancer avec les praticiens, un module à la fois.
+          </p>
+        </div>
+      </section>
+
       {/* NAPO-ÉVÉNEMENT */}
       <section className="py-16 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center bg-gradient-to-br from-rose/40 to-pale/60 rounded-3xl p-10 border border-mystic/10 relative overflow-hidden">
@@ -388,7 +434,7 @@ export default function Landing() {
             <div>
               <h4 className="font-bold mb-6 text-white">Entreprise</h4>
               <ul className="space-y-4 text-gray-400 text-sm">
-                <li><a href="#" className="hover:text-white transition">Contact</a></li>
+                <li><a href="mailto:contact@naposolo.com" className="hover:text-white transition">Contact</a></li>
                 <li><a href="#" className="hover:text-white transition">À propos</a></li>
               </ul>
             </div>
