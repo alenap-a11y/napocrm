@@ -11,7 +11,7 @@ const inpStyle = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-const EMPTY = { prenom: '', nom: '', tel: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '' }
+const EMPTY = { prenom: '', nom: '', tel: '', ville: '', siret: '', activite: '', agenda_public: false, slug: '', avatar_url: '', metier: '', adresse_rdv: '', ville_rdv: '', code_postal: '', maps_url: '', tel_urgence: '', bio: '', email_contact: '', specialites: '' }
 
 export default function ProfilPage({ accent, onSignOut }) {
   const navigate = useNavigate()
@@ -55,6 +55,7 @@ export default function ProfilPage({ accent, onSignOut }) {
           tel_urgence:   p?.tel_urgence   || '',
           bio:           p?.bio           || '',
           email_contact: p?.email_contact || '',
+          specialites:   (p?.specialites || []).join(', '),
         })
         const moisActif = Math.max(1, Math.floor(
           (new Date() - new Date(u.created_at)) / (1000 * 60 * 60 * 24 * 30)
@@ -104,6 +105,7 @@ export default function ProfilPage({ accent, onSignOut }) {
         ville_rdv: draft.ville_rdv, code_postal: draft.code_postal,
         maps_url: draft.maps_url, tel_urgence: draft.tel_urgence,
         bio: draft.bio, email_contact: draft.email_contact,
+        specialites: draft.specialites.split(',').map(s => s.trim()).filter(Boolean),
       }, { onConflict: 'id' })
       if (error) throw error
       setProfil({ ...draft, avatar_url: profil.avatar_url })
@@ -220,6 +222,11 @@ export default function ProfilPage({ accent, onSignOut }) {
             <div className="pf-field"><div className="pf-field-lbl">Code postal</div><input value={draft.code_postal} onChange={d('code_postal')} placeholder="54000" style={inpStyle} /></div>
             <div className="pf-field"><div className="pf-field-lbl">Lien Maps</div><input value={draft.maps_url} onChange={d('maps_url')} placeholder="https://maps.google.com/..." style={inpStyle} /></div>
             <div className="pf-field"><div className="pf-field-lbl">Bio</div><textarea value={draft.bio} onChange={d('bio')} placeholder="Présentation courte..." rows={3} style={{ ...inpStyle, resize: 'vertical' }} /></div>
+            <div className="pf-field">
+              <div className="pf-field-lbl">Spécialités / tags</div>
+              <input value={draft.specialites} onChange={d('specialites')} placeholder="Sophrologie, Massage bien-être, Naturopathie..." style={inpStyle} />
+              <div style={{ fontSize: 9, color: 'var(--color-text-secondary)', marginTop: 2 }}>Séparés par des virgules — recommandé pour apparaître dans l'annuaire</div>
+            </div>
           </>
         ) : (
           [
@@ -237,6 +244,7 @@ export default function ProfilPage({ accent, onSignOut }) {
             { lbl: 'Code postal',   val: profil.code_postal  || '—' },
             { lbl: 'Lien Maps',     val: profil.maps_url     || '—' },
             { lbl: 'Bio',           val: profil.bio          || '—' },
+            { lbl: 'Spécialités / tags', val: profil.specialites || '—' },
           ].map(f => (
             <div className="pf-field" key={f.lbl}>
               <div className="pf-field-lbl">{f.lbl}</div>
