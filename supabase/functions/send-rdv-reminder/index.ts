@@ -15,18 +15,30 @@ serve(async (req) => {
   demain.setDate(demain.getDate() + 1)
   const demainISO = demain.toISOString().slice(0, 10)
 
+  // seances.user_id référence auth.users, pas profiles (même si profiles.id
+  // référence aussi auth.users) : PostgREST ne peut pas déduire de jointure
+  // implicite seances->profiles faute de FK directe entre les deux tables.
+  // Requête séparée + fusion manuelle plutôt que d'ajouter une FK sur
+  // seances (table sensible, partagée avec le reste de l'app praticien).
   const { data: seances, error } = await sb
     .from('seances')
-    .select('*, clients(prenom, nom, email), profiles(prenom, nom, tel, email_contact, adresse_rdv, ville_rdv, code_postal)')
+    .select('*, clients(prenom, nom, email)')
     .eq('date_seance', demainISO)
     .neq('statut', 'annulé')
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
 
+  const userIds = [...new Set((seances || []).map(s => s.user_id).filter(Boolean))]
+  const { data: profilesData } = await sb
+    .from('profiles')
+    .select('id, prenom, nom, tel, email_contact, adresse_rdv, ville_rdv, code_postal')
+    .in('id', userIds.length ? userIds : ['00000000-0000-0000-0000-000000000000'])
+  const profilesById = Object.fromEntries((profilesData || []).map(p => [p.id, p]))
+
   let sent = 0
   for (const s of seances || []) {
     const client = s.clients
-    const profile = s.profiles
+    const profile = profilesById[s.user_id]
     if (!client?.email) continue
 
     const praticien = `${profile?.prenom || ''} ${profile?.nom || ''}`.trim()
