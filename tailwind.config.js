@@ -16,6 +16,14 @@ export default {
         warm: '#F0A04B',
         mystic: '#7C5CFC',
         rose: '#F5F0FF',
+        // Espace client — identité "Zen Sauge", isolée du thème praticien.
+        sauge: '#7A8B6F',
+        saugeDark: '#4F5D46',
+        creme: '#F5F1E8',
+      },
+      fontFamily: {
+        clientSerif: ['"Cormorant Garamond"', 'serif'],
+        clientSans: ['"DM Sans"', 'sans-serif'],
       },
       animation: {
         marquee: 'marquee 40s linear infinite',
