@@ -105,7 +105,8 @@ export default function ClientInscription() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-creme flex items-center justify-center px-6">
+      <div className="min-h-screen bg-creme flex flex-col items-center justify-center px-6">
+        <Link to="/" className="font-clientSerif text-2xl text-saugeDark mb-6">Naposolo</Link>
         <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-sauge/15 p-8 text-center">
           <h1 className="font-clientSerif text-2xl text-saugeDark mb-3">Vérifiez votre email</h1>
           <p className="text-sauge text-sm leading-relaxed">
@@ -121,7 +122,8 @@ export default function ClientInscription() {
   }
 
   return (
-    <div className="min-h-screen bg-creme flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-creme flex flex-col items-center justify-center px-6 py-12">
+      <Link to="/" className="font-clientSerif text-2xl text-saugeDark mb-6">Naposolo</Link>
       <form onSubmit={handleSubmit} className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-sauge/15 p-8">
         <h1 className="font-clientSerif text-3xl text-saugeDark mb-1">Espace client</h1>
         <p className="text-sauge text-sm mb-6">Créez votre compte pour réserver vos séances.</p>
