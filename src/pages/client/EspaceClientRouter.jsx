@@ -3,7 +3,24 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { supabaseClient } from '../../lib/supabaseClient';
 import ClientInscription from './ClientInscription';
 import ClientConnexion from './ClientConnexion';
-import ClientAccueilPlaceholder from './ClientAccueilPlaceholder';
+import ClientShell from './ClientShell';
+import ClientAccueil from './screens/ClientAccueil';
+import ClientSeances from './screens/ClientSeances';
+import ClientAnnuaire from './screens/ClientAnnuaire';
+import ClientEvenements from './screens/ClientEvenements';
+import ClientFavoris from './screens/ClientFavoris';
+import ClientLive from './screens/ClientLive';
+import ClientProfil from './screens/ClientProfil';
+
+const AUTHENTICATED_SCREENS = [
+  { path: '/client/accueil', element: (session) => <ClientAccueil session={session} /> },
+  { path: '/client/seances', element: () => <ClientSeances /> },
+  { path: '/client/annuaire', element: () => <ClientAnnuaire /> },
+  { path: '/client/evenements', element: () => <ClientEvenements /> },
+  { path: '/client/favoris', element: () => <ClientFavoris /> },
+  { path: '/client/live', element: () => <ClientLive /> },
+  { path: '/client/profil', element: () => <ClientProfil /> },
+];
 
 // Racine de routage de l'espace client, montée sur /client/* dans App.jsx.
 // Session gérée via supabaseClient (storageKey dédiée) — totalement
@@ -32,10 +49,13 @@ export default function EspaceClientRouter() {
           path="/client/connexion"
           element={session ? <Navigate to="/client/accueil" replace /> : <ClientConnexion />}
         />
-        <Route
-          path="/client/accueil"
-          element={session ? <ClientAccueilPlaceholder session={session} /> : <Navigate to="/client/connexion" replace />}
-        />
+        {AUTHENTICATED_SCREENS.map(({ path, element }) => (
+          <Route
+            key={path}
+            path={path}
+            element={session ? <ClientShell>{element(session)}</ClientShell> : <Navigate to="/client/connexion" replace />}
+          />
+        ))}
         <Route
           path="*"
           element={<Navigate to={session ? '/client/accueil' : '/client/connexion'} replace />}
