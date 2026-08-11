@@ -12,7 +12,7 @@ const TYPE_LABELS = {
 // Carte praticien réutilisable (Annuaire, Favoris...). `isFavori` initial
 // vient du parent (une seule requête favoris_client pour toute la liste),
 // le composant gère ensuite le toggle localement.
-export default function PraticienCard({ praticien, session, isFavori = false }) {
+export default function PraticienCard({ praticien, session, isFavori = false, onToggle }) {
   const [favori, setFavori] = useState(isFavori);
   const [toggling, setToggling] = useState(false);
 
@@ -29,11 +29,13 @@ export default function PraticienCard({ praticien, session, isFavori = false }) 
       await supabaseClient.from('favoris_client').delete()
         .eq('user_id', session.user.id).eq('target_type', 'praticien').eq('target_id', praticien.id);
       setFavori(false);
+      onToggle?.(false);
     } else {
       await supabaseClient.from('favoris_client').insert({
         user_id: session.user.id, target_type: 'praticien', target_id: praticien.id,
       });
       setFavori(true);
+      onToggle?.(true);
     }
     setToggling(false);
   }

@@ -16,8 +16,8 @@ const AUTHENTICATED_SCREENS = [
   { path: '/client/accueil', element: (session) => <ClientAccueil session={session} /> },
   { path: '/client/seances', element: () => <ClientSeances /> },
   { path: '/client/annuaire', element: (session) => <ClientAnnuaire session={session} /> },
-  { path: '/client/evenements', element: () => <ClientEvenements /> },
-  { path: '/client/favoris', element: () => <ClientFavoris /> },
+  { path: '/client/evenements', element: (session) => <ClientEvenements session={session} /> },
+  { path: '/client/favoris', element: (session) => <ClientFavoris session={session} /> },
   { path: '/client/live', element: () => <ClientLive /> },
   { path: '/client/profil', element: () => <ClientProfil /> },
 ];
