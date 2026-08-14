@@ -32,6 +32,18 @@ const OFFRE_MODALITES = [
   { v: 'replay', label: 'Replay' },
 ]
 
+const EVENEMENT_TYPES = [
+  { v: 'atelier', label: 'Atelier' },
+  { v: 'formation', label: 'Formation' },
+  { v: 'ceremonie', label: 'Cérémonie' },
+  { v: 'stage', label: 'Stage' },
+  { v: 'replay', label: 'Replay' },
+]
+const EVENEMENT_FORMATS = [
+  { v: 'presentiel', label: 'Présentiel' },
+  { v: 'en_ligne', label: 'En ligne' },
+]
+
 function ListEditor({ label, placeholder, icon, items, onChange }) {
   const [value, setValue] = useState('')
   function add() {
@@ -78,6 +90,8 @@ export default function ProfilPresentation() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [draft, setDraft] = useState(null)
   const [offres, setOffres] = useState([])
+  const [produits, setProduits] = useState([])
+  const [evenements, setEvenements] = useState([])
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const fileInputRef = useRef(null)
@@ -87,9 +101,11 @@ export default function ProfilPresentation() {
       const { data: { user: u } } = await supabase.auth.getUser()
       if (!u) return
       setUser(u)
-      const [{ data: p }, { data: o }] = await Promise.all([
+      const [{ data: p }, { data: o }, { data: prod }, { data: evt }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', u.id).single(),
         supabase.from('offres_praticien').select('*').eq('user_id', u.id).order('ordre'),
+        supabase.from('boutique_produits').select('*').eq('user_id', u.id).order('ordre'),
+        supabase.from('evenements').select('*').eq('praticien_id', u.id).order('date_debut'),
       ])
       setCharteAcceptee(!!p?.charte_acceptee_le)
       setDraft({
@@ -117,9 +133,14 @@ export default function ProfilPresentation() {
         cote_decale: p?.cote_decale || '',
         phrase_representative: p?.phrase_representative || '',
         choses_insolites: p?.choses_insolites || [],
+        instagram_url: p?.instagram_url || '',
+        facebook_url: p?.facebook_url || '',
+        tiktok_url: p?.tiktok_url || '',
         presentation_statut: p?.presentation_statut || 'brouillon',
       })
       setOffres(o || [])
+      setProduits(prod || [])
+      setEvenements(evt || [])
       setLoading(false)
     }
     load()
@@ -174,6 +195,9 @@ export default function ProfilPresentation() {
       cote_decale: draft.cote_decale,
       phrase_representative: draft.phrase_representative,
       choses_insolites: draft.choses_insolites || [],
+      instagram_url: draft.instagram_url,
+      facebook_url: draft.facebook_url,
+      tiktok_url: draft.tiktok_url,
     }
   }
 
@@ -213,6 +237,36 @@ export default function ProfilPresentation() {
   async function supprimerOffre(id) {
     setOffres(o => o.filter(x => x.id !== id))
     await supabase.from('offres_praticien').delete().eq('id', id)
+  }
+
+  async function ajouterProduit() {
+    const { data, error } = await supabase.from('boutique_produits').insert({
+      user_id: user.id, nom: '', ordre: produits.length,
+    }).select().single()
+    if (!error && data) setProduits(p => [...p, data])
+  }
+  async function majProduit(id, patch) {
+    setProduits(p => p.map(x => x.id === id ? { ...x, ...patch } : x))
+    await supabase.from('boutique_produits').update(patch).eq('id', id)
+  }
+  async function supprimerProduit(id) {
+    setProduits(p => p.filter(x => x.id !== id))
+    await supabase.from('boutique_produits').delete().eq('id', id)
+  }
+
+  async function ajouterEvenement() {
+    const { data, error } = await supabase.from('evenements').insert({
+      praticien_id: user.id, titre: '', type: 'atelier', format: 'presentiel',
+    }).select().single()
+    if (!error && data) setEvenements(e => [...e, data])
+  }
+  async function majEvenement(id, patch) {
+    setEvenements(e => e.map(x => x.id === id ? { ...x, ...patch } : x))
+    await supabase.from('evenements').update(patch).eq('id', id)
+  }
+  async function supprimerEvenement(id) {
+    setEvenements(e => e.filter(x => x.id !== id))
+    await supabase.from('evenements').delete().eq('id', id)
   }
 
   if (loading || !draft) return (
@@ -352,6 +406,20 @@ export default function ProfilPresentation() {
         </div>
       </div>
 
+      <div style={sectionTitleStyle}>Réseaux sociaux</div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}><i className="ti ti-brand-instagram" style={{ fontSize: 12, marginRight: 4 }} />Instagram</div>
+        <input value={draft.instagram_url || ''} onChange={d('instagram_url')} placeholder="https://instagram.com/..." style={inputStyle} />
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}><i className="ti ti-brand-facebook" style={{ fontSize: 12, marginRight: 4 }} />Facebook</div>
+          <input value={draft.facebook_url || ''} onChange={d('facebook_url')} placeholder="https://facebook.com/..." style={inputStyle} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}><i className="ti ti-brand-tiktok" style={{ fontSize: 12, marginRight: 4 }} />TikTok</div>
+          <input value={draft.tiktok_url || ''} onChange={d('tiktok_url')} placeholder="https://tiktok.com/@..." style={inputStyle} />
+        </div>
+      </div>
+
       <div style={sectionTitleStyle}>Offres</div>
       <div style={cardStyle}>
         {offres.length === 0 && <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>Aucune offre pour l'instant.</p>}
@@ -369,6 +437,60 @@ export default function ProfilPresentation() {
         ))}
         <button type="button" onClick={ajouterOffre} style={{ marginTop: 4, padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           + Ajouter une offre
+        </button>
+      </div>
+
+      <div style={sectionTitleStyle}>Napo-Boutique</div>
+      <div style={cardStyle}>
+        <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>Vos produits en vente directe (encens, bougies, oracles...). Les clients vous contactent via vos coordonnées pro pour commander.</p>
+        {produits.length === 0 && <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>Aucun produit pour l'instant.</p>}
+        {produits.map(pr => (
+          <div key={pr.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10, paddingBottom: 10, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+            <div style={{ flex: 1 }}>
+              <input value={pr.nom} onChange={e => majProduit(pr.id, { nom: e.target.value })} placeholder="Nom du produit" style={{ ...inputStyle, marginBottom: 6 }} />
+              <textarea value={pr.description || ''} onChange={e => majProduit(pr.id, { description: e.target.value })} placeholder="Description (optionnel)" rows={2} style={{ ...inputStyle, resize: 'vertical', marginBottom: 6 }} />
+              <input type="number" step="0.01" value={pr.prix ?? ''} onChange={e => majProduit(pr.id, { prix: e.target.value === '' ? null : parseFloat(e.target.value) })} placeholder="Prix en € (optionnel)" style={{ ...inputStyle, maxWidth: 160 }} />
+            </div>
+            <i className="ti ti-trash" style={{ fontSize: 16, color: '#B23A3A', cursor: 'pointer', flexShrink: 0, marginTop: 8 }} onClick={() => supprimerProduit(pr.id)} />
+          </div>
+        ))}
+        <button type="button" onClick={ajouterProduit} style={{ marginTop: 4, padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          + Ajouter un produit
+        </button>
+      </div>
+
+      <div style={sectionTitleStyle}>Événements</div>
+      <div style={cardStyle}>
+        <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>Visibles immédiatement dans l'espace client dès leur création, indépendamment du statut de votre présentation.</p>
+        {evenements.length === 0 && <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>Aucun événement pour l'instant.</p>}
+        {evenements.map(evt => (
+          <div key={evt.id} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
+            <input value={evt.titre} onChange={e => majEvenement(evt.id, { titre: e.target.value })} placeholder="Titre de l'événement" style={{ ...inputStyle, marginBottom: 6 }} />
+            <textarea value={evt.description || ''} onChange={e => majEvenement(evt.id, { description: e.target.value })} placeholder="Description (optionnel)" rows={2} style={{ ...inputStyle, resize: 'vertical', marginBottom: 6 }} />
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              <select value={evt.type || 'atelier'} onChange={e => majEvenement(evt.id, { type: e.target.value })} style={{ ...inputStyle, flex: 1 }}>
+                {EVENEMENT_TYPES.map(t => <option key={t.v} value={t.v}>{t.label}</option>)}
+              </select>
+              <select value={evt.format || 'presentiel'} onChange={e => majEvenement(evt.id, { format: e.target.value })} style={{ ...inputStyle, flex: 1 }}>
+                {EVENEMENT_FORMATS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              <input value={evt.pays || ''} onChange={e => majEvenement(evt.id, { pays: e.target.value })} placeholder="Pays" style={{ ...inputStyle, flex: 1 }} />
+              <input type="number" step="0.01" value={evt.prix ?? ''} onChange={e => majEvenement(evt.id, { prix: e.target.value === '' ? null : parseFloat(e.target.value) })} placeholder="Prix en € (optionnel)" style={{ ...inputStyle, flex: 1 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              <input type="datetime-local" value={evt.date_debut ? evt.date_debut.slice(0, 16) : ''} onChange={e => majEvenement(evt.id, { date_debut: e.target.value ? new Date(e.target.value).toISOString() : null })} style={{ ...inputStyle, flex: 1 }} />
+              <input type="datetime-local" value={evt.date_fin ? evt.date_fin.slice(0, 16) : ''} onChange={e => majEvenement(evt.id, { date_fin: e.target.value ? new Date(e.target.value).toISOString() : null })} style={{ ...inputStyle, flex: 1 }} />
+            </div>
+            <input value={evt.lien_externe || ''} onChange={e => majEvenement(evt.id, { lien_externe: e.target.value })} placeholder="Lien externe (inscription, replay...)" style={{ ...inputStyle, marginBottom: 6 }} />
+            <button type="button" onClick={() => supprimerEvenement(evt.id)} style={{ padding: '5px 12px', borderRadius: 8, border: 'none', background: 'transparent', color: '#B23A3A', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <i className="ti ti-trash" style={{ fontSize: 13, marginRight: 4 }} />Supprimer cet événement
+            </button>
+          </div>
+        ))}
+        <button type="button" onClick={ajouterEvenement} style={{ marginTop: 4, padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          + Ajouter un événement
         </button>
       </div>
 

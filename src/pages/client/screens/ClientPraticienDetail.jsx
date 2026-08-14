@@ -2,10 +2,16 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabaseClient } from '../../../lib/supabaseClient';
 
+const ACTIVITE_LABELS = {
+  live: 'Live', formation: 'Formation', seminaire: 'Séminaire', meditation: 'Méditation', atelier: 'Atelier',
+  ceremonie: 'Cérémonie', stage: 'Stage', replay: 'Replay',
+};
+
 export default function ClientPraticienDetail() {
   const { slug } = useParams();
   const [p, setP] = useState(null);
-  const [offres, setOffres] = useState([]);
+  const [activites, setActivites] = useState([]);
+  const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,13 +28,14 @@ export default function ClientPraticienDetail() {
 
   useEffect(() => {
     if (!p?.id) return;
+    supabaseClient.rpc('get_activites_praticien', { p_praticien_id: p.id })
+      .then(({ data }) => setActivites((data || []).filter(a => !a.date_prevue || new Date(a.date_prevue) >= new Date(new Date().toDateString()))));
     supabaseClient
-      .from('offres_praticien')
+      .from('boutique_produits')
       .select('*')
       .eq('user_id', p.id)
-      .gte('date_prevue', new Date().toISOString().slice(0, 10))
-      .order('date_prevue', { ascending: true })
-      .then(({ data }) => setOffres(data || []));
+      .order('ordre')
+      .then(({ data }) => setProduits(data || []));
   }, [p?.id]);
 
   if (loading) return <div className="px-6 py-8 text-center text-sauge">Chargement...</div>;
@@ -67,6 +74,13 @@ export default function ClientPraticienDetail() {
           <div className="flex gap-2 mt-3">
             {p.tel_pro && <a href={`tel:${p.tel_pro}`} className="text-xs px-3 py-1.5 rounded-full border" style={{ borderColor: '#2C5F66', color: '#2C5F66' }}>📞 Appeler</a>}
             {p.email_pro && <a href={`mailto:${p.email_pro}`} className="text-xs px-3 py-1.5 rounded-full border" style={{ borderColor: '#2C5F66', color: '#2C5F66' }}>✉️ Email</a>}
+          </div>
+        )}
+        {(p.instagram_url || p.facebook_url || p.tiktok_url) && (
+          <div className="flex gap-3 mt-3">
+            {p.instagram_url && <a href={p.instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i className="ti ti-brand-instagram" style={{ fontSize: 20, color: '#2C5F66' }} /></a>}
+            {p.facebook_url && <a href={p.facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i className="ti ti-brand-facebook" style={{ fontSize: 20, color: '#2C5F66' }} /></a>}
+            {p.tiktok_url && <a href={p.tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok"><i className="ti ti-brand-tiktok" style={{ fontSize: 20, color: '#2C5F66' }} /></a>}
           </div>
         )}
         {p.siret && <p className="text-xs text-sauge mt-3 pt-2 border-t border-[#2C5F66]/15">SIRET : {p.siret}</p>}
@@ -110,17 +124,50 @@ export default function ClientPraticienDetail() {
       </section>
 
       {/* 3. ACTIVITÉS */}
-      {offres.length > 0 && (
+      {activites.length > 0 && (
         <section className="rounded-2xl p-4 border border-[#B5652F]/15" style={{ background: '#FBEEE6' }}>
           <div className="flex items-center gap-2 mb-3">
             <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-semibold" style={{ background: '#B5652F' }}>3</span>
             <h2 className="font-semibold" style={{ color: '#B5652F' }}>Je propose</h2>
           </div>
           <ul className="space-y-2 text-sm">
-            {offres.map((o) => (
-              <li key={o.id}>
-                {o.type} · {o.modalite}
-                {o.date_prevue && ` · ${new Date(o.date_prevue).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`}
+            {activites.map((a, i) => (
+              <li key={i}>
+                {a.source === 'evenement' ? (
+                  <>
+                    <span className="font-medium">{a.titre}</span>
+                    {a.type && <span className="text-xs text-sauge"> ({ACTIVITE_LABELS[a.type] || a.type})</span>}
+                  </>
+                ) : (
+                  <span>{ACTIVITE_LABELS[a.titre] || a.titre}</span>
+                )}
+                {a.date_prevue && ` · ${new Date(a.date_prevue).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`}
+                {a.lien_externe && (
+                  <a href={a.lien_externe} target="_blank" rel="noopener noreferrer" className="text-xs ml-2 px-2 py-0.5 rounded-full border" style={{ borderColor: '#B5652F', color: '#B5652F' }}>
+                    En savoir plus
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* 4. BOUTIQUE */}
+      {produits.length > 0 && (
+        <section className="rounded-2xl p-4 border border-[#7A5C9E]/15" style={{ background: '#F2ECF8' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-semibold" style={{ background: '#7A5C9E' }}>4</span>
+            <h2 className="font-semibold" style={{ color: '#7A5C9E' }}>Napo-Boutique</h2>
+          </div>
+          <ul className="space-y-3 text-sm">
+            {produits.map((pr) => (
+              <li key={pr.id} className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{pr.nom}</p>
+                  {pr.description && <p className="text-xs text-sauge mt-0.5">{pr.description}</p>}
+                </div>
+                {pr.prix != null && <span className="text-sm font-medium whitespace-nowrap">{pr.prix} €</span>}
               </li>
             ))}
           </ul>
