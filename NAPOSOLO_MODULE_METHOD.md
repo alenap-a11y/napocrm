@@ -79,6 +79,7 @@ Avant tout code React. Toujours.
 | Alpha toggle | /napo-cockpit-7X | app_config | OK juin 2026 |
 | NapoÉnergie | /energie | energie_seances, energie_chakras_mesures | OK juin 2026 |
 | Napo-3D | /napo-3d | seances (réutilisée, filtre type_seance='3D Humain') | OK juillet 2026 |
+| Présentation praticien | /presentation | profiles (colonnes réutilisées + ajoutées), offres_praticien | OK août 2026 |
 
 ### NapoÉnergie détail
 - 7 chakras : rotation, état, taux Bovis, couleur perçue, avant/arrière, gauche/droite, observation
@@ -95,6 +96,14 @@ Avant tout code React. Toujours.
 - Fiche détail (`Napo3DSeance.jsx`) affiche les zones annotées (`schema_annotations`) en liste texte (pastille couleur + nom de zone), PAS de replay du corps 3D — `captureSchema()` génère un PNG côté client mais ne le sauvegarde jamais en base/Storage. Si un aperçu visuel devient nécessaire : soit uploader ce PNG vers Supabase Storage au moment du save, soit rejoindre la scène Three.js en lecture seule dans la fiche (chantier plus lourd, non fait).
 
 ---
+
+### Présentation praticien détail
+
+- Architecture divergente assumée, comme Napo-3D : reconnaissance préalable (grep) a montré qu'un cadrage écrit à froid supposait un `Annuaire.jsx` et un modèle `presentation_*` neufs qui n'existaient pas. Le vrai système est `src/pages/client/screens/ClientAnnuaire.jsx` + `PraticienCard.jsx`, alimenté par la fonction SQL `search_praticiens()` qui lit directement des colonnes de `profiles`. Décision : réutiliser ces colonnes (pays, langues, types_prestation, musiques, livres, recettes, specialites, bio, avatar_url, siret, metier) plutôt que dupliquer un second modèle parallèle.
+- Colonnes ajoutées sur `profiles` (jamais de préfixe `presentation_` sur les champs de contenu, seulement sur le statut) : `anciennete_depuis`, `charte_acceptee_le`, `aides_services`, `desactivation_motif`, `desactivation_le`, puis `parcours`, `formations`, `tarif_indicatif`, `tel_pro`, `email_pro`, `films_series`, `passions`, `animal`, `petit_plaisir`, `endroit_prefere`, `cote_decale`, `phrase_representative`, `choses_insolites`.
+- Table `offres_praticien` (type/modalité/date_prevue, RLS calquée sur le pattern `agenda_public_anon_select`), jointe en lateral dans `search_praticiens()` pour exposer une "prochaine offre" sur la carte Annuaire.
+- **Statut de publication : `profiles.presentation_statut` (brouillon/publie), distinct de `agenda_public`.** Décision prise en cours de chantier après qu'une modification hors pipeline versionné (colonne + fonction modifiées directement en base, sans migration locale, pendant qu'une session travaillait sur ce fichier) a fait basculer `search_praticiens()` sur ce critère. Plutôt que de revenir en arrière, la divergence a été actée : `agenda_public` reste dédié à la réservation en ligne (ProfilPage.jsx), `presentation_statut` gouverne la visibilité de la fiche vitrine dans l'Annuaire. **Point de vigilance non résolu** : `ProfilPage.jsx` affiche encore "⚫ Désactivé — invisible du public" pour `agenda_public`, ce qui est devenu trompeur — désactiver l'agenda ne masque plus la fiche Présentation. À corriger un jour si ça crée de la confusion côté praticien.
+- **Incident évité, à retenir** : une modification directe en base (hors `supabase db push`/migration) a introduit `presentation_statut` ET ajouté `p.siret` au retour public de `search_praticiens()`, en contradiction avec le commentaire de sécurité d'origine de cette fonction (siret jamais exposé publiquement). Détecté avant commit en interrogeant `pg_get_functiondef` sur la fonction live avant de committer — retiré via migration `20260814170000`. Réflexe à garder : avant tout commit touchant à une fonction/table déjà en prod, vérifier l'état réel en base (`pg_get_functiondef`, `information_schema.columns`) plutôt que de supposer que le fichier local ou le dernier message de session reflète la vérité — une édition directe en base ou dans un fichier peut être arrivée entre-temps, par un autre canal.
 
 ## Décision architecture — modules 3D (juillet 2026)
 

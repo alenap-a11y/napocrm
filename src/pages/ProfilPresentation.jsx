@@ -104,6 +104,19 @@ export default function ProfilPresentation() {
         musiques: p?.musiques || [],
         livres: p?.livres || [],
         recettes: p?.recettes || [],
+        parcours: p?.parcours || '',
+        formations: p?.formations || [],
+        tarif_indicatif: p?.tarif_indicatif || '',
+        tel_pro: p?.tel_pro || '',
+        email_pro: p?.email_pro || '',
+        films_series: p?.films_series || [],
+        passions: p?.passions || [],
+        animal: p?.animal || '',
+        petit_plaisir: p?.petit_plaisir || '',
+        endroit_prefere: p?.endroit_prefere || '',
+        cote_decale: p?.cote_decale || '',
+        phrase_representative: p?.phrase_representative || '',
+        choses_insolites: p?.choses_insolites || [],
         presentation_statut: p?.presentation_statut || 'brouillon',
       })
       setOffres(o || [])
@@ -148,6 +161,19 @@ export default function ProfilPresentation() {
       musiques: draft.musiques,
       livres: draft.livres,
       recettes: draft.recettes,
+      parcours: draft.parcours,
+      formations: draft.formations || [],
+      tarif_indicatif: draft.tarif_indicatif,
+      tel_pro: draft.tel_pro,
+      email_pro: draft.email_pro,
+      films_series: draft.films_series || [],
+      passions: draft.passions || [],
+      animal: draft.animal,
+      petit_plaisir: draft.petit_plaisir,
+      endroit_prefere: draft.endroit_prefere,
+      cote_decale: draft.cote_decale,
+      phrase_representative: draft.phrase_representative,
+      choses_insolites: draft.choses_insolites || [],
     }
   }
 
@@ -303,6 +329,29 @@ export default function ProfilPresentation() {
         <input type="date" value={draft.anciennete_depuis || ''} onChange={d('anciennete_depuis')} style={{ ...inputStyle, maxWidth: 220 }} />
       </div>
 
+      <div style={sectionTitleStyle}>Parcours et formations</div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Parcours</div>
+        <textarea value={draft.parcours || ''} onChange={d('parcours')} rows={4} placeholder="Votre parcours, en quelques lignes..." style={{ ...inputStyle, resize: 'vertical' }} />
+        <div style={{ marginTop: 14 }}>
+          <ListEditor label="Formations / certifications" placeholder="Un intitulé..." icon="ti-certificate" items={draft.formations || []} onChange={v => setDraft(p => ({ ...p, formations: v }))} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Tarif indicatif</div>
+          <input value={draft.tarif_indicatif || ''} onChange={d('tarif_indicatif')} placeholder="À partir de 50€" style={inputStyle} />
+        </div>
+      </div>
+
+      <div style={sectionTitleStyle}>Contact</div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Téléphone professionnel</div>
+        <input value={draft.tel_pro || ''} onChange={d('tel_pro')} placeholder="06 12 34 56 78" style={inputStyle} />
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Email professionnel</div>
+          <input value={draft.email_pro || ''} onChange={d('email_pro')} placeholder="contact@..." style={inputStyle} />
+        </div>
+      </div>
+
       <div style={sectionTitleStyle}>Offres</div>
       <div style={cardStyle}>
         {offres.length === 0 && <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>Aucune offre pour l'instant.</p>}
@@ -335,6 +384,38 @@ export default function ProfilPresentation() {
         <ListEditor label="Livres" placeholder="Un titre..." icon="ti-book" items={draft.livres} onChange={v => setDraft(p => ({ ...p, livres: v }))} />
         <div style={{ height: 14 }} />
         <ListEditor label="Recettes" placeholder="Une recette..." icon="ti-tools-kitchen-2" items={draft.recettes} onChange={v => setDraft(p => ({ ...p, recettes: v }))} />
+      </div>
+
+      <div style={sectionTitleStyle}>Films, séries et passions</div>
+      <div style={cardStyle}>
+        <ListEditor label="Films / séries" placeholder="Un titre..." icon="ti-movie" items={draft.films_series || []} onChange={v => setDraft(p => ({ ...p, films_series: v }))} />
+        <div style={{ height: 14 }} />
+        <ListEditor label="Passions" placeholder="Une passion..." icon="ti-heart" items={draft.passions || []} onChange={v => setDraft(p => ({ ...p, passions: v }))} />
+      </div>
+
+      <div style={sectionTitleStyle}>Petits détails</div>
+      <div style={cardStyle}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Mon animal</div>
+        <input value={draft.animal || ''} onChange={d('animal')} style={inputStyle} />
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Mon petit plaisir</div>
+          <input value={draft.petit_plaisir || ''} onChange={d('petit_plaisir')} style={inputStyle} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Mon endroit préféré</div>
+          <input value={draft.endroit_prefere || ''} onChange={d('endroit_prefere')} style={inputStyle} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Mon côté décalé</div>
+          <input value={draft.cote_decale || ''} onChange={d('cote_decale')} style={inputStyle} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Une phrase qui me représente</div>
+          <input value={draft.phrase_representative || ''} onChange={d('phrase_representative')} style={inputStyle} />
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <ListEditor label="3 choses que vous ne devineriez pas sur moi" placeholder="Une chose insolite..." icon="ti-sparkles" items={draft.choses_insolites || []} onChange={v => setDraft(p => ({ ...p, choses_insolites: v }))} />
+        </div>
       </div>
 
       <div style={sectionTitleStyle}>Mentions légales</div>
