@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabaseClient } from '../../lib/supabaseClient';
 
 const TYPE_LABELS = {
@@ -21,6 +22,7 @@ const OFFRE_LABELS = {
 // vient du parent (une seule requête favoris_client pour toute la liste),
 // le composant gère ensuite le toggle localement.
 export default function PraticienCard({ praticien, session, isFavori = false, onToggle }) {
+  const navigate = useNavigate();
   const [favori, setFavori] = useState(isFavori);
   const [toggling, setToggling] = useState(false);
 
@@ -53,9 +55,12 @@ export default function PraticienCard({ praticien, session, isFavori = false, on
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-sauge/15 p-4 relative">
+    <div
+      className="bg-white rounded-2xl border border-sauge/15 p-4 relative cursor-pointer"
+      onClick={() => praticien.slug && navigate(`/client/praticien/${praticien.slug}`)}
+    >
       <button
-        onClick={toggleFavori}
+        onClick={(e) => { e.stopPropagation(); toggleFavori(); }}
         disabled={toggling}
         aria-label={favori ? 'Retirer des favoris' : 'Ajouter aux favoris'}
         className="absolute top-3 right-3"
