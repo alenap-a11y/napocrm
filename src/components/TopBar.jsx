@@ -17,7 +17,7 @@ export default function TopBar({
 
   function handleClick(item) {
     setTbActif(item.id)
-    if (['faq', 'aide', 'newsnapo'].includes(item.id)) onNavigate(item.id)
+    if (['faq', 'aide', 'newsnapo', 'presentation'].includes(item.id)) onNavigate(item.id)
   }
 
   function onDragStart(e, idx) {
