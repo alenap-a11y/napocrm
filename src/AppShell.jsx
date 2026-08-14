@@ -26,6 +26,7 @@ const Factures = lazy(() => import('./pages/Factures'))
 const FAQ = lazy(() => import('./pages/FAQ'))
 const Aide = lazy(() => import('./pages/Aide'))
 const NewsNapo = lazy(() => import('./pages/NewsNapo'))
+const ProfilPresentation = lazy(() => import('./pages/ProfilPresentation'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const FicheSeance = lazy(() => import('./pages/FicheSeance'))
@@ -157,6 +158,7 @@ const DEFAULT_TB_ITEMS = [
   { id: 'faq',  label: 'FAQ',  icon: 'ti-help-circle',  vis: true },
   { id: 'aide', label: 'Aide', icon: 'ti-lifebuoy',     vis: true },
   { id: 'newsnapo', label: 'News', icon: 'ti-speakerphone', vis: true },
+  { id: 'presentation', label: 'Présentation', icon: 'ti-user', vis: true },
 ]
 
 const DEFAULT_WIDGETS = { clock: true, meteo: true, lune: true, fete: true, ferie: true, mantra: true }
@@ -616,6 +618,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/faq"      element={<FAQ />} />
               <Route path="/aide"     element={<Aide />} />
               <Route path="/newsnapo" element={<NewsNapo />} />
+              <Route path="/presentation" element={<ProfilPresentation />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense></ChunkErrorBoundary>

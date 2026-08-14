@@ -9,6 +9,14 @@ const TYPE_LABELS = {
   seminaire: 'Séminaire',
 };
 
+const OFFRE_LABELS = {
+  live: 'Live',
+  formation: 'Formation',
+  seminaire: 'Séminaire',
+  meditation: 'Méditation',
+  atelier: 'Atelier',
+};
+
 // Carte praticien réutilisable (Annuaire, Favoris...). `isFavori` initial
 // vient du parent (une seule requête favoris_client pour toute la liste),
 // le composant gère ensuite le toggle localement.
@@ -21,6 +29,10 @@ export default function PraticienCard({ praticien, session, isFavori = false, on
   const nbMusiques = praticien.musiques?.length || 0;
   const nbLivres = praticien.livres?.length || 0;
   const nbRecettes = praticien.recettes?.length || 0;
+  const depuisAnnee = praticien.anciennete_depuis ? new Date(praticien.anciennete_depuis).getFullYear() : null;
+  const prochaineOffre = praticien.prochaine_offre_date
+    ? `${OFFRE_LABELS[praticien.prochaine_offre_type] || praticien.prochaine_offre_type} · ${new Date(praticien.prochaine_offre_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+    : null;
 
   async function toggleFavori() {
     if (toggling || !session) return;
@@ -90,6 +102,23 @@ export default function PraticienCard({ praticien, session, isFavori = false, on
               {TYPE_LABELS[t] || t}
             </span>
           ))}
+        </div>
+      )}
+
+      {(depuisAnnee || prochaineOffre) && (
+        <div className="flex items-center gap-3 text-[11px] text-sauge mb-2">
+          {depuisAnnee && (
+            <span className="flex items-center gap-1">
+              <i className="ti ti-calendar-time" style={{ fontSize: 12 }} aria-hidden="true" />
+              Depuis {depuisAnnee}
+            </span>
+          )}
+          {prochaineOffre && (
+            <span className="flex items-center gap-1">
+              <i className="ti ti-calendar-event" style={{ fontSize: 12 }} aria-hidden="true" />
+              {prochaineOffre}
+            </span>
+          )}
         </div>
       )}
 
