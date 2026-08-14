@@ -104,7 +104,7 @@ export default function ProfilPresentation() {
         musiques: p?.musiques || [],
         livres: p?.livres || [],
         recettes: p?.recettes || [],
-        agenda_public: p?.agenda_public || false,
+        presentation_statut: p?.presentation_statut || 'brouillon',
       })
       setOffres(o || [])
       setLoading(false)
@@ -165,9 +165,9 @@ export default function ProfilPresentation() {
   async function publier() {
     setSaving(true); setMsg('')
     try {
-      const { error } = await supabase.from('profiles').update({ ...buildPayload(), agenda_public: true }).eq('id', user.id)
+      const { error } = await supabase.from('profiles').update({ ...buildPayload(), presentation_statut: 'publie' }).eq('id', user.id)
       if (error) throw error
-      setDraft(d => ({ ...d, agenda_public: true }))
+      setDraft(d => ({ ...d, presentation_statut: 'publie' }))
       setMsg('✓ Présentation publiée')
     } catch (e) { setMsg(`✗ Erreur : ${e.message}`) }
     setSaving(false)
@@ -244,8 +244,8 @@ export default function ProfilPresentation() {
           <i className="ti ti-user" style={{ fontSize: 24, color: 'var(--color-accent)' }} />
           <div>
             <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--color-text-primary)' }}>Présentation du praticien</div>
-            <div style={{ fontSize: 12, color: draft.agenda_public ? '#0F6E56' : 'var(--color-text-secondary)' }}>
-              {draft.agenda_public ? '🟢 Publiée — visible dans l’Annuaire' : '⚫ Brouillon — pas encore publiée'}
+            <div style={{ fontSize: 12, color: draft.presentation_statut === 'publie' ? '#0F6E56' : 'var(--color-text-secondary)' }}>
+              {draft.presentation_statut === 'publie' ? '🟢 Publiée — visible dans l’Annuaire' : '⚫ Brouillon — pas encore publiée'}
             </div>
           </div>
         </div>
@@ -348,7 +348,7 @@ export default function ProfilPresentation() {
           Enregistrer le brouillon
         </button>
         <button onClick={publier} disabled={saving} style={{ padding: '10px 18px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-          {draft.agenda_public ? 'Publiée' : 'Publier'}
+          {draft.presentation_statut === 'publie' ? 'Publiée' : 'Publier'}
         </button>
       </div>
     </div>
