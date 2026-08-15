@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase as defaultSupabase } from '../lib/supabase'
 
-export default function AgendaPublic({ slug }) {
+// `supabaseClient` optionnel : quand ce composant est monté dans l'espace
+// client (session isolée, storageKey dédiée — cf. lib/supabaseClient.js),
+// il faut lui passer cette instance pour que les appels réseau portent
+// l'authentification client_portail. Sans ce prop (cas public /rdv/{slug}),
+// on retombe sur l'instance par défaut, comportement inchangé.
+export default function AgendaPublic({ slug, session, supabaseClient }) {
+  const supabase = supabaseClient || defaultSupabase
   const [profil, setProfil] = useState(null)
   const [dispos, setDispos] = useState(null)
   const [seancesReservees, setSeancesReservees] = useState([])
@@ -76,6 +82,25 @@ export default function AgendaPublic({ slug }) {
     if (slug) load()
   }, [slug])
 
+  useEffect(() => {
+    if (!session?.user?.id) return
+    supabase
+      .from('clients_portail')
+      .select('prenom, nom, email, telephone')
+      .eq('id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        setForm((f) => ({
+          ...f,
+          prenom: f.prenom || data.prenom || '',
+          nom: f.nom || data.nom || '',
+          email: f.email || data.email || '',
+          telephone: f.telephone || data.telephone || '',
+        }))
+      })
+  }, [session?.user?.id])
+
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontSize: 13, color: '#6B7280' }}>Chargement...</div>
   if (notFound) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: 12 }}>
@@ -143,8 +168,26 @@ export default function AgendaPublic({ slug }) {
     if (!form.prenom || !form.nom || !form.email || !form.telephone || !selectedSlot) return
     setSending(true)
     try {
+      let clientId = null
+      if (session?.user?.id) {
+        const { data: resolvedClientId, error: clientIdError } = await supabase.rpc('get_or_create_client_portail', {
+          p_praticien_id: profil.id,
+          p_email: form.email,
+          p_prenom: form.prenom,
+          p_nom: form.nom,
+          p_telephone: form.telephone,
+        })
+        if (clientIdError) {
+          console.error('❌ Erreur résolution fiche client:', clientIdError)
+          setSending(false)
+          return
+        }
+        clientId = resolvedClientId
+      }
+
       const { error: insertError } = await supabase.from('seances').insert([{
         user_id: profil.id,
+        client_id: clientId,
         prenom: form.prenom,
         nom: form.nom,
         email: form.email,
@@ -182,11 +225,12 @@ export default function AgendaPublic({ slug }) {
 
       if (fnError) {
         console.error('❌ Erreur envoi email:', fnError.message)
-        setSending(false)
-        return
+        // La séance est déjà créée à ce stade — un email raté ne doit pas
+        // empêcher la confirmation visuelle, sinon risque de double
+        // réservation par un client qui croit que rien ne s'est passé.
+      } else {
+        console.log('✅ Email envoyé avec succès')
       }
-
-      console.log('✅ Email envoyé avec succès')
       setSent(true)
     } catch (e) {
       console.error('❌ Erreur lors de la soumission:', e)

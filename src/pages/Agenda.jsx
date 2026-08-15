@@ -293,6 +293,14 @@ export default function Agenda() {
   }
 
   /* ── Suppression ── */
+  async function annulerRdv(id) {
+    const motif = window.prompt('Motif de l\'annulation (optionnel) :')
+    if (motif === null) return
+    const { error } = await supabase.from('seances').update({ statut: 'annulé', motif_annulation: motif || null }).eq('id', id)
+    if (error) { console.error(error); return }
+    setDetail(d => d ? { ...d, statut: 'annulé', motif_annulation: motif || null } : d)
+  }
+
   async function deleteRdv(id) {
     const { error } = await supabase.from('seances').delete().eq('id', id)
     if (!error) setDetail(null)
@@ -447,6 +455,10 @@ export default function Agenda() {
               <button onClick={() => openEdit(detail)}
                 style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                 <i className="ti ti-pencil" style={{ marginRight: 4 }} aria-hidden="true" />Modifier
+              </button>
+              <button onClick={() => annulerRdv(detail.id)}
+                style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: '#8E9BAA', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                <i className="ti ti-calendar-x" style={{ marginRight: 4 }} aria-hidden="true" />Annuler
               </button>
               <button onClick={async () => {
                   if (['Énergie', 'Magnétiseur', 'Énergéticien'].includes(detail.type_seance) && detail.client_id) {

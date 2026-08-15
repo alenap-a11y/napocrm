@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { supabaseClient } from '../../../lib/supabaseClient';
 
 const ACTIVITE_LABELS = {
@@ -77,6 +77,17 @@ export default function ClientPraticienDetail() {
         {p.tarif_indicatif && <p className="text-sm font-medium mt-2">💶 {p.tarif_indicatif}</p>}
         {p.anciennete_depuis && (
           <p className="text-sm text-sauge mt-1">Pratique depuis {new Date(p.anciennete_depuis).getFullYear()}</p>
+        )}
+        {p.slug && (
+          <div className="mt-3">
+            <Link
+              to={`/client/rdv/${p.slug}`}
+              className="text-xs px-3 py-1.5 rounded-full text-white font-medium inline-block"
+              style={{ background: '#2C5F66' }}
+            >
+              📅 Prendre rendez-vous
+            </Link>
+          </div>
         )}
         {(p.tel_pro || p.email_pro) && (
           <div className="flex gap-2 mt-3">

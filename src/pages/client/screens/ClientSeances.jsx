@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabaseClient } from '../../../lib/supabaseClient';
 
 const STATUT_LABELS = {
@@ -8,13 +9,15 @@ const STATUT_LABELS = {
   disponible: 'Disponible',
 };
 
-function SeanceCard({ seance }) {
+function SeanceCard({ seance, praticien, slug, showActions, annuling, onAnnuler }) {
   const date = seance.date_seance ? new Date(seance.date_seance) : null;
+  const isAnnulee = seance.statut === 'annulé';
   return (
     <div className="bg-white rounded-xl border border-sauge/15 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-saugeDark">{seance.type_seance || 'Séance'}</p>
+          <p className="text-sm font-medium text-saugeDark">{praticien ? `${praticien.prenom}${praticien.metier ? ' — ' + praticien.metier : ''}` : 'Praticien'}</p>
+          <p className="text-xs text-sauge">{seance.type_seance || 'Séance'}</p>
           {date && (
             <p className="text-xs text-sauge mt-0.5">
               {date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -29,28 +32,76 @@ function SeanceCard({ seance }) {
         )}
       </div>
       <p className="text-xs text-sauge mt-3">Paiement : bientôt disponible</p>
+      {showActions && !isAnnulee && (
+        <button
+          onClick={() => onAnnuler(seance.id)}
+          disabled={annuling}
+          className="text-xs mt-2 underline disabled:opacity-50"
+          style={{ color: '#C4694A' }}
+        >
+          {annuling ? 'Annulation...' : 'Annuler'}
+        </button>
+      )}
+      {showActions && isAnnulee && slug && (
+        <Link to={`/client/rdv/${slug}`} className="text-xs mt-2 inline-block underline" style={{ color: '#2C5F66' }}>
+          Reprendre un RDV
+        </Link>
+      )}
     </div>
   );
 }
 
 export default function ClientSeances() {
   const [seances, setSeances] = useState(null);
+  const [slugsParPraticien, setSlugsParPraticien] = useState({});
   const [error, setError] = useState('');
+  const [annulingId, setAnnulingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       const { data, error: fetchError } = await supabaseClient
         .from('seances')
-        .select('id, date_seance, heure_seance, type_seance, statut, client_id')
+        .select('id, date_seance, heure_seance, type_seance, statut, client_id, user_id')
         .order('date_seance', { ascending: false });
       if (cancelled) return;
-      if (fetchError) setError(fetchError.message);
-      else setSeances(data || []);
+      if (fetchError) {
+        setError(fetchError.message);
+        return;
+      }
+      setSeances(data || []);
+
+      const userIds = [...new Set((data || []).map((s) => s.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: profils } = await supabaseClient.from('profiles').select('id, slug, prenom, nom, metier').in('id', userIds);
+        if (!cancelled) setSlugsParPraticien(Object.fromEntries((profils || []).map((p) => [p.id, p])));
+      }
     }
     load();
     return () => { cancelled = true; };
   }, []);
+
+  async function annuler(seanceId) {
+    setAnnulingId(seanceId);
+    const seance = seances.find(s => s.id === seanceId);
+    const { error: updateError } = await supabaseClient.from('seances').update({ statut: 'annulé' }).eq('id', seanceId);
+    if (updateError) {
+      console.error(updateError);
+      setAnnulingId(null);
+      return;
+    }
+    if (seance?.user_id) {
+      await supabaseClient.from('notifications').insert({
+        user_id: seance.user_id,
+        msg: 'Un rendez-vous a été annulé par un client',
+        icon: 'ti-calendar-x',
+        icon_color: '#C4694A',
+        unread: true,
+      });
+    }
+    setSeances((prev) => prev.map((s) => (s.id === seanceId ? { ...s, statut: 'annulé' } : s)));
+    setAnnulingId(null);
+  }
 
   if (error) {
     return <div className="px-6 py-10 text-center text-sm text-red-500">{error}</div>;
@@ -72,7 +123,17 @@ export default function ClientSeances() {
         <p className="text-sauge text-sm mb-8">Aucun rendez-vous à venir.</p>
       ) : (
         <div className="space-y-3 mb-8">
-          {aVenir.map((s) => <SeanceCard key={s.id} seance={s} />)}
+          {aVenir.map((s) => (
+            <SeanceCard
+              key={s.id}
+              seance={s}
+              praticien={slugsParPraticien[s.user_id]}
+              slug={slugsParPraticien[s.user_id]?.slug}
+              showActions
+              annuling={annulingId === s.id}
+              onAnnuler={annuler}
+            />
+          ))}
         </div>
       )}
 
@@ -81,7 +142,7 @@ export default function ClientSeances() {
         <p className="text-sauge text-sm">Aucune séance passée pour le moment.</p>
       ) : (
         <div className="space-y-3">
-          {historique.map((s) => <SeanceCard key={s.id} seance={s} />)}
+          {historique.map((s) => <SeanceCard key={s.id} seance={s} showActions={false} />)}
         </div>
       )}
     </div>
