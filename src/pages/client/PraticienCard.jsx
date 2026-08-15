@@ -59,20 +59,28 @@ export default function PraticienCard({ praticien, session, isFavori = false, on
       className="bg-white rounded-2xl border border-sauge/15 p-4 relative cursor-pointer"
       onClick={() => praticien.slug && navigate(`/client/praticien/${praticien.slug}`)}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); toggleFavori(); }}
-        disabled={toggling}
-        aria-label={favori ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-        className="absolute top-3 right-3"
-      >
-        <i
-          className={`ti ${favori ? 'ti-heart-filled' : 'ti-heart'}`}
-          style={{ fontSize: 20, color: favori ? '#C4694A' : '#B8C4AE' }}
-          aria-hidden="true"
-        />
-      </button>
+      <div className="absolute top-3 right-3 flex items-center gap-2.5">
+        <span
+          className="flex items-center gap-1 text-[11px] text-sauge"
+          aria-label={`${praticien.nombre_vues || 0} vues du profil`}
+        >
+          <i className="ti ti-eye" style={{ fontSize: 16, color: '#B8C4AE' }} aria-hidden="true" />
+          {praticien.nombre_vues || 0}
+        </span>
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleFavori(); }}
+          disabled={toggling}
+          aria-label={favori ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+        >
+          <i
+            className={`ti ${favori ? 'ti-heart-filled' : 'ti-heart'}`}
+            style={{ fontSize: 20, color: favori ? '#C4694A' : '#B8C4AE' }}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
 
-      <div className="flex items-center gap-3 mb-3 pr-6">
+      <div className="flex items-center gap-3 mb-3 pr-16">
         {praticien.avatar_url ? (
           <img src={praticien.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
         ) : (

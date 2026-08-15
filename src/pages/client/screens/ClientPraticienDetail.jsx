@@ -28,6 +28,14 @@ export default function ClientPraticienDetail() {
 
   useEffect(() => {
     if (!p?.id) return;
+    const key = `vue_praticien_${p.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    supabaseClient.rpc('increment_vue_praticien', { p_praticien_id: p.id });
+  }, [p?.id]);
+
+  useEffect(() => {
+    if (!p?.id) return;
     supabaseClient.rpc('get_activites_praticien', { p_praticien_id: p.id })
       .then(({ data }) => setActivites((data || []).filter(a => !a.date_prevue || new Date(a.date_prevue) >= new Date(new Date().toDateString()))));
     supabaseClient
