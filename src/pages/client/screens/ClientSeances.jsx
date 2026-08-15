@@ -83,21 +83,15 @@ export default function ClientSeances() {
 
   async function annuler(seanceId) {
     setAnnulingId(seanceId);
-    const seance = seances.find(s => s.id === seanceId);
-    const { error: updateError } = await supabaseClient.from('seances').update({ statut: 'annulé' }).eq('id', seanceId);
-    if (updateError) {
-      console.error(updateError);
+    // RPC (annulation + notification praticien atomiques) plutôt que deux
+    // appels séparés : notifications n'accorde l'insert qu'à auth.uid() =
+    // user_id, un client_portail ne peut donc jamais insérer sous l'id du
+    // praticien directement — cf. 20260815120000_annulation_notifie_praticien.sql.
+    const { error: annulerError } = await supabaseClient.rpc('annuler_seance_client', { p_seance_id: seanceId });
+    if (annulerError) {
+      console.error(annulerError);
       setAnnulingId(null);
       return;
-    }
-    if (seance?.user_id) {
-      await supabaseClient.from('notifications').insert({
-        user_id: seance.user_id,
-        msg: 'Un rendez-vous a été annulé par un client',
-        icon: 'ti-calendar-x',
-        icon_color: '#C4694A',
-        unread: true,
-      });
     }
     setSeances((prev) => prev.map((s) => (s.id === seanceId ? { ...s, statut: 'annulé' } : s)));
     setAnnulingId(null);

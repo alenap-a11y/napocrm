@@ -41,8 +41,8 @@ begin
   limit 1;
 
   if v_client_id is null then
-    insert into clients (user_id, prenom, nom, email, telephone)
-    values (p_praticien_id, p_prenom, p_nom, p_email, p_telephone)
+    insert into clients (user_id, prenom, nom, email, tel, statut)
+    values (p_praticien_id, p_prenom, p_nom, p_email, p_telephone, 'actif')
     returning id into v_client_id;
   end if;
 
