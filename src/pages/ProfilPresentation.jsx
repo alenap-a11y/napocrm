@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import PraticienApercuContenu from '../components/PraticienApercuContenu'
 
 const inputStyle = {
   width: '100%', padding: '8px 10px', borderRadius: 8,
@@ -89,11 +90,13 @@ export default function ProfilPresentation() {
   const [charteCoche, setCharteCoche] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [draft, setDraft] = useState(null)
+  const [identite, setIdentite] = useState({ prenom: '', nom: '', slug: '' })
   const [offres, setOffres] = useState([])
   const [produits, setProduits] = useState([])
   const [evenements, setEvenements] = useState([])
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -108,6 +111,7 @@ export default function ProfilPresentation() {
         supabase.from('evenements').select('*').eq('praticien_id', u.id).order('date_debut'),
       ])
       setCharteAcceptee(!!p?.charte_acceptee_le)
+      setIdentite({ prenom: p?.prenom || '', nom: p?.nom || '', slug: p?.slug || '' })
       setDraft({
         metier: p?.metier || '',
         avatar_url: p?.avatar_url || '',
@@ -317,7 +321,14 @@ export default function ProfilPresentation() {
 
   const d = k => e => setDraft(p => ({ ...p, [k]: e.target.value }))
 
+  const apercuP = draft ? { ...draft, ...identite } : null
+  const apercuActivites = [
+    ...offres.map(o => ({ source: 'offre', titre: o.type, type: null, date_prevue: o.date_prevue, lien_externe: null })),
+    ...evenements.map(e => ({ source: 'evenement', titre: e.titre, type: e.type, date_prevue: e.date_debut, lien_externe: e.lien_externe })),
+  ].filter(a => !a.date_prevue || new Date(a.date_prevue) >= new Date(new Date().toDateString()))
+
   return (
+    <>
     <div style={{ padding: '1.6rem 2rem', maxWidth: 720 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -547,6 +558,9 @@ export default function ProfilPresentation() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24, marginBottom: 40 }}>
+        <button onClick={() => setPreviewOpen(true)} style={{ padding: '10px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-accent)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <i className="ti ti-eye" style={{ marginRight: 6 }} />Aperçu
+        </button>
         <button onClick={saveDraft} disabled={saving} style={{ padding: '10px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
           Enregistrer le brouillon
         </button>
@@ -555,5 +569,17 @@ export default function ProfilPresentation() {
         </button>
       </div>
     </div>
+    {previewOpen && apercuP && (
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setPreviewOpen(false)}>
+        <div style={{ width: 420, maxWidth: '100%', height: '100%', background: '#F5F0E8', overflowY: 'auto', position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: 'sticky', top: 0, background: '#0F6E56', color: '#fff', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 1 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>👁 Aperçu — ceci n'est pas encore la version publiée</span>
+            <i className="ti ti-x" style={{ cursor: 'pointer', fontSize: 18 }} onClick={() => setPreviewOpen(false)} />
+          </div>
+          <PraticienApercuContenu p={apercuP} activites={apercuActivites} produits={produits} />
+        </div>
+      </div>
+    )}
+    </>
   )
 }
