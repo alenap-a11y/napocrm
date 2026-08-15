@@ -65,6 +65,7 @@ export default function AgendaPublic({ slug, session, supabaseClient }) {
           .eq('user_id', p.id)
           .gte('date_seance', today)
           .neq('statut', 'disponible')
+          .neq('statut', 'annulé')
 
         if (errS) {
           console.error('❌ Erreur chargement séances:', errS)
