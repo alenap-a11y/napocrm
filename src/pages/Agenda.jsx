@@ -447,7 +447,7 @@ export default function Agenda() {
             )}
             <SeanceNotesPreview seanceId={detail.id} />
             <NotesDuJour date={selectedDate} />
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
               <button onClick={() => deleteRdv(detail.id)}
                 style={{ padding: '7px 12px', borderRadius: 6, border: '0.5px solid #FBEAF0', background: 'transparent', color: '#993556', cursor: 'pointer', fontSize: 12 }}>
                 <i className="ti ti-trash" style={{ marginRight: 4 }} aria-hidden="true" />Supprimer

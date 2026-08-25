@@ -104,7 +104,7 @@ export default function App() {
     // jamais atterrir sur le dashboard praticien si une session praticien
     // est active dans le même navigateur (/ bascule sur AppShell si connecté).
     content = <Landing />
-  } else if (location.pathname.startsWith('/client')) {
+  } else if ((location.pathname === '/client' || location.pathname.startsWith('/client/'))) {
     content = <EspaceClientRouter />
   } else if (loading) {
     content = null
