@@ -1,3 +1,5 @@
+import SpotifyMiniPlayer from './SpotifyMiniPlayer';
+
 const ACTIVITE_LABELS = {
   live: 'Live', formation: 'Formation', seminaire: 'Séminaire', meditation: 'Méditation', atelier: 'Atelier',
   ceremonie: 'Cérémonie', stage: 'Stage', replay: 'Replay',
@@ -64,10 +66,12 @@ export default function PraticienApercuContenu({ p, activites, produits }) {
         </div>
         <div className="space-y-2 text-sm">
           {p.musiques?.length > 0 && (
-            <div><span className="font-medium">🎵 Musiques</span>
-              <ul className="list-disc list-inside mt-1 space-y-0.5">{p.musiques.map((m, i) => <li key={i} className="break-all">{m}</li>)}</ul>
-            </div>
-          )}
+              <div><span className="font-medium">🎵 Musiques</span>
+                <div className="mt-2 space-y-2">
+                  {p.musiques.map((m, i) => <SpotifyMiniPlayer key={i} url={m} />)}
+                </div>
+              </div>
+            )}
           {p.livres?.length > 0 && (
             <div><span className="font-medium">📚 Livres</span>
               <ul className="list-disc list-inside mt-1 space-y-0.5">{p.livres.map((l, i) => <li key={i} className="break-all">{l}</li>)}</ul>

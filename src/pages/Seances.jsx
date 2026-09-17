@@ -221,12 +221,6 @@ export default function Seances() {
       {/* En-tête */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.2rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-          <button onClick={() => navigate('/seances/nouvelle-standard')}
-            onMouseEnter={() => setBtnHover(true)} onMouseLeave={() => { setBtnHover(false); setBtnActive(false) }}
-            onMouseDown={() => setBtnActive(true)} onMouseUp={() => setBtnActive(false)}
-            style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 22px', borderRadius:10, border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:'#fff', background:'linear-gradient(145deg,#6b9e5e,#4a7a3d)', boxShadow: btnActive ? '0px 0px 0px #2d5a24' : btnHover ? '2px 2px 0px #2d5a24' : '4px 4px 0px #2d5a24', transform: btnActive ? 'translateY(4px)' : btnHover ? 'translateY(2px)' : 'none', transition:'all 0.1s ease' }}>
-            <i className="ti ti-plus" style={{ fontSize:15 }} />Nouvelle séance
-          </button>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <i className="ti ti-calendar-plus" style={{ fontSize:24, color:'var(--color-accent)' }} />
             <div>
@@ -259,7 +253,7 @@ export default function Seances() {
 
       {/* Tabs */}
       <div style={{ display:'flex', borderBottom:'0.5px solid var(--color-border-tertiary)', marginBottom:16 }}>
-        {[['historique','Historique','ti-history'],['nouvelle','Nouvelle séance','ti-plus'],['export','Import / Export','ti-arrows-transfer-down']].map(([id,label,icon]) => (
+        {[['historique','Historique','ti-history'],['export','Import / Export','ti-arrows-transfer-down']].map(([id,label,icon]) => (
           <button key={id} onClick={() => setActiveTab(id)} style={{ display:'flex', alignItems:'center', gap:6, padding:'10px 18px', border:'none', background:'none', cursor:'pointer', fontSize:13, fontWeight:activeTab===id?600:400, color:activeTab===id?'var(--color-accent)':'var(--color-text-secondary)', borderBottom:activeTab===id?'2px solid var(--color-accent)':'2px solid transparent', marginBottom:-1 }}>
             <i className={`ti ${icon}`} style={{ fontSize:14 }} />{label}
           </button>
@@ -329,97 +323,6 @@ export default function Seances() {
             </div>
           )}
         </>
-      )}
-
-      {/* ══ NOUVELLE SÉANCE ══ */}
-      {activeTab === 'nouvelle' && (
-        <div style={{ maxWidth:600 }}>
-          {formMsg && <div style={{ marginBottom:14, padding:'10px 14px', borderRadius:8, background:formMsg.startsWith('✓')?'#EAF3DE':'#FBEAF0', color:formMsg.startsWith('✓')?'#3B6D11':'#993556', fontSize:13 }}>{formMsg}</div>}
-          <div style={{ background:'var(--color-background-secondary)', borderRadius:14, border:'0.5px solid var(--color-border-tertiary)', padding:'28px' }}>
-            <div style={{ fontSize:15, fontWeight:600, color:'var(--color-text-primary)', marginBottom:22 }}>Informations de la séance</div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
-              <Field label="Client *" style={{ gridColumn: '1/-1' }}>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    value={clientSearch}
-                    onChange={e => {
-                      setClientSearch(e.target.value)
-                      setClientSelectionne(null)
-                      setShowClientDropdown(true)
-                    }}
-                    onFocus={() => setShowClientDropdown(true)}
-                    placeholder="Rechercher un client…"
-                    style={inputStyle}
-                  />
-                  {clientSelectionne && (
-                    <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: '#0F6E56', fontWeight: 600 }}>
-                      ✓ {clientSelectionne.prenom} {clientSelectionne.nom}
-                    </div>
-                  )}
-                  {showClientDropdown && clientSearch.length > 0 && !clientSelectionne && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-secondary)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
-                      {clients
-                        .filter(c => `${c.prenom} ${c.nom}`.toLowerCase().includes(clientSearch.toLowerCase()))
-                        .map(c => (
-                          <div key={c.id}
-                            onClick={() => {
-                              setClientSelectionne(c)
-                              setClientSearch(`${c.prenom} ${c.nom}`)
-                              setShowClientDropdown(false)
-                              setForm(f => ({ ...f, prenom: c.prenom, nom: c.nom, email: c.email || '' }))
-                            }}
-                            style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, borderBottom: '0.5px solid var(--color-border-tertiary)' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-background-secondary)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          >
-                            <span style={{ fontWeight: 500 }}>{c.prenom} {c.nom}</span>
-                            {c.specialite && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginLeft: 8 }}>{c.specialite}</span>}
-                          </div>
-                        ))
-                      }
-                      {clients.filter(c => `${c.prenom} ${c.nom}`.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
-                        <div style={{ padding: '12px 14px', fontSize: 12, color: 'var(--color-text-secondary)' }}>Aucun client trouvé</div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </Field>
-              <Field label="Date"><input type="date" value={form.date_seance} onChange={e=>setForm(f=>({...f,date_seance:e.target.value}))} style={inputStyle} /></Field>
-              <Field label="Heure"><input type="time" value={form.heure_seance} onChange={e=>setForm(f=>({...f,heure_seance:e.target.value}))} style={inputStyle} /></Field>
-              <Field label="Type de séance">
-                <select value={form.type_seance} onChange={e=>setForm(f=>({...f,type_seance:e.target.value}))} style={inputStyle}>
-                  {TYPES.slice(1).map(t=><option key={t} value={t}>{t}</option>)}
-                </select>
-              </Field>
-              <Field label="Durée (min)"><input type="number" value={form.duree_minutes} onChange={e=>setForm(f=>({...f,duree_minutes:e.target.value}))} placeholder="60" min="1" style={inputStyle} /></Field>
-              <Field label="Prix (€)"><input type="number" value={form.prix_euros} onChange={e=>setForm(f=>({...f,prix_euros:e.target.value}))} placeholder="60" min="0" style={inputStyle} /></Field>
-              <Field label="Tags (séparés par ,)"><input value={form.tags} onChange={e=>setForm(f=>({...f,tags:e.target.value}))} placeholder="Stress, Sommeil…" style={inputStyle} /></Field>
-            </div>
-            <Field label="Email"><input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="email@exemple.com" style={inputStyle} /></Field>
-            <Field label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="Observations, compte-rendu…" rows={4} style={{ ...inputStyle, resize:'vertical', fontFamily:'inherit' }} /></Field>
-            <div style={{ display:'flex', gap:10, marginTop:22, justifyContent:'flex-end' }}>
-              <button onClick={() => { setForm(EMPTY_FORM); setFormMsg('') }} style={{ padding:'9px 18px', borderRadius:8, border:'0.5px solid var(--color-border-secondary)', background:'transparent', color:'var(--color-text-primary)', cursor:'pointer', fontSize:13 }}>Réinitialiser</button>
-              <button onClick={async () => {
-                if (!form.prenom.trim()||!form.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
-                if (!form.date_seance) { setFormMsg('Date requise.'); return }
-                const parsedTags = form.tags.split(',').map(t=>t.trim()).filter(Boolean)
-                const { error } = await addSeance({
-                  client_id: clientSelectionne?.id || null, prenom: form.prenom, nom: form.nom, email: form.email||null,
-                  type_seance: form.type_seance, date_seance: form.date_seance, heure_seance: form.heure_seance,
-                  duree_minutes: parseInt(form.duree_minutes)||60, prix_euros: parseFloat(form.prix_euros)||null,
-                  tags: parsedTags.length?parsedTags:null, notes: form.notes||null,
-                  fleurs_bach: form.fleurs_bach?.length ? form.fleurs_bach : null,
-                })
-                if (error) { setFormMsg(`✗ Erreur : ${error.message||error}`); return }
-                insertNotif({ msg:`Nouvelle séance — ${form.prenom} ${form.nom}`, icon:'ti-calendar-plus', iconColor:'#185FA5', bg:'#E6F1FB' })
-                setForm(EMPTY_FORM); setClientSelectionne(null); setClientSearch(''); setFormMsg('✓ Séance ajoutée.')
-                setTimeout(() => { setFormMsg(''); setActiveTab('historique') }, 1500)
-              }} style={{ padding:'9px 22px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:600 }}>
-                <i className="ti ti-check" style={{ marginRight:6 }} />Enregistrer la séance
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* ══ EXPORT ══ */}
