@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import SpotifyMiniPlayer from './SpotifyMiniPlayer';
 
 const ACTIVITE_LABELS = {
@@ -36,12 +37,12 @@ export default function PraticienApercuContenu({ p, activites, produits }) {
           <p className="text-sm text-sauge mt-1">Pratique depuis {new Date(p.anciennete_depuis).getFullYear()}</p>
         )}
         {p.slug && (
-          <div className="mt-3">
-            <span className="text-xs px-3 py-1.5 rounded-full text-white font-medium inline-block" style={{ background: '#2C5F66' }}>
-              📅 Prendre rendez-vous
-            </span>
-          </div>
-        )}
+            <div className="mt-3">
+              <Link to={`/rdv/${p.slug}`} className="text-xs px-3 py-1.5 rounded-full text-white font-medium inline-block" style={{ background: '#2C5F66' }}>
+                📅 Prendre rendez-vous
+              </Link>
+            </div>
+          )}
         {(p.tel_pro || p.email_pro) && (
           <div className="flex gap-2 mt-3">
             {p.tel_pro && <span className="text-xs px-3 py-1.5 rounded-full border" style={{ borderColor: '#2C5F66', color: '#2C5F66' }}>📞 Appeler</span>}
