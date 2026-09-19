@@ -185,6 +185,7 @@ export default function AppShell({ user, onSignOut }) {
   const [sbCollapsed, setSbCollapsed] = useState(() => loadSbCollapsed(user?.id))
   const [metierModuleMap, setMetierModuleMap] = useState({})
   const [activeModuleIds, setActiveModuleIds] = useState(new Set())
+  const [isLoadingModules, setIsLoadingModules] = useState(!!user?.id)
   const [tbItems, setTbItems] = useState(DEFAULT_TB_ITEMS)
   const [sbActif, setSbActif] = useState('dashboard')
   const [tbActif, setTbActif] = useState('')
@@ -224,16 +225,21 @@ export default function AppShell({ user, onSignOut }) {
   useEffect(() => {
     if (!user?.id) return
     async function loadGating() {
-      const { data: mods } = await supabase.from('marketplace_modules')
-        .select('id, title').eq('category', 'Napo-Métiers').eq('status', 'available')
-      const map = {}
-      ;(mods || []).forEach(m => { map[m.title] = m.id })
-      setMetierModuleMap(map)
-      const ids = (mods || []).map(m => m.id)
-      if (ids.length) {
-        const { data: actifs } = await supabase.from('profil_modules_actifs')
-          .select('module_id').eq('user_id', user.id).in('module_id', ids)
-        setActiveModuleIds(new Set((actifs || []).map(a => a.module_id)))
+      setIsLoadingModules(true)
+      try {
+        const { data: mods } = await supabase.from('marketplace_modules')
+          .select('id, title').eq('category', 'Napo-Métiers').eq('status', 'available')
+        const map = {}
+        ;(mods || []).forEach(m => { map[m.title] = m.id })
+        setMetierModuleMap(map)
+        const ids = (mods || []).map(m => m.id)
+        if (ids.length) {
+          const { data: actifs } = await supabase.from('profil_modules_actifs')
+            .select('module_id').eq('user_id', user.id).in('module_id', ids)
+          setActiveModuleIds(new Set((actifs || []).map(a => a.module_id)))
+        }
+      } finally {
+        setIsLoadingModules(false)
       }
     }
     loadGating()
@@ -383,7 +389,7 @@ export default function AppShell({ user, onSignOut }) {
           <div className="deco-head">
             <div className="deco-ring"><i className="ti ti-power" aria-hidden="true" /></div>
             <div className="deco-name">Se déconnecter ?</div>
-            <div className="deco-sub">Nathalie Alpha · Plan Créateur</div>
+            <div className="deco-sub">À bientôt sur Naposolo</div>
           </div>
           <div className="deco-foot">
             <button className="deco-cancel" onClick={() => setDecoOpen(false)}>Annuler</button>
@@ -401,6 +407,7 @@ export default function AppShell({ user, onSignOut }) {
           items={sbItems.filter(i => {
             if (sbVis[i.id] === false) return false
             if (i.moduleTitle) {
+              if (isLoadingModules) return false
               const modId = metierModuleMap[i.moduleTitle]
               if (modId && !activeModuleIds.has(modId)) return false
             }

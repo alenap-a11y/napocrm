@@ -48,9 +48,12 @@ export default function Landing() {
   const [betaPassword, setBetaPassword] = useState('');
   const [betaConsent,  setBetaConsent]  = useState(false);
   const [alphaOpen,    setAlphaOpen]    = useState(true);
+  const [betaStep,     setBetaStep]     = useState(1);
   const [cms,          setCms]          = useState({});
   const [dynFeatures,  setDynFeatures]  = useState([]);
   const [dynModules,   setDynModules]   = useState([]);
+  const [metierModules,     setMetierModules]     = useState([]);
+  const [betaMetiersChoisis, setBetaMetiersChoisis] = useState([]);
 
   useEffect(() => {
     supabase.from('app_config').select('value').eq('key', 'alpha_open').single()
@@ -66,7 +69,19 @@ export default function Landing() {
       .then(({ data }) => { if (data && data.length) setDynFeatures(data) })
     supabase.from('landing_modules').select('*').order('ordre')
       .then(({ data }) => { if (data && data.length) setDynModules(data) })
+    // Formulaire d'inscription joué en anon (avant création de compte) :
+    // filtre category = 'Napo-Métiers' + status = 'available', même filtre
+    // que le backfill historique (20260807180000_backfill_profil_modules_actifs.sql)
+    // qui définit quels modules comptent comme "métiers" activables.
+    supabase.from('marketplace_modules').select('*')
+      .eq('visible', true).eq('category', 'Napo-Métiers').eq('status', 'available')
+      .order('position')
+      .then(({ data }) => { if (data) setMetierModules(data) })
   }, []);
+
+  function toggleBetaMetier(moduleId) {
+    setBetaMetiersChoisis(prev => prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId])
+  }
 
   const cmsText = (key, fallback) => cms[key]?.value || fallback;
   const cmsStyle = (key) => {
@@ -95,8 +110,8 @@ export default function Landing() {
         email: betaEmail.trim(),
         password: betaPassword,
         options: {
-          data: { prenom: betaPrenom.trim(), nom: betaNom.trim(), metier: betaMetier.trim() || null },
-          emailRedirectTo: 'https://naposolo.com'
+          data: { prenom: betaPrenom.trim(), nom: betaNom.trim(), metier: betaMetier.trim() || null, metiers_choisis: betaMetiersChoisis },
+          emailRedirectTo: window.location.origin
         }
       })
       if (error) {
@@ -127,6 +142,15 @@ export default function Landing() {
     setShowRegisterModal(false)
     setBetaPrenom(''); setBetaNom(''); setBetaEmail(''); setBetaMetier('')
     setBetaPassword(''); setBetaConsent(false); setBetaSent(false); setBetaError('')
+    setBetaMetiersChoisis([]); setBetaStep(1)
+  }
+
+  function goToBetaStep2() {
+    if (!betaPrenom.trim() || !betaNom.trim() || !betaEmail.trim()) { setBetaError('Nom, prénom et email requis.'); return }
+    if (!betaPassword || betaPassword.length < 8) { setBetaError('Mot de passe minimum 8 caractères.'); return }
+    if (!betaConsent) { setBetaError('Merci de cocher la case de consentement RGPD.'); return }
+    setBetaError('')
+    setBetaStep(2)
   }
 
   return (
@@ -513,7 +537,7 @@ export default function Landing() {
           onClick={e => e.target === e.currentTarget && closeRegisterModal()}
           className="fixed inset-0 z-[500] bg-black/45 flex items-center justify-center px-4"
         >
-          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-[420px]">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-[420px] sm:max-w-[640px] lg:max-w-[760px]">
             <div className="flex justify-between items-start mb-5">
               <div>
                 <div className="text-lg font-bold text-navy mb-1">🚀 Rejoindre l'alpha</div>
@@ -541,78 +565,118 @@ export default function Landing() {
               </div>
             ) : (
               <>
+                <div className="text-[10.5px] font-semibold text-primary uppercase tracking-wide mb-2.5">Étape {betaStep}/2</div>
                 {betaError && <div className="px-3 py-2.5 rounded-lg bg-red-50 text-red-600 text-sm mb-3.5">{betaError}</div>}
-                <div className="flex flex-col gap-3.5">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom *</label>
-                    <input type="text" autoFocus value={betaPrenom} onChange={e => setBetaPrenom(e.target.value)} placeholder="Votre prénom"
-                      className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom *</label>
-                    <input type="text" value={betaNom} onChange={e => setBetaNom(e.target.value)} placeholder="Votre nom"
-                      className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Email *</label>
-                    <input type="email" value={betaEmail} onChange={e => setBetaEmail(e.target.value)} placeholder="vous@exemple.com"
-                      className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mot de passe *</label>
-                    <div className="flex gap-1.5">
-                      <input type="text" value={betaPassword} onChange={e => setBetaPassword(e.target.value)} placeholder="Minimum 8 caractères"
-                        className="flex-1 px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
+                {betaStep === 1 ? (
+                  <div className="flex flex-col gap-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Prénom *</label>
+                      <input type="text" autoFocus value={betaPrenom} onChange={e => setBetaPrenom(e.target.value)} placeholder="Votre prénom"
+                        className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Nom *</label>
+                      <input type="text" value={betaNom} onChange={e => setBetaNom(e.target.value)} placeholder="Votre nom"
+                        className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Email *</label>
+                      <input type="email" value={betaEmail} onChange={e => setBetaEmail(e.target.value)} placeholder="vous@exemple.com"
+                        className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Mot de passe *</label>
+                      <div className="flex gap-1.5">
+                        <input type="text" value={betaPassword} onChange={e => setBetaPassword(e.target.value)} placeholder="Minimum 8 caractères"
+                          className="flex-1 px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border" />
+                        <button
+                          type="button"
+                          onClick={() => setBetaPassword(Math.random().toString(36).slice(2, 10).toUpperCase() + Math.random().toString(36).slice(2, 5) + '!9')}
+                          className="px-2.5 rounded-lg border border-primary/30 bg-pale text-primary text-xs whitespace-nowrap shrink-0"
+                        >
+                          🎲 Générer
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-1">Notez ce mot de passe — il vous servira pour vous connecter.</div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Votre métier</label>
+                      <select value={betaMetier} onChange={e => setBetaMetier(e.target.value)}
+                        className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border cursor-pointer">
+                        <option value="">Sélectionnez...</option>
+                        <option>Aromathérapeute</option>
+                        <option>Astrologue</option>
+                        <option>Cartomancienne</option>
+                        <option>Coach bien-être</option>
+                        <option>Coach yoga</option>
+                        <option>Energéticien</option>
+                        <option>Hypnothérapeute</option>
+                        <option>Magnétiseur</option>
+                        <option>Médium</option>
+                        <option>Naturopathe</option>
+                        <option>Ostéopathe</option>
+                        <option>Praticien massage</option>
+                        <option>Psychologue</option>
+                        <option>Réflexologue</option>
+                        <option>Reiki</option>
+                        <option>Sophrologue</option>
+                        <option>Autre praticien</option>
+                      </select>
+                    </div>
+                    <label className="flex gap-2 items-start text-[11.5px] text-gray-500 leading-snug cursor-pointer mt-0.5">
+                      <input type="checkbox" checked={betaConsent} onChange={e => setBetaConsent(e.target.checked)} className="mt-0.5 shrink-0" />
+                      <span>J'accepte le traitement de mes données conformément à la <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="text-primary underline" onClick={e => e.stopPropagation()}>politique de confidentialité</a>. *</span>
+                    </label>
+                    <div className="flex gap-2.5 mt-1">
+                      <button type="button" onClick={closeRegisterModal} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 transition-colors">Annuler</button>
                       <button
                         type="button"
-                        onClick={() => setBetaPassword(Math.random().toString(36).slice(2, 10).toUpperCase() + Math.random().toString(36).slice(2, 5) + '!9')}
-                        className="px-2.5 rounded-lg border border-primary/30 bg-pale text-primary text-xs whitespace-nowrap shrink-0"
+                        onClick={goToBetaStep2}
+                        className="flex-[2] py-2.5 min-h-[44px] rounded-lg text-white text-sm font-semibold transition-all bg-gradient-to-r from-primary to-mystic"
                       >
-                        🎲 Générer
+                        Suivant
                       </button>
                     </div>
-                    <div className="text-[10px] text-gray-400 mt-1">Notez ce mot de passe — il vous servira pour vous connecter.</div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Votre métier</label>
-                    <select value={betaMetier} onChange={e => setBetaMetier(e.target.value)}
-                      className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-gray-200 bg-gray-50 text-navy text-sm outline-none focus:border-primary transition-colors box-border cursor-pointer">
-                      <option value="">Sélectionnez...</option>
-                      <option>Aromathérapeute</option>
-                      <option>Astrologue</option>
-                      <option>Cartomancienne</option>
-                      <option>Coach bien-être</option>
-                      <option>Coach yoga</option>
-                      <option>Energéticien</option>
-                      <option>Hypnothérapeute</option>
-                      <option>Magnétiseur</option>
-                      <option>Médium</option>
-                      <option>Naturopathe</option>
-                      <option>Ostéopathe</option>
-                      <option>Praticien massage</option>
-                      <option>Psychologue</option>
-                      <option>Réflexologue</option>
-                      <option>Reiki</option>
-                      <option>Sophrologue</option>
-                      <option>Autre praticien</option>
-                    </select>
+                ) : (
+                  <div className="flex flex-col gap-3.5">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Choix des métiers</label>
+                      {metierModules.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+                          {metierModules.map(m => (
+                            <label key={m.id} className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-gray-200 bg-gray-50 cursor-pointer hover:border-primary/50 transition-colors">
+                              <input type="checkbox" checked={betaMetiersChoisis.includes(m.id)} onChange={() => toggleBetaMetier(m.id)} className="shrink-0" />
+                              <i className={`ti ${m.icon || 'ti-sparkles'} text-sm shrink-0`} style={{ color: m.icon_color || '#534AB7' }} aria-hidden="true" />
+                              <div className="min-w-0">
+                                <div className="text-xs font-medium text-navy">{m.title}</div>
+                                {m.description && <div className="text-[10.5px] text-gray-400 truncate">{m.description}</div>}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-gray-400 italic">Chargement des métiers...</div>
+                      )}
+                      <div className="text-[10.5px] text-gray-400 mt-1.5 leading-snug">
+                        {betaMetiersChoisis.length === 0
+                          ? "Aucun métier sélectionné pour l'instant — pas de problème, vous pourrez activer vos métiers plus tard depuis le Marketplace."
+                          : `${betaMetiersChoisis.length} métier${betaMetiersChoisis.length > 1 ? 's' : ''} sélectionné${betaMetiersChoisis.length > 1 ? 's' : ''} — vous pourrez toujours en activer d'autres plus tard depuis le Marketplace.`}
+                      </div>
+                    </div>
+                    <div className="flex gap-2.5 mt-1">
+                      <button type="button" onClick={() => setBetaStep(1)} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 transition-colors">Retour</button>
+                      <button
+                        type="button"
+                        onClick={handleBeta}
+                        disabled={betaLoading || !betaConsent}
+                        className="flex-[2] py-2.5 min-h-[44px] rounded-lg text-white text-sm font-semibold transition-all bg-gradient-to-r from-primary to-mystic disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {betaLoading ? 'Inscription...' : "Je rejoins l'alpha 🚀"}
+                      </button>
+                    </div>
                   </div>
-                  <label className="flex gap-2 items-start text-[11.5px] text-gray-500 leading-snug cursor-pointer mt-0.5">
-                    <input type="checkbox" checked={betaConsent} onChange={e => setBetaConsent(e.target.checked)} className="mt-0.5 shrink-0" />
-                    <span>J'accepte le traitement de mes données conformément à la <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="text-primary underline" onClick={e => e.stopPropagation()}>politique de confidentialité</a>. *</span>
-                  </label>
-                  <div className="flex gap-2.5 mt-1">
-                    <button type="button" onClick={closeRegisterModal} className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-500 text-sm hover:bg-gray-50 transition-colors">Annuler</button>
-                    <button
-                      type="button"
-                      onClick={handleBeta}
-                      disabled={betaLoading || !betaConsent}
-                      className="flex-[2] py-2.5 min-h-[44px] rounded-lg text-white text-sm font-semibold transition-all bg-gradient-to-r from-primary to-mystic disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {betaLoading ? 'Inscription...' : "Je rejoins l'alpha 🚀"}
-                    </button>
-                  </div>
-                </div>
+                )}
               </>
             )}
           </div>

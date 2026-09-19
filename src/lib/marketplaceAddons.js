@@ -27,7 +27,8 @@ export async function checkActivatedModules(userId, modules) {
 }
 
 export async function activateMetierModule(userId, moduleId) {
-  await supabase.from('profil_modules_actifs').upsert({ user_id: userId, module_id: moduleId }, { onConflict: 'user_id,module_id', ignoreDuplicates: true })
+  const { error } = await supabase.from('profil_modules_actifs').upsert({ user_id: userId, module_id: moduleId }, { onConflict: 'user_id,module_id', ignoreDuplicates: true })
+  return { error }
 }
 
 export async function deactivateMetierModule(userId, moduleId) {

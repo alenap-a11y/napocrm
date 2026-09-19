@@ -37,9 +37,9 @@ export default function ConfirmEmail() {
         setErrorMsg(error.message.includes('expired') || error.message.includes('invalid')
           ? 'Ce lien a expiré ou a déjà été utilisé.'
           : error.message)
-      } else {
-        window.location.replace(isClient ? '/client/accueil' : '/')
+        return
       }
+      window.location.replace(isClient ? '/client/accueil' : '/')
     })
   }, [])
 
