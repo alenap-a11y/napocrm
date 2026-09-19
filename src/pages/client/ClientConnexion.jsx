@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabaseClient } from '../../lib/supabaseClient';
+import napopetit from '../../assets/napopetitv1.png';
 
 export default function ClientConnexion({ errorMessage, onErrorShown }) {
   const [email, setEmail] = useState('');
@@ -48,30 +49,48 @@ export default function ClientConnexion({ errorMessage, onErrorShown }) {
   }
 
   return (
-    <div className="min-h-screen bg-creme flex flex-col items-center justify-center px-6">
-      <Link to="/accueil" className="font-clientSerif text-2xl text-saugeDark mb-6">Naposolo</Link>
-      <form onSubmit={handleSubmit} className="max-w-sm w-full bg-white rounded-2xl shadow-sm border border-sauge/15 p-8">
-        <h1 className="font-clientSerif text-3xl text-saugeDark mb-1">Espace client</h1>
-        <p className="text-sauge text-sm mb-6">Connectez-vous à votre compte.</p>
-
-        {error && (
-          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
-        )}
-
-        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Email"
-          className="w-full border border-sauge/25 rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:border-sauge" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Mot de passe"
-          className="w-full border border-sauge/25 rounded-lg px-3 py-2.5 text-sm mb-5 focus:outline-none focus:border-sauge" />
-
-        <button type="submit" disabled={loading}
-          className="w-full bg-sauge hover:bg-saugeDark text-white rounded-xl py-3 text-sm font-medium transition-colors disabled:opacity-50">
-          {loading ? 'Connexion...' : 'Se connecter'}
-        </button>
-
-        <p className="text-center text-xs text-sauge mt-5">
-          Pas encore de compte ? <Link to="/client/inscription" className="text-saugeDark underline">S'inscrire</Link>
-        </p>
-      </form>
+    <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <Link to="/" style={{ display: 'block', textAlign: 'center', width: '100%', maxWidth: 420, marginBottom: 12, fontSize: 13, color: '#8A8378', textDecoration: 'none' }}>← Page d'accueil</Link>
+      <div style={{ display: 'flex', gap: 6, padding: 4, width: '100%', maxWidth: 420, marginBottom: 16, background: '#e5f2f8', borderRadius: 999 }}>
+        <Link to="/client/connexion" style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 999, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: '#fff', background: '#1E95C1' }}>Client</Link>
+        <Link to="/login" style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 999, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: '#6b7280', background: 'transparent' }}>Praticien</Link>
+      </div>
+      <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420, border: '0.5px solid rgba(14,165,233,0.2)', boxShadow: '0 8px 40px rgba(0,0,0,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+          <img src={napopetit} alt="Naposolo" style={{ height: 28 }} />
+          <span style={{ fontSize: 17, fontWeight: 700, color: '#111827' }}>Naposolo</span>
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Espace client</div>
+          <div style={{ fontSize: 13, color: '#9ca3af' }}>Connectez-vous à votre compte.</div>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {error && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}</div>}
+          <div>
+            <label style={labelStyle}>Email</label>
+            <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="vous@exemple.com" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Mot de passe</label>
+            <input type="password" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={inputStyle} />
+          </div>
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', minHeight: 44, background: loading ? '#7dd3fc' : '#0EA5E9', color: '#fff', fontSize: 14, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+            {loading ? 'Connexion…' : 'Se connecter'}
+          </button>
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+            Pas encore de compte ?{' '}
+            <Link to="/client/inscription" style={{ color: '#0EA5E9', fontWeight: 600, textDecoration: 'none' }}>S'inscrire</Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
+}
+
+const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }
+const inputStyle = {
+  width: '100%', padding: '9px 12px', borderRadius: 8, minHeight: 44,
+  border: '0.5px solid #d1d5db', background: '#f9fafb',
+  color: '#111827', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  fontFamily: 'inherit', transition: 'border-color .15s',
 }

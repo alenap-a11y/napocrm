@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import AppShell from './AppShell'
 import LoginPage from './pages/LoginPage'
 import Landing from './pages/Landing'
+import AccesPage from './pages/AccesPage'
 import SetPassword from './pages/SetPassword'
 import ResetPassword from './pages/ResetPassword'
 import AdminLayout from './pages/AdminLayout'
@@ -98,6 +99,8 @@ export default function App() {
     content = <PolitiqueConfidentialite />
   } else if (location.pathname === '/confirmer') {
     content = <ConfirmEmail />
+  } else if (location.pathname === '/acces') {
+    content = <AccesPage />
   } else if (location.pathname === '/accueil') {
     // Landing publique forcée, quel que soit l'état de connexion praticien
     // — utilisée par le lien "Naposolo" depuis l'espace client, pour ne

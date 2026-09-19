@@ -56,6 +56,14 @@ export default function Landing() {
   const [betaMetiersChoisis, setBetaMetiersChoisis] = useState([]);
 
   useEffect(() => {
+    // Déclenchement externe de la modale d'inscription (ex. carte "Création
+    // de compte praticien" sur /acces) via ?modal=alpha, sans autre logique.
+    if (new URLSearchParams(window.location.search).get('modal') === 'alpha') {
+      setShowRegisterModal(true)
+    }
+  }, [])
+
+  useEffect(() => {
     supabase.from('app_config').select('value').eq('key', 'alpha_open').single()
       .then(({ data }) => { if (data) setAlphaOpen(data.value === 'true') })
     supabase.from('landing_content').select('key, value, color, font_size, font_family')
@@ -164,17 +172,15 @@ export default function Landing() {
       )}
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-gray-100/50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-gray-100/50 font-clientSans">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-3">
           <div className="flex items-center gap-10">
-            <Link to="/" className="text-2xl font-extrabold text-navy tracking-tight flex items-center gap-2.5 group">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary to-mystic rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-mystic/30 transition-all duration-300 group-hover:scale-105">
+            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group shrink-0 no-underline">
+              <div className="w-9 h-9 bg-gradient-to-br from-primary to-mystic rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-mystic/30 transition-all duration-300 group-hover:scale-105 shrink-0">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
               </div>
-              <span className="bg-gradient-to-r from-navy to-navy/80 bg-clip-text">Naposolo</span>
-              {cmsText('header_badge', '') && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-mystic/10 text-mystic normal-case tracking-normal">{cmsText('header_badge', '')}</span>
-              )}
+              <span className="font-clientSerif text-2xl font-semibold text-navy tracking-tight">Naposolo</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1E95C11A] text-[#1E95C1] tracking-wide">ALPHA</span>
             </Link>
             <div className="hidden lg:flex items-center gap-8 font-medium text-gray-600 text-sm">
               <Link to="/" className="hover:text-primary transition-colors duration-200">Accueil</Link>
@@ -184,12 +190,46 @@ export default function Landing() {
               <a href="#a-propos" className="hover:text-primary transition-colors duration-200">À Propos</a>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/client/connexion" className="block font-medium text-mystic hover:text-primary transition-colors duration-200 text-sm px-3 py-1.5 rounded-lg border border-mystic/20 hover:border-primary/30">Espace client</Link>
-            <Link to="/login" className="block font-medium text-navy/80 hover:text-primary transition-colors duration-200 text-sm">Se connecter</Link>
-            <button type="button" onClick={() => setShowRegisterModal(true)} className="bg-gradient-to-r from-navy to-[#1a2d4a] text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-lg shadow-navy/15 hover:shadow-xl hover:shadow-navy/25 hover:scale-[1.03] transition-all duration-300">
-              Rejoindre l'alpha
-            </button>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link to="/client/connexion" className="max-sm:hidden flex items-center gap-1.5 font-medium text-gray-600 hover:text-[#1E95C1] transition-colors duration-200 text-sm whitespace-nowrap no-underline">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z"></path></svg>
+              Espace Client Connexion
+            </Link>
+
+            <span className="max-sm:hidden block w-px h-6 bg-[#DCD3BE]"></span>
+
+            <div className="flex items-center gap-2">
+              <Link
+                to="/client/inscription"
+                className="flex items-center gap-2 bg-white pl-2 pr-2.5 sm:pr-4 py-1.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 no-underline"
+              >
+                <span className="w-7 h-7 bg-[#1E95C1] text-white rounded-lg flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </span>
+                <span className="max-sm:hidden inline text-sm font-semibold text-navy whitespace-nowrap">Rejoindre l'alpha — Client</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setShowRegisterModal(true)}
+                className="flex items-center gap-2 bg-white pl-2 pr-2.5 sm:pr-4 py-1.5 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <span className="w-7 h-7 bg-[#1E95C1] text-white rounded-lg flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </span>
+                <span className="max-sm:hidden inline text-sm font-semibold text-navy whitespace-nowrap">Rejoindre l'alpha — Praticien</span>
+              </button>
+            </div>
+
+            <span className="max-sm:hidden block w-px h-6 bg-[#DCD3BE]"></span>
+
+            <Link
+              to="/login"
+              className="font-semibold text-[#1E95C1] border border-[#1E95C1] px-3 sm:px-4 py-2 rounded-xl hover:bg-[#1E95C11A] transition-colors duration-200 text-sm whitespace-nowrap no-underline"
+            >
+              Espace Praticien Connexion
+            </Link>
           </div>
         </div>
       </nav>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import napopetit from '../assets/napopetitv1.png'
 
@@ -47,15 +47,20 @@ export default function LoginPage({ deniedMessage, onDeniedShown }) {
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+    <div style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#111827', background: '#f0f9ff', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <Link to="/" style={{ display: 'block', textAlign: 'center', width: '100%', maxWidth: 420, marginBottom: 12, fontSize: 13, color: '#8A8378', textDecoration: 'none' }}>← Page d'accueil</Link>
+      <div style={{ display: 'flex', gap: 6, padding: 4, width: '100%', maxWidth: 420, marginBottom: 16, background: '#e5f2f8', borderRadius: 999 }}>
+        <Link to="/client/connexion" style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 999, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: '#6b7280', background: 'transparent' }}>Client</Link>
+        <Link to="/login" style={{ flex: 1, textAlign: 'center', padding: '9px 0', borderRadius: 999, fontSize: 13, fontWeight: 600, textDecoration: 'none', color: '#fff', background: '#1E95C1' }}>Praticien</Link>
+      </div>
       <div style={{ background: '#fff', borderRadius: 16, padding: 32, width: '100%', maxWidth: 420, border: '0.5px solid rgba(14,165,233,0.2)', boxShadow: '0 8px 40px rgba(0,0,0,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
           <img src={napopetit} alt="Naposolo" style={{ height: 28 }} />
           <span style={{ fontSize: 17, fontWeight: 700, color: '#111827' }}>Naposolo</span>
         </div>
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Connexion</div>
-          <div style={{ fontSize: 13, color: '#9ca3af' }}>Accédez à votre espace Naposolo</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Espace Praticien</div>
+          <div style={{ fontSize: 13, color: '#9ca3af' }}>Connectez-vous à votre espace professionnel</div>
         </div>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {error && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 8, background: '#FCEBEB', color: '#A32D2D', fontSize: 13 }}><i className="ti ti-alert-circle" style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }} />{error}</div>}
