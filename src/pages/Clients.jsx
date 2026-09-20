@@ -6,6 +6,26 @@ import { insertNotif } from '../lib/notif'
 import { useSeancesSync } from '../hooks/useSeancesSync'
 
 
+// Modules métier ajoutés à la fiche client (un onglet chacun). Pour en ajouter un : une ligne ici.
+const EXTRA_METIERS = [
+  { id: 'magnetisme', label: 'Magnétisme', icon: 'ti-hand-stop', table: 'fiches_magnetisme', route: '/magnetisme', moduleTitle: 'Napo-Magnétiseur', color: '#B4531F', bg: '#FCEBDD' },
+  { id: 'mediumnite', label: 'Médium', icon: 'ti-ghost', table: 'fiches_mediumnite', route: '/mediumnite', moduleTitle: 'Napo-Médium', color: '#6B4FA0', bg: '#EFE9F8' },
+  { id: 'radiesthesie', label: 'Radiesthésie', icon: 'ti-pendulum', table: 'fiches_radiesthesie', route: '/radiesthesie', moduleTitle: 'Napo-Radiesthésie', color: '#185FA5', bg: '#E6F1FB' },
+  { id: 'yoga', label: 'Yoga', icon: 'ti-yoga', table: 'fiches_yoga', route: '/napo-yoga', moduleTitle: 'Napo-Yoga', color: '#0F6E56', bg: '#E1F5EE' },
+  { id: 'naturopathie', label: 'Naturopathie', icon: 'ti-plant-2', table: 'fiches_naturopathie', route: '/napo-naturopathie', moduleTitle: 'Napo-Naturopathie', color: '#3B7A2E', bg: '#E9F4E3' },
+  { id: 'aromatherapie', label: 'Aromathérapie', icon: 'ti-droplet', table: 'fiches_aromatherapie', route: '/napo-aromatherapie', moduleTitle: 'Napo-Aromathérapie', color: '#8A6D0B', bg: '#F8F0D5' },
+  { id: 'sonotherapie', label: 'Sonothérapie', icon: 'ti-wave-sine', table: 'fiches_sonotherapie', route: '/napo-sonotherapie', moduleTitle: 'Napo-Sonothérapie', color: '#1D6F8C', bg: '#E1F1F7' },
+  { id: 'massage', label: 'Massage', icon: 'ti-hand-move', table: 'fiches_massage', route: '/napo-massage', moduleTitle: 'Napo-Massage', color: '#854F0B', bg: '#FAEEDA' },
+  { id: 'sophrologie', label: 'Sophrologie', icon: 'ti-mood-smile', table: 'fiches_sophrologie', route: '/napo-sophrologie', moduleTitle: 'Napo-Sophrologie', color: '#2F6DB5', bg: '#E4EEF9' },
+  { id: 'hypnotherapie', label: 'Hypnothérapie', icon: 'ti-spiral', table: 'fiches_hypnotherapie', route: '/napo-hypnotherapie', moduleTitle: 'Napo-Hypnothérapie', color: '#5B4BB5', bg: '#ECEAFB' },
+  { id: 'chamanisme', label: 'Chamanisme', icon: 'ti-feather', table: 'fiches_chamanisme', route: '/napo-chamanisme', moduleTitle: 'Napo-Chamanisme', color: '#7A4B2A', bg: '#F3E8DF' },
+  { id: 'astrologie', label: 'Astrologie', icon: 'ti-moon-stars', table: 'fiches_astrologie', route: '/napo-astrologie', moduleTitle: 'Napo-Astrologie', color: '#4A4FA8', bg: '#E8E9F8' },
+]
+
+const DETAIL_TABS_BASE = [['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['recap','Récap','ti-list-details'],['stats','Stats','ti-chart-bar'],['notes','Notes','ti-notes']]
+// 4e valeur = titre du module dans marketplace_modules (même clé que le gating de la sidebar)
+const DETAIL_TABS_METIER = [['bach','🌿 Bach','ti-leaf','Fleurs de Bach'],['energie','⚡ Énergie','ti-sparkles','NapoÉnergie'],['oracle','🔮 Oracle','ti-cards','NapoOracle'], ...EXTRA_METIERS.map(m => [m.id, m.label, m.icon, m.moduleTitle])]
+
 const SPECIALITES = ['Toutes', 'Sophrologie', 'Coaching', 'Naturopathie', 'Fleurs de Bach', 'Énergie', 'Massage', 'Autre']
 const STATUTS     = ['Tous', 'actif', 'inactif', 'archivé']
 
@@ -142,6 +162,43 @@ export default function Clients() {
   const [oracleSeances, setOracleSeances] = useState([])
   const [loadingOracle, setLoadingOracle] = useState(false)
   const [loadingBach,    setLoadingBach]    = useState(false)
+  const [extraSeances,  setExtraSeances]  = useState({})
+  const [loadingExtra,  setLoadingExtra]  = useState(false)
+
+  const [extraLoadedFor, setExtraLoadedFor] = useState(null)
+  const [metierIds, setMetierIds] = useState({})
+  const [activeIds, setActiveIds] = useState(null)
+  // Onglet métier visible si le module est actif pour ce praticien.
+  // Pas de correspondance dans marketplace_modules : on ne masque pas (ne rien cacher par erreur).
+  const tabVisible = (title) => {
+    if (!title) return true
+    if (!activeIds) return false
+    const modId = metierIds[title]
+    return !modId || activeIds.has(modId)
+  }
+  useEffect(() => {
+    let annule = false
+    async function chargerModulesActifs() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: mods, error: e1 } = await supabase.from('marketplace_modules')
+        .select('id, title').eq('category', 'Napo-Métiers').eq('status', 'available')
+      if (e1) console.error('Modules métiers :', e1.message)
+      const map = {}
+      ;(mods || []).forEach(m => { map[m.title] = m.id })
+      const ids = (mods || []).map(m => m.id)
+      let actifs = []
+      if (ids.length) {
+        const { data, error: e2 } = await supabase.from('profil_modules_actifs')
+          .select('module_id').eq('user_id', user.id).in('module_id', ids)
+        if (e2) console.error('Modules actifs :', e2.message)
+        actifs = data || []
+      }
+      if (!annule) { setMetierIds(map); setActiveIds(new Set(actifs.map(a => a.module_id))) }
+    }
+    chargerModulesActifs()
+    return () => { annule = true }
+  }, [])
   const [saving,         setSaving]         = useState(false)
   const [saveMsg,        setSaveMsg]        = useState('')
   const [importMsg,      setImportMsg]      = useState('')
@@ -210,6 +267,14 @@ export default function Clients() {
         .eq('client_id', detail.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => { setBachFiches(data || []); setLoadingBach(false) })
+    }
+    if ((EXTRA_METIERS.some(m => m.id === detailTab) || detailTab === 'recap' || detailTab === 'stats') && detail && extraLoadedFor !== detail.id) {
+      setLoadingExtra(true)
+      Promise.all(EXTRA_METIERS.map(m =>
+        supabase.from(m.table).select('*')
+          .eq('client_id', detail.id).order('date_seance', { ascending: false })
+          .then(({ data, error }) => { if (error) console.error('Onglet ' + m.label + ' :', error.message); return [m.id, data || []] })
+      )).then(entries => { setExtraSeances(Object.fromEntries(entries)); setExtraLoadedFor(detail.id); setLoadingExtra(false) })
     }
     if (detailTab !== 'bach' && detailTab !== 'recap' && detailTab !== 'stats') { setBachFiches([]) }
   }, [detailTab, detail?.id])
@@ -648,7 +713,7 @@ export default function Clients() {
             {/* Onglets (masqués en mode édition) */}
             {!editingDetail && (
               <div style={{ display: 'flex', borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 18, overflowX: 'auto' }}>
-                {[['infos','Infos','ti-user'],['seances','Séances','ti-calendar-stats'],['recap','Récap','ti-list-details'],['stats','Stats','ti-chart-bar'],['notes','Notes','ti-notes'],['bach','🌿 Bach','ti-leaf'],['energie','⚡ Énergie','ti-sparkles'],['oracle','🔮 Oracle','ti-cards']].map(([id, label, icon]) => (
+                {[...DETAIL_TABS_BASE, ...DETAIL_TABS_METIER.filter(t => tabVisible(t[3]))].map(([id, label, icon]) => (
                   <button key={id} onClick={() => setDetailTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: detailTab===id ? 600 : 400, color: detailTab===id ? 'var(--color-accent)' : 'var(--color-text-secondary)', borderBottom: detailTab===id ? '2px solid var(--color-accent)' : '2px solid transparent', marginBottom: -1, whiteSpace: 'nowrap', flexShrink: 0 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13 }} />{label}
                     {id==='seances' && clientSeances.length > 0 && (
@@ -897,7 +962,8 @@ export default function Clients() {
                     ...clientSeances.map(s => ({ ...s, _type: 'Séance', _color: '#378ADD', _date: s.date_seance, _heure: s.heure_seance })),
                     ...energieSeances.map(s => ({ ...s, _type: 'Énergie', _color: '#1D9E75', _date: s.date_seance, _heure: s.heure_seance })),
                     ...oracleSeances.map(s => ({ ...s, _type: 'Oracle', _color: '#993556', _date: s.date_seance, _heure: s.heure_seance })),
-                    ...bachFiches.map(s => ({ ...s, _type: 'Bach', _color: '#854F0B', _date: s.created_at ? s.created_at.slice(0,10) : null, _heure: null }))
+                    ...bachFiches.map(s => ({ ...s, _type: 'Bach', _color: '#854F0B', _date: s.created_at ? s.created_at.slice(0,10) : null, _heure: null })),
+                    ...EXTRA_METIERS.flatMap(m => (extraSeances[m.id] || []).map(s => ({ ...s, _type: m.label, _color: m.color, _date: s.date_seance, _heure: s.heure_seance })))
                   ].filter(e => e._date).sort((a, b) => new Date(b._date) - new Date(a._date))
 
                   if (events.length === 0) return <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>Aucun événement enregistré</div>
@@ -923,7 +989,7 @@ export default function Clients() {
             )}
 
             {detailTab === 'stats' && (() => {
-              const allEvents = [...clientSeances, ...energieSeances, ...oracleSeances]
+              const allEvents = [...clientSeances, ...energieSeances, ...oracleSeances, ...EXTRA_METIERS.flatMap(m => extraSeances[m.id] || [])]
               const totalCA = clientSeances.reduce((sum, s) => sum + (parseFloat(s.prix_euros) || 0), 0)
               const dates = [
                 ...allEvents.map(s => s.date_seance).filter(Boolean),
@@ -953,7 +1019,7 @@ export default function Clients() {
                   <div style={{ background:'var(--color-background-secondary)', borderRadius:10, padding:16 }}>
                     <div style={{ fontSize:12, color:'var(--color-text-secondary)' }}>Répartition par module</div>
                     <div style={{ fontSize:13, marginTop:4, lineHeight:1.8 }}>
-                      Séances {clientSeances.length} · Énergie {energieSeances.length} · Oracle {oracleSeances.length} · Bach {bachFiches.length}
+                      Séances {clientSeances.length} · Énergie {energieSeances.length} · Oracle {oracleSeances.length} · Bach {bachFiches.length}{EXTRA_METIERS.map(m => ` · ${m.label} ${(extraSeances[m.id] || []).length}`).join('')}
                     </div>
                   </div>
                 </div>
@@ -1121,6 +1187,53 @@ export default function Clients() {
                 })}
               </div>
             )}
+
+            {/* Onglets métiers génériques (EXTRA_METIERS) */}
+            {EXTRA_METIERS.map(m => detailTab === m.id && !editingDetail && (
+              <div key={m.id}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:'var(--color-text-primary)' }}>
+                    {(extraSeances[m.id] || []).length} séance(s) {m.label.toLowerCase()}
+                  </span>
+                  <button onClick={() => { window.location.href = m.route }}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, border:'none', background:'var(--color-accent)', color:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    <i className="ti ti-external-link" style={{ fontSize:13 }} />Ouvrir Napo-{m.label}
+                  </button>
+                </div>
+
+                {loadingExtra ? (
+                  <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
+                    <i className="ti ti-loader-2" style={{ fontSize:22, display:'block', marginBottom:8 }} />Chargement…
+                  </div>
+                ) : (extraSeances[m.id] || []).length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'30px', color:'var(--color-text-secondary)', fontSize:13 }}>
+                    <i className={`ti ${m.icon}`} style={{ fontSize:28, display:'block', marginBottom:8 }} />
+                    Aucune séance {m.label.toLowerCase()} enregistrée
+                  </div>
+                ) : (extraSeances[m.id] || []).map((s, idx, arr) => {
+                  const d = s.date_seance ? s.date_seance.slice(0,10).split('-') : null
+                  const dateStr = d ? `${parseInt(d[2])} ${['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'][parseInt(d[1])-1]} ${d[0]}` : '—'
+                  return (
+                    <div key={s.id} style={{ display:'flex', gap:12, alignItems:'flex-start', padding:'12px 0', borderBottom: idx < arr.length-1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                      <div style={{ width:8, height:8, borderRadius:'50%', background:m.color, flexShrink:0, marginTop:5 }} />
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                          <span style={{ fontSize:13, fontWeight:500, color:'var(--color-text-primary)' }}>{dateStr}</span>
+                          {s.heure_seance && <span style={{ fontSize:12, color:'var(--color-text-secondary)' }}>à {s.heure_seance.slice(0,5)}</span>}
+                          <span style={{ fontSize:10, fontWeight:600, background:m.bg, color:m.color, padding:'1px 7px', borderRadius:20, marginLeft:'auto' }}>{m.label}</span>
+                        </div>
+                        <div style={{ display:'flex', justifyContent:'flex-end' }}>
+                          <button onClick={() => { window.location.href = `${m.route}/${s.id}` }}
+                            style={{ background:'none', border:'0.5px solid var(--color-border-secondary)', borderRadius:6, cursor:'pointer', color:'var(--color-accent)', fontSize:11, padding:'3px 8px', display:'flex', alignItems:'center', gap:4 }}>
+                            <i className="ti ti-eye" style={{ fontSize:11 }} />Voir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
 
             {/* Onglet ENERGIE */}
             {detailTab === 'energie' && !editingDetail && (
