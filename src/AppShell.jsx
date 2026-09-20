@@ -224,8 +224,8 @@ export default function AppShell({ user, onSignOut }) {
   // pour ce praticien. Ré-vérifié à chaque montage (pas de state figé).
   useEffect(() => {
     if (!user?.id) return
-    async function loadGating() {
-      setIsLoadingModules(true)
+    async function loadGating(silent = false) {
+      if (!silent) setIsLoadingModules(true)
       try {
         const { data: mods } = await supabase.from('marketplace_modules')
           .select('id, title').eq('category', 'Napo-Métiers').eq('status', 'available')
@@ -243,6 +243,10 @@ export default function AppShell({ user, onSignOut }) {
       }
     }
     loadGating()
+    // Rafraîchit la sidebar quand un module est activé/désactivé (sans flash de chargement)
+    const onModulesChanged = () => loadGating(true)
+    window.addEventListener('napo:modules-changed', onModulesChanged)
+    return () => window.removeEventListener('napo:modules-changed', onModulesChanged)
   }, [user?.id])
 
   useEffect(() => {

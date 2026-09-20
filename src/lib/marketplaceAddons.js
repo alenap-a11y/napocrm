@@ -26,13 +26,22 @@ export async function checkActivatedModules(userId, modules) {
   return results
 }
 
+// Prévient l'app (sidebar) qu'un module métier a été activé/désactivé, sans rechargement de page
+function notifyModulesChanged() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('napo:modules-changed'))
+}
+
 export async function activateMetierModule(userId, moduleId) {
   const { error } = await supabase.from('profil_modules_actifs').upsert({ user_id: userId, module_id: moduleId }, { onConflict: 'user_id,module_id', ignoreDuplicates: true })
+  if (!error) notifyModulesChanged()
   return { error }
 }
 
 export async function deactivateMetierModule(userId, moduleId) {
-  await supabase.from('profil_modules_actifs').delete().eq('user_id', userId).eq('module_id', moduleId)
+  const { error } = await supabase.from('profil_modules_actifs').delete().eq('user_id', userId).eq('module_id', moduleId)
+  if (error) console.error('Désactivation module :', error.message)
+  else notifyModulesChanged()
+  return { error }
 }
 
 export async function activateCatalogueModule(userId, mod) {
