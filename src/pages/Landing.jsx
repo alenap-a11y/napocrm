@@ -119,7 +119,7 @@ export default function Landing() {
         password: betaPassword,
         options: {
           data: { prenom: betaPrenom.trim(), nom: betaNom.trim(), metier: betaMetier.trim() || null, metiers_choisis: betaMetiersChoisis },
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: window.location.origin + '/'
         }
       })
       if (error) {
