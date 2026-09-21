@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import AudioRecButton from '../components/AudioRecButton'
 
 const MOIS = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc']
 
@@ -141,11 +142,27 @@ export default function NapoOracleSéance() {
   function ajouterTirage() {
     setTirages(prev => [...prev, {
       id: crypto.randomUUID(), deck_utilise: '', theme_utilise: '', question_texte: '',
-      cartes: [], reponse_recue: '', interpretation: ''
+      cartes: [], reponse_recue: '', reponse_audio_path: null, interpretation: ''
     }])
   }
+  // Pourquoi : un tirage supprimé ne doit pas laisser son audio orphelin dans Storage (RGPD)
   function supprimerTirage(tid) {
+    const audio = tirages.find(t => t.id === tid)?.reponse_audio_path
+    if (audio) supabase.storage.from('oracle-audio').remove([audio])
     setTirages(prev => prev.filter(t => t.id !== tid))
+  }
+  // Pourquoi : on persiste le chemin dès l'upload, sinon un audio enregistré puis une page
+  // quittée sans "Sauvegarder" laisse un fichier sans référence en base (ou l'inverse au remplacement).
+  // Effet de bord assumé : les autres saisies du tirage en cours sont sauvegardées au passage.
+  function changerAudio(tid, path) {
+    const suivant = tirages.map(t => t.id === tid ? { ...t, reponse_audio_path: path } : t)
+    setTirages(suivant)
+    supabase.from('napo_oracle_seances')
+      .update({ cartes_tirees: suivant, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) alert('Audio envoyé mais non rattaché à la séance : clique sur « Sauvegarder la séance ».')
+      })
   }
   function modifierTirage(tid, champ, val) {
     setTirages(prev => prev.map(t => t.id === tid ? { ...t, [champ]: val } : t))
@@ -417,9 +434,10 @@ export default function NapoOracleSéance() {
                 </div>
               </div>
 
-              <div style={{ marginBottom:8 }}>
+              <div style={{ marginBottom:8, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                 <input value={t.reponse_recue} onChange={e => modifierTirage(t.id, 'reponse_recue', e.target.value)}
-                  placeholder="Réponse reçue" style={{ ...inp }} />
+                  placeholder="Réponse reçue" style={{ ...inp, width:'auto', flex:1, minWidth:180 }} />
+                <AudioRecButton path={t.reponse_audio_path || null} folder={`${id}/${t.id}`} onChange={p => changerAudio(t.id, p)} />
               </div>
               <textarea value={t.interpretation} onChange={e => modifierTirage(t.id, 'interpretation', e.target.value)}
                 rows={2} placeholder="Interprétation, ressenti, message reçu..."
