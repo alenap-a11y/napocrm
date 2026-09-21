@@ -25,7 +25,7 @@ export default function AgendaPublic({ slug, session, supabaseClient }) {
       try {
         const { data: p, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, slug, agenda_public, prenom, nom, activite, ville, tel, email_contact, adresse_rdv, ville_rdv, code_postal')
           .eq('slug', slug)
           .eq('agenda_public', true)
           .maybeSingle()
