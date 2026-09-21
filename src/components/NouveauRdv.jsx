@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import DureeInput from './DureeInput'
 import { supabase } from '../lib/supabase'
 import { insertNotif } from '../lib/notif'
 import { useNavigate } from 'react-router-dom'
@@ -258,12 +259,8 @@ export default function NouveauRdv({ onSuccess, onCancel, prefillDate, prefillCl
 
       {/* Durée */}
       <div>
-        <label style={lbl}>Durée (min)</label>
-        <select value={duree} onChange={e => setDuree(e.target.value)} style={inp}>
-          {[15, 30, 45, 60, 75, 90, 120].map(d => (
-            <option key={d} value={d}>{d} min</option>
-          ))}
-        </select>
+        <label style={lbl}>Durée</label>
+        <DureeInput value={duree} onChange={setDuree} presets={[15, 30, 45, 60, 75, 90, 120]} />
       </div>
       {/* Type de séance */}
       <div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DureeInput from '../components/DureeInput'
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
@@ -130,10 +131,8 @@ export default function NouvelleSeanceStandard() {
             </div>
 
             <div>
-              <span style={s.label}>Durée (min)</span>
-              <select value={duree} onChange={e => setDuree(e.target.value)} style={s.input}>
-                {[30, 45, 60, 75, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
-              </select>
+              <span style={s.label}>Durée</span>
+              <DureeInput value={duree} onChange={setDuree} presets={[30, 45, 60, 75, 90, 120]} />
             </div>
 
             <div>
