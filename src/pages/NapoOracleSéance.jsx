@@ -139,17 +139,43 @@ export default function NapoOracleSéance() {
     setShowImportQuestionsFor(null)
   }
 
-  function ajouterTirage() {
+  // Pourquoi : un sous-tirage est un tirage ordinaire rattaché à un parent (parent_id).
+  // Liste à plat, pas de composant récursif. Passer à 5 niveaux = changer cette constante.
+  const NIVEAU_MAX = 3
+  function ordonnerTirages() {
+    const ids = new Set(tirages.map(t => t.id))
+    const res = []
+    const parcourir = (pid, niveau, prefixe) => {
+      const enfants = tirages.filter(t => pid === null
+        ? (!t.parent_id || !ids.has(t.parent_id))
+        : t.parent_id === pid)
+      enfants.forEach((t, i) => {
+        const label = prefixe ? `${prefixe}.${i + 1}` : `${i + 1}`
+        res.push({ t, niveau, label })
+        if (niveau < NIVEAU_MAX - 1) parcourir(t.id, niveau + 1, label)
+      })
+    }
+    parcourir(null, 0, '')
+    return res
+  }
+  function ajouterTirage(parentId) {
     setTirages(prev => [...prev, {
-      id: crypto.randomUUID(), deck_utilise: '', theme_utilise: '', question_texte: '',
+      id: crypto.randomUUID(), parent_id: typeof parentId === 'string' ? parentId : null, deck_utilise: '', theme_utilise: '', question_texte: '',
       cartes: [], reponse_recue: '', reponse_audio_path: null, interpretation: ''
     }])
   }
   // Pourquoi : un tirage supprimé ne doit pas laisser son audio orphelin dans Storage (RGPD)
   function supprimerTirage(tid) {
-    const audio = tirages.find(t => t.id === tid)?.reponse_audio_path
-    if (audio) supabase.storage.from('oracle-audio').remove([audio])
-    setTirages(prev => prev.filter(t => t.id !== tid))
+    // Pourquoi : supprimer un tirage supprime ses sous-tirages (sinon orphelins dans le jsonb) et leurs audios (RGPD)
+    const aSupprimer = new Set([tid])
+    for (let i = 0; i < NIVEAU_MAX; i++) {
+      for (const t of tirages) {
+        if (t.parent_id && aSupprimer.has(t.parent_id)) aSupprimer.add(t.id)
+      }
+    }
+    const audios = tirages.filter(t => aSupprimer.has(t.id) && t.reponse_audio_path).map(t => t.reponse_audio_path)
+    if (audios.length) supabase.storage.from('oracle-audio').remove(audios)
+    setTirages(prev => prev.filter(t => !aSupprimer.has(t.id)))
   }
   // Pourquoi : on persiste le chemin dès l'upload, sinon un audio enregistré puis une page
   // quittée sans "Sauvegarder" laisse un fichier sans référence en base (ou l'inverse au remplacement).
@@ -354,11 +380,11 @@ export default function NapoOracleSéance() {
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-          {tirages.map((t, tIdx) => (
-            <div key={t.id} style={{ background:'var(--color-background-secondary)', border:'0.5px solid var(--color-border-tertiary)', borderRadius:14, padding:'14px 16px' }}>
+          {ordonnerTirages().map(({ t, niveau, label }) => (
+            <div key={t.id} style={{ marginLeft: niveau * 20, background:'var(--color-background-secondary)', border:'0.5px solid var(--color-border-tertiary)', borderRadius:14, padding:'14px 16px' }}>
 
               <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8, flexWrap:'wrap' }}>
-                <span style={{ fontSize:11, color:'var(--color-text-muted)', fontWeight:600 }}>#{tIdx+1}</span>
+                <span style={{ fontSize:11, color:'var(--color-text-muted)', fontWeight:600 }}>#{label}</span>
                 <input list="decks-perso-list" value={t.deck_utilise} onChange={e => modifierTirage(t.id, 'deck_utilise', e.target.value)}
                   onBlur={e => chargerCartesDuDeck(e.target.value)}
                   placeholder="Deck (ex: Oracle de l'Amour)" style={{ ...inp, flex:1, minWidth:150 }} />
@@ -367,7 +393,15 @@ export default function NapoOracleSéance() {
                   style={{ fontSize:10, padding:'5px 8px', borderRadius:6, border:'0.5px solid var(--color-border-secondary)', background:'var(--color-background-primary)', color:'var(--color-text-secondary)', cursor:'pointer' }}>
                   <i className="ti ti-cards" style={{ fontSize:12 }} />
                 </button>
-                <button onClick={() => supprimerTirage(t.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-secondary)', fontSize:16, padding:'0 4px', marginLeft:'auto' }}>×</button>
+                <div style={{ marginLeft:'auto', display:'flex', gap:6, alignItems:'center' }}>
+                  {niveau < NIVEAU_MAX - 1 && (
+                    <button type="button" onClick={() => ajouterTirage(t.id)} title="Ajouter un sous-tirage lié à celui-ci"
+                      style={{ fontSize:10, padding:'5px 8px', borderRadius:6, border:'0.5px solid var(--color-border-secondary)', background:'var(--color-background-primary)', color:'var(--color-text-secondary)', cursor:'pointer' }}>
+                      + Sous-tirage
+                    </button>
+                  )}
+                  <button onClick={() => supprimerTirage(t.id)} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--color-text-secondary)', fontSize:16, padding:'0 4px' }}>×</button>
+                </div>
               </div>
 
               {showImportCartesFor === t.id && (
