@@ -434,9 +434,9 @@ export default function NapoOracleSéance() {
                 </div>
               </div>
 
-              <div style={{ marginBottom:8, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
-                <input value={t.reponse_recue} onChange={e => modifierTirage(t.id, 'reponse_recue', e.target.value)}
-                  placeholder="Réponse reçue" style={{ ...inp, width:'auto', flex:1, minWidth:180 }} />
+              <div style={{ marginBottom:8, display:'flex', gap:8, alignItems:'flex-start', flexWrap:'wrap' }}>
+                <textarea value={t.reponse_recue} onChange={e => modifierTirage(t.id, 'reponse_recue', e.target.value)}
+                  rows={4} placeholder="Réponse reçue" style={{ ...inp, width:'auto', flex:1, minWidth:180, minHeight:96, resize:'vertical', lineHeight:1.5 }} />
                 <AudioRecButton path={t.reponse_audio_path || null} folder={`${id}/${t.id}`} onChange={p => changerAudio(t.id, p)} />
               </div>
               <textarea value={t.interpretation} onChange={e => modifierTirage(t.id, 'interpretation', e.target.value)}
