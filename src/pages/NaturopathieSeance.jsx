@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import DureeInput from '../components/DureeInput'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -106,9 +107,7 @@ export default function NaturopathieSeance() {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ fontSize:10, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.04em' }}>Durée</span>
-            <select value={seance.duree_minutes || '60'} onChange={e => updateSeanceField('duree_minutes', e.target.value)} style={{ ...inp, width:80 }}>
-              {[30,45,60,75,90,120].map(d => <option key={d} value={d}>{d} min</option>)}
-            </select>
+            <DureeInput value={seance.duree_minutes || 60} onChange={v => updateSeanceField('duree_minutes', v)} />
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ fontSize:10, color:'var(--color-text-secondary)', textTransform:'uppercase', letterSpacing:'.04em' }}>Prix</span>
