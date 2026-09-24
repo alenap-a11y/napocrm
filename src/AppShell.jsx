@@ -30,6 +30,7 @@ const ProfilPresentation = lazy(() => import('./pages/ProfilPresentation'))
 const Praticien = lazy(() => import('./pages/Praticien'))
 const AnalyticsNS = lazy(() => import('./pages/AnalyticsNS'))
 const Formation = lazy(() => import('./pages/Formation'))
+const NsAnnuaire = lazy(() => import('./pages/NsAnnuaire'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const FicheSeance = lazy(() => import('./pages/FicheSeance'))
@@ -165,6 +166,7 @@ const DEFAULT_TB_ITEMS = [
   { id: 'praticien', label: 'Praticien', icon: 'ti-id-badge-2', vis: true },
   { id: 'analyticsns', label: 'AnalyticsNS', icon: 'ti-chart-bar', vis: true },
   { id: 'formation', label: 'Formation', icon: 'ti-school', vis: true },
+  { id: 'nsannuaire', label: 'NS-Annuaire', icon: 'ti-address-book', vis: true },
 ]
 
 const DEFAULT_WIDGETS = { clock: true, meteo: true, lune: true, fete: true, ferie: true, mantra: true }
@@ -639,6 +641,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/praticien" element={<Praticien />} />
               <Route path="/analyticsns" element={<AnalyticsNS />} />
               <Route path="/formation" element={<Formation />} />
+              <Route path="/ns-annuaire" element={<NsAnnuaire />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense></ChunkErrorBoundary>
