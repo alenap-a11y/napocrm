@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
-import DureeInput from '../components/DureeInput'
 import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -623,7 +622,11 @@ export default function NouvelleSeance() {
 
               <div style={gap}>
                 <label style={lbl}>Durée</label>
-                <DureeInput value={duree} onChange={setDuree} presets={[30, 45, 60, 90, 120]} />
+                <select style={sel} value={duree} onChange={e => setDuree(e.target.value)}>
+                  {[['30','30 min'],['45','45 min'],['60','1 h'],['90','1 h 30'],['120','2 h']].map(([v,l]) => (
+                    <option key={v} value={v} style={{ background: '#fff' }}>{l}</option>
+                  ))}
+                </select>
               </div>
 
               <div style={gap}>
