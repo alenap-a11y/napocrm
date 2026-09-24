@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import DureeInput from '../components/DureeInput'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import BodySchema3D, { COLOR_LABELS } from '../components/BodySchema3D'
@@ -125,7 +124,9 @@ export default function Napo3DSeance() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', width: 50 }}>Durée</span>
-                <DureeInput value={seance.duree_minutes || 60} onChange={v => updateField('duree_minutes', v)} />
+                <select value={seance.duree_minutes || '60'} onChange={e => updateField('duree_minutes', e.target.value)} style={{ ...inp, flex: 1 }}>
+                  {[30, 45, 60, 75, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
+                </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', width: 50 }}>Prix</span>
