@@ -77,6 +77,8 @@ export default function FicheSeance({ userId }) {
   /* Séance */
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [duree, setDuree] = useState('1h')
+  const [ressentiAvant, setRessentiAvant] = useState('')
+  const [ressentiApres, setRessentiApres] = useState('')
   const [prix, setPrix] = useState('')
 
   const [fleursBach, setFleursBach] = useState([])
@@ -202,6 +204,8 @@ export default function FicheSeance({ userId }) {
         schema_annotations: annotations.length ? annotations : null,
         zones_corps:        annotations.length ? [...new Set(annotations.map(a => yToZone(a.y)))] : null,
         tags:               tags.length ? tags : null,
+        ressenti_avant:     ressentiAvant !== '' ? parseInt(ressentiAvant, 10) : null,
+        ressenti_apres:     ressentiApres !== '' ? parseInt(ressentiApres, 10) : null,
       })
       .select('id')
       .single()
@@ -303,6 +307,17 @@ export default function FicheSeance({ userId }) {
           <div style={{ ...S.field, marginBottom: 0 }}>
             <span style={S.label}>Prix (€)</span>
             <input style={S.input} type="number" min="0" placeholder="0" value={prix} onChange={e => setPrix(e.target.value)} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ ...S.field, flex: 1 }}>
+            <span style={S.label}>Ressenti avant (0-10)</span>
+            <input style={S.input} type="number" min="0" max="10" placeholder="—" value={ressentiAvant} onChange={e => setRessentiAvant(e.target.value)} />
+          </div>
+          <div style={{ ...S.field, flex: 1, marginBottom: 0 }}>
+            <span style={S.label}>Ressenti après (0-10)</span>
+            <input style={S.input} type="number" min="0" max="10" placeholder="—" value={ressentiApres} onChange={e => setRessentiApres(e.target.value)} />
           </div>
         </div>
 
