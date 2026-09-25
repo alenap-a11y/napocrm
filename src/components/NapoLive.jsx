@@ -15,6 +15,7 @@ import SophrologieSeance from '../pages/SophrologieSeance'
 import HypnotherapieSeance from '../pages/HypnotherapieSeance'
 import ChamanismeSeance from '../pages/ChamanismeSeance'
 import AstrologieSeance from '../pages/AstrologieSeance'
+import FormationSéance from '../pages/FormationSéance'
 
 const MODULES = {
   oracle:       { table: 'napo_oracle_seances', label: 'Napo-Oracle',       backTo: id => `/napo-oracle/${id}`,   Component: NapoOracleSéance },
@@ -31,6 +32,7 @@ const MODULES = {
   hypnotherapie: { table: 'fiches_hypnotherapie', label: 'Napo-Hypnothérapie', backTo: id => `/napo-hypnotherapie/${id}`, Component: HypnotherapieSeance },
   chamanisme: { table: 'fiches_chamanisme', label: 'Napo-Chamanisme', backTo: id => `/napo-chamanisme/${id}`, Component: ChamanismeSeance },
   astrologie: { table: 'fiches_astrologie', label: 'Napo-Astrologie', backTo: id => `/napo-astrologie/${id}`, Component: AstrologieSeance },
+  formation: { table: 'formation_seances', label: 'Formation', backTo: id => `/formation/${id}`, Component: FormationSéance },
 }
 
 export default function NapoLive() {

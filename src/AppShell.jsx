@@ -32,6 +32,7 @@ const MesClients = lazy(() => import('./pages/praticien/MesClients'))
 const FicheClientPraticien = lazy(() => import('./pages/praticien/FicheClientPraticien'))
 const AnalyticsNS = lazy(() => import('./pages/AnalyticsNS'))
 const Formation = lazy(() => import('./pages/Formation'))
+const FormationSéance = lazy(() => import('./pages/FormationSéance'))
 const NsAnnuaire = lazy(() => import('./pages/NsAnnuaire'))
 const NapoMarketplace = lazy(() => import('./pages/NapoMarketplace'))
 const NotFound = lazy(() => import('./pages/NotFound'))
@@ -646,6 +647,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/praticien/clients/:clientId/:tab" element={<FicheClientPraticien />} />
               <Route path="/analyticsns" element={<AnalyticsNS />} />
               <Route path="/formation" element={<Formation />} />
+              <Route path="/formation/:id" element={<FormationSéance />} />
               <Route path="/ns-annuaire" element={<NsAnnuaire />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

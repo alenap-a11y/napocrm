@@ -33,7 +33,30 @@ const ONGLETS_BASE = [
   ['suivi', 'Suivi'], ['objectifs', 'Objectifs'], ['notes', 'Notes'],
   ['documents', 'Documents'], ['analyse', 'Analyse'],
 ]
-const ONGLETS_METIERS_FIXES = [['bach', 'Bach'], ['energie', 'Énergie'], ['oracle', 'Oracle']]
+const ONGLETS_METIERS_FIXES = [['bach', 'Bach'], ['energie', 'Énergie'], ['oracle', 'Oracle'], ['formation', 'Formation']]
+const METIER_ICONS = {
+  bach: 'ti-leaf', energie: 'ti-sparkles', oracle: 'ti-cards', formation: 'ti-school',
+  magnetisme: 'ti-hand-stop', mediumnite: 'ti-ghost', radiesthesie: 'ti-pendulum',
+  yoga: 'ti-yoga', naturopathie: 'ti-plant-2', aromatherapie: 'ti-droplet',
+  sonotherapie: 'ti-wave-sine', massage: 'ti-hand-move', sophrologie: 'ti-mood-smile',
+  hypnotherapie: 'ti-spiral', chamanisme: 'ti-feather', astrologie: 'ti-moon-stars',
+}
+const METIER_CONFIG = {
+  energie:       { table: 'energie_seances',     route: id => `/energie/${id}` },
+  oracle:        { table: 'napo_oracle_seances', route: id => `/napo-oracle/${id}` },
+  magnetisme:    { table: 'fiches_magnetisme',   route: id => `/magnetisme/${id}` },
+  mediumnite:    { table: 'fiches_mediumnite',   route: id => `/mediumnite/${id}` },
+  radiesthesie:  { table: 'fiches_radiesthesie', route: id => `/radiesthesie/${id}` },
+  yoga:          { table: 'fiches_yoga',         route: id => `/napo-yoga/${id}` },
+  naturopathie:  { table: 'fiches_naturopathie', route: id => `/napo-naturopathie/${id}` },
+  aromatherapie: { table: 'fiches_aromatherapie',route: id => `/napo-aromatherapie/${id}` },
+  sonotherapie:  { table: 'fiches_sonotherapie', route: id => `/napo-sonotherapie/${id}` },
+  massage:       { table: 'fiches_massage',      route: id => `/napo-massage/${id}` },
+  sophrologie:   { table: 'fiches_sophrologie',  route: id => `/napo-sophrologie/${id}` },
+  hypnotherapie: { table: 'fiches_hypnotherapie',route: id => `/napo-hypnotherapie/${id}` },
+  chamanisme:    { table: 'fiches_chamanisme',   route: id => `/napo-chamanisme/${id}` },
+  astrologie:    { table: 'fiches_astrologie',   route: id => `/napo-astrologie/${id}` },
+}
 
 const card = { background: 'var(--color-background-secondary)', borderRadius: 10, padding: 16 }
 const cardLabel = { fontSize: 12, color: 'var(--color-text-secondary)' }
@@ -80,6 +103,10 @@ export default function FicheClientPraticien() {
   const [filtrePeriode, setFiltrePeriode] = useState('tout')
   const [filtreStatut, setFiltreStatut] = useState('')
   const [rechercheTexte, setRechercheTexte] = useState('')
+  const [formationHistorique, setFormationHistorique] = useState([])
+  const [loadingFormation, setLoadingFormation] = useState(true)
+  const [metierHistorique, setMetierHistorique] = useState([])
+  const [loadingMetierHistorique, setLoadingMetierHistorique] = useState(true)
 
   useEffect(() => {
     if (client) {
@@ -241,6 +268,31 @@ export default function FicheClientPraticien() {
     })
   }, [clientId, seances])
 
+  useEffect(() => {
+    if (!clientId) return
+    setLoadingFormation(true)
+    supabase.from('formation_participants')
+      .select('id, evaluation_individuelle, formation_seances(id, date_seance, heure_seance, theme, numero_seance)')
+      .eq('client_id', clientId)
+      .order('date_seance', { foreignTable: 'formation_seances', ascending: false })
+      .then(({ data }) => {
+        setFormationHistorique(data || [])
+        setLoadingFormation(false)
+      })
+  }, [clientId])
+
+  useEffect(() => {
+    const cfg = METIER_CONFIG[activeTab]
+    if (!cfg || !clientId) return
+    setLoadingMetierHistorique(true)
+    supabase.from(cfg.table).select('id, date_seance, heure_seance').eq('client_id', clientId)
+      .order('date_seance', { ascending: false })
+      .then(({ data }) => {
+        setMetierHistorique(data || [])
+        setLoadingMetierHistorique(false)
+      })
+  }, [activeTab, clientId])
+
   const now = new Date().toISOString().slice(0, 10)
   const passees = seances.filter(s => s.date_seance && s.date_seance.slice(0, 10) < now)
   const avenir = seances.filter(s => s.date_seance && s.date_seance.slice(0, 10) >= now && s.statut === 'planifié')
@@ -317,6 +369,11 @@ export default function FicheClientPraticien() {
     </div>
   )
 
+  const metiersActifs = modulesActifs === null
+    ? EXTRA_METIERS.map(m => [m.id, m.label])
+    : EXTRA_METIERS.filter(m => modulesActifs.has(m.moduleTitle)).map(m => [m.id, m.label])
+  const ongletsMetiers = [...ONGLETS_METIERS_FIXES, ...metiersActifs]
+
   return (
     <div style={{ padding: '1.6rem 2rem', width: '100%', boxSizing: 'border-box' }}>
       <button type="button" onClick={() => navigate('/praticien/clients')}
@@ -349,38 +406,29 @@ export default function FicheClientPraticien() {
         <button type="button" style={{ padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 12, cursor: 'pointer' }}>Questionnaire</button>
       </div>
 
-      {(() => {
-        const metiersActifs = modulesActifs === null
-          ? EXTRA_METIERS.map(m => [m.id, m.label])
-          : EXTRA_METIERS.filter(m => modulesActifs.has(m.moduleTitle)).map(m => [m.id, m.label])
-        const ongletsMetiers = [...ONGLETS_METIERS_FIXES, ...metiersActifs]
-        const isMetierActif = ongletsMetiers.some(([id]) => id === activeTab)
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 20, flexWrap: 'wrap' }}>
-            {ONGLETS_BASE.map(([id, label]) => (
-              <button key={id} type="button"
-                onClick={() => navigate(id === 'resume' ? `/praticien/clients/${clientId}` : `/praticien/clients/${clientId}/${id}`)}
-                style={{
-                  padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
-                  color: activeTab === id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                  borderBottom: activeTab === id ? '2px solid var(--color-accent)' : '2px solid transparent',
-                  fontWeight: activeTab === id ? 600 : 400,
-                }}>
-                {label}
-              </button>
-            ))}
-            <select value={isMetierActif ? activeTab : ''} onChange={e => e.target.value && navigate(`/praticien/clients/${clientId}/${e.target.value}`)}
-              style={{
-                marginLeft: 8, padding: '6px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)',
-                background: isMetierActif ? 'var(--color-background-secondary)' : 'transparent',
-                color: isMetierActif ? 'var(--color-accent)' : 'var(--color-text-secondary)', fontSize: 13, cursor: 'pointer',
-              }}>
-              <option value="">Modules métiers…</option>
-              {ongletsMetiers.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-            </select>
-          </div>
-        )
-      })()}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '0.5px solid var(--color-border-tertiary)', marginBottom: 20, flexWrap: 'wrap' }}>
+        {ONGLETS_BASE.map(([id, label]) => (
+          <button key={id} type="button"
+            onClick={() => navigate(id === 'resume' ? `/praticien/clients/${clientId}` : `/praticien/clients/${clientId}/${id}`)}
+            style={{
+              padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap',
+              color: activeTab === id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+              borderBottom: activeTab === id ? '2px solid var(--color-accent)' : '2px solid transparent',
+              fontWeight: activeTab === id ? 600 : 400,
+            }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {ongletsMetiers.some(([id]) => id === activeTab) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, padding: '8px 12px', background: 'var(--color-background-secondary)', borderRadius: 8, width: 'fit-content' }}>
+          <i className={`ti ${METIER_ICONS[activeTab] || 'ti-stethoscope'}`} style={{ fontSize: 16, color: 'var(--color-accent)' }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            {ongletsMetiers.find(([id]) => id === activeTab)?.[1]}
+          </span>
+        </div>
+      )}
 
       {activeTab === 'analyse' ? (
         <>
@@ -706,6 +754,117 @@ export default function FicheClientPraticien() {
               </div>
             </div>
           )}
+
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', margin: '28px 0 10px' }}>
+            Séances de formation
+          </div>
+          {loadingFormation ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Chargement…</div>
+          ) : formationHistorique.length === 0 ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Aucune séance de formation enregistrée.</div>
+          ) : (
+            <div>
+              {formationHistorique.map((p, idx) => (
+                <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < formationHistorique.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#534AB7', flexShrink: 0, marginTop: 5 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDate(p.formation_seances?.date_seance)}</span>
+                      {p.formation_seances?.heure_seance && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>à {p.formation_seances.heure_seance}</span>}
+                      <span style={{ fontSize: 10, fontWeight: 600, background: '#EEEDFE', color: '#534AB7', padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>Formation · #{p.formation_seances?.numero_seance}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{p.formation_seances?.theme || 'Thème non renseigné'}</div>
+                    {p.evaluation_individuelle && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{p.evaluation_individuelle}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                      <button type="button" onClick={() => navigate(`/formation/${p.formation_seances?.id}`)}
+                        style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <i className="ti ti-eye" style={{ fontSize: 11 }} />Voir la fiche
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : activeTab === 'formation' ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {formationHistorique.length} séance(s) de formation
+            </span>
+          </div>
+          {loadingFormation ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Chargement…</div>
+          ) : formationHistorique.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <i className="ti ti-school" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+              Aucune séance de formation enregistrée
+            </div>
+          ) : (
+            <div>
+              {formationHistorique.map((p, idx) => (
+                <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 0', borderBottom: idx < formationHistorique.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#534AB7', flexShrink: 0, marginTop: 5 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{fmtDate(p.formation_seances?.date_seance)}</span>
+                      {p.formation_seances?.heure_seance && <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 6 }}>à {p.formation_seances.heure_seance}</span>}
+                      <span style={{ fontSize: 10, fontWeight: 600, background: '#EEEDFE', color: '#534AB7', padding: '1px 7px', borderRadius: 20, marginLeft: 'auto' }}>Séance #{p.formation_seances?.numero_seance}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{p.formation_seances?.theme || 'Thème non renseigné'}</div>
+                    {p.evaluation_individuelle && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6, lineHeight: 1.5, background: 'var(--color-background-secondary)', padding: '6px 10px', borderRadius: 6 }}>{p.evaluation_individuelle}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                      <button type="button" onClick={() => navigate(`/formation/${p.formation_seances?.id}`)}
+                        style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <i className="ti ti-eye" style={{ fontSize: 11 }} />Voir la fiche
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : activeTab === 'bach' ? (
+        <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          <i className="ti ti-leaf" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+          Le suivi Fleurs de Bach est une fiche évolutive unique par client, pas une liste de séances datées.
+          <div style={{ marginTop: 14 }}>
+            <button type="button" onClick={() => navigate(`/fleurs-de-bach/${clientId}`)}
+              style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              Ouvrir la fiche Bach
+            </button>
+          </div>
+        </div>
+      ) : METIER_CONFIG[activeTab] ? (
+        <>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 14 }}>
+            {metierHistorique.length} séance(s)
+          </div>
+          {loadingMetierHistorique ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Chargement…</div>
+          ) : metierHistorique.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <i className="ti ti-calendar-off" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+              Aucune séance enregistrée
+            </div>
+          ) : (
+            <div>
+              {metierHistorique.map((s, idx) => (
+                <div key={s.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: idx < metierHistorique.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-accent)', flexShrink: 0 }} />
+                  <div style={{ flex: 1, fontSize: 13, color: 'var(--color-text-primary)' }}>
+                    {fmtDate(s.date_seance)}{s.heure_seance ? ` à ${s.heure_seance}` : ''}
+                  </div>
+                  <button type="button" onClick={() => navigate(METIER_CONFIG[activeTab].route(s.id))}
+                    style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-accent)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <i className="ti ti-eye" style={{ fontSize: 11 }} />Voir
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       ) : activeTab !== 'resume' ? (
         <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-secondary)', fontSize: 13 }}>
@@ -726,6 +885,17 @@ export default function FicheClientPraticien() {
               <div style={card}><div style={cardLabel}>Objectifs actifs</div><div style={cardValue}>—</div></div>
             </div>
           )}
+
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>Modules métiers</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10, marginBottom: 24 }}>
+            {ongletsMetiers.map(([id, label]) => (
+              <div key={id} onClick={() => navigate(`/praticien/clients/${clientId}/${id}`)}
+                style={{ ...card, textAlign: 'center', cursor: 'pointer', padding: '16px 10px' }}>
+                <i className={`ti ${METIER_ICONS[id] || 'ti-stethoscope'}`} style={{ fontSize: 22, color: 'var(--color-accent)', display: 'block', marginBottom: 8 }} />
+                <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{label}</div>
+              </div>
+            ))}
+          </div>
 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>À retenir</div>
           <div style={{ ...card, marginBottom: 24, fontSize: 13, lineHeight: 1.9 }}>
