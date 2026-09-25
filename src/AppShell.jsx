@@ -166,6 +166,7 @@ const DEFAULT_TB_ITEMS = [
   { id: 'newsnapo', label: 'News', icon: 'ti-speakerphone', vis: true },
   { id: 'presentation', label: 'Présentation', icon: 'ti-user', vis: true },
   { id: 'analyticsns', label: 'AnalyticsNS', icon: 'ti-chart-bar', vis: true },
+  { id: 'mesclients', label: 'Mes clients', icon: 'ti-id-badge-2', vis: true },
   { id: 'formation', label: 'Formation', icon: 'ti-school', vis: true },
   { id: 'nsannuaire', label: 'NS-Annuaire', icon: 'ti-address-book', vis: true },
 ]
