@@ -15,7 +15,12 @@ export default function TopBar({
   const dragSrc = useRef(null)
   const [launcherOpen, setLauncherOpen] = useState(false)
 
-  const ROUTES_PERSO = { mesclients: 'praticien/clients' }
+  const ROUTES_PERSO = {
+    mesclients: 'praticien/clients',
+    analyticsns: 'analyticsns',
+    formation: 'formation',
+    nsannuaire: 'ns-annuaire',
+  }
   function handleClick(item) {
     setTbActif(item.id)
     if (['faq', 'aide', 'newsnapo', 'presentation'].includes(item.id)) onNavigate(item.id)
