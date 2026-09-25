@@ -5,6 +5,15 @@ import { supabase } from '../../lib/supabase'
 
 function clientName(c) { return `${c.prenom || ''} ${c.nom || ''}`.trim() }
 
+function calculerAge(dateNaissance) {
+  if (!dateNaissance) return null
+  const n = new Date(dateNaissance)
+  const t = new Date()
+  let age = t.getFullYear() - n.getFullYear()
+  if (t.getMonth() < n.getMonth() || (t.getMonth() === n.getMonth() && t.getDate() < n.getDate())) age--
+  return age
+}
+
 const inp = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'var(--color-background-primary)', color: 'var(--color-text-primary)', fontSize: 13, boxSizing: 'border-box' }
 const statCard = { background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: '14px 16px', minWidth: 140 }
 const statLabel = { fontSize: 11, color: 'var(--color-text-secondary)' }
@@ -20,16 +29,26 @@ const PERIODES = [
 
 const FILTRES = ['Tous', 'Actifs', 'Nouveaux', 'Sans activité récente', 'Avec prochaine séance']
 
+const EMPTY_CLIENT = {
+  prenom: '', nom: '', nom_naissance: '', email: '', tel: '', date_naissance: '',
+  specialite: 'Sophrologue',
+  adresse_numero: '', adresse_rue: '', adresse_complement: '', code_postal: '', ville: '',
+  situation_familiale: 'celibataire', environnement: 'non_toxique', situation_professionnelle: 'actif', nombre_enfants: 0,
+  statut: 'actif', notes: '',
+}
+
 export default function MesClients() {
-  const { clients, loading, addClient } = useClients()
+  const { clients, loading, addClient, refresh } = useClients()
   const [search, setSearch] = useState('')
   const [filtre, setFiltre] = useState('Tous')
   const [periode, setPeriode] = useState('mois')
   const [seances, setSeances] = useState([])
   const [loadingSeances, setLoadingSeances] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [newClient, setNewClient] = useState({ prenom: '', nom: '', email: '', tel: '' })
+  const [newClient, setNewClient] = useState(EMPTY_CLIENT)
+  const [formMsg, setFormMsg] = useState('')
   const navigate = useNavigate()
+  const f = k => e => setNewClient(n => ({ ...n, [k]: e.target.value }))
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -83,12 +102,19 @@ export default function MesClients() {
 
   const favoris = clients.filter(c => c.favori)
 
+  async function retirerFavori(e, c) {
+    e.stopPropagation()
+    await supabase.from('clients').update({ favori: false }).eq('id', c.id)
+    refresh()
+  }
+
   async function handleAddClient(e) {
     e.preventDefault()
-    if (!newClient.prenom && !newClient.nom) return
+    if (!newClient.prenom.trim() || !newClient.nom.trim()) { setFormMsg('Prénom et nom requis.'); return }
     await addClient(newClient)
-    setNewClient({ prenom: '', nom: '', email: '', tel: '' })
-    setShowAdd(false)
+    setNewClient(EMPTY_CLIENT)
+    setFormMsg('✓ Client ajouté.')
+    setTimeout(() => { setFormMsg(''); setShowAdd(false) }, 1200)
   }
 
   return (
@@ -99,19 +125,101 @@ export default function MesClients() {
           <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 4 }}>Retrouvez rapidement les personnes que vous accompagnez.</div>
         </div>
         <button type="button" onClick={() => setShowAdd(v => !v)}
-          style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#F2B01E', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           + Nouveau client
         </button>
       </div>
 
       {showAdd && (
-        <form onSubmit={handleAddClient} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', background: 'var(--color-background-secondary)', borderRadius: 10, padding: 14, margin: '14px 0' }}>
-          <input value={newClient.prenom} onChange={e => setNewClient(n => ({ ...n, prenom: e.target.value }))} placeholder="Prénom" style={{ ...inp, flex: 1, minWidth: 120 }} />
-          <input value={newClient.nom} onChange={e => setNewClient(n => ({ ...n, nom: e.target.value }))} placeholder="Nom" style={{ ...inp, flex: 1, minWidth: 120 }} />
-          <input value={newClient.email} onChange={e => setNewClient(n => ({ ...n, email: e.target.value }))} placeholder="Email" style={{ ...inp, flex: 1, minWidth: 160 }} />
-          <input value={newClient.tel} onChange={e => setNewClient(n => ({ ...n, tel: e.target.value }))} placeholder="Téléphone" style={{ ...inp, flex: 1, minWidth: 140 }} />
-          <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Ajouter</button>
-        </form>
+        <div style={{ margin: '14px 0' }}>
+          {formMsg && (
+            <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 8, background: formMsg.startsWith('✓') ? '#EAF3DE' : '#FBEAF0', color: formMsg.startsWith('✓') ? '#3B6D11' : '#993556', fontSize: 13 }}>
+              {formMsg}
+            </div>
+          )}
+          <form onSubmit={handleAddClient} style={{ background: 'var(--color-background-secondary)', borderRadius: 14, border: '0.5px solid var(--color-border-tertiary)', padding: 28, maxWidth: 640 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 22 }}>Informations du client</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <Field label="Prénom"><input value={newClient.prenom} onChange={f('prenom')} placeholder="Sophie" style={inp} /></Field>
+              <Field label="Nom"><input value={newClient.nom} onChange={f('nom')} placeholder="Legrand" style={inp} /></Field>
+              <Field label="Nom de naissance" style={{ gridColumn: '1/-1' }}><input value={newClient.nom_naissance} onChange={f('nom_naissance')} placeholder="Dupont" style={inp} /></Field>
+              <Field label="Email"><input type="email" value={newClient.email} onChange={f('email')} placeholder="email@exemple.com" style={inp} /></Field>
+              <Field label="Téléphone"><input type="tel" value={newClient.tel} onChange={f('tel')} placeholder="06 00 00 00 00" style={inp} /></Field>
+              <Field label="Date de naissance"><input type="date" value={newClient.date_naissance} onChange={f('date_naissance')} style={inp} /></Field>
+              <Field label="Situation familiale">
+                <select value={newClient.situation_familiale} onChange={f('situation_familiale')} style={inp}>
+                  <option value="celibataire">Célibataire</option>
+                  <option value="marie">Marié(e)</option>
+                  <option value="divorce">Divorcé(e)</option>
+                  <option value="separe">Séparé(e)</option>
+                  <option value="veuf">Veuf</option>
+                  <option value="veuve">Veuve</option>
+                </select>
+              </Field>
+              <Field label="N°"><input value={newClient.adresse_numero} onChange={f('adresse_numero')} placeholder="12" style={inp} /></Field>
+              <Field label="Rue"><input value={newClient.adresse_rue} onChange={f('adresse_rue')} placeholder="Rue des Lilas" style={inp} /></Field>
+              <Field label="Complément d'adresse"><input value={newClient.adresse_complement} onChange={f('adresse_complement')} placeholder="Bâtiment B, étage 2…" style={inp} /></Field>
+              <Field label="Code postal"><input value={newClient.code_postal} onChange={f('code_postal')} placeholder="75000" style={inp} /></Field>
+              <Field label="Ville"><input value={newClient.ville} onChange={f('ville')} placeholder="Paris" style={inp} /></Field>
+              <Field label="Situation professionnelle">
+                <select value={newClient.situation_professionnelle} onChange={f('situation_professionnelle')} style={inp}>
+                  <option value="actif">Actif</option>
+                  <option value="chomage">Chômage</option>
+                  <option value="retraite">Retraite</option>
+                  <option value="invalide_malade">Invalide / malade</option>
+                </select>
+              </Field>
+              <Field label="Environnement">
+                <select value={newClient.environnement} onChange={f('environnement')} style={inp}>
+                  <option value="non_toxique">Non toxique</option>
+                  <option value="toxique">Toxique</option>
+                </select>
+              </Field>
+              <Field label="Nombre d'enfants"><input type="number" min={0} value={newClient.nombre_enfants} onChange={f('nombre_enfants')} style={inp} /></Field>
+              <Field label="Spécialité">
+                <select value={newClient.specialite} onChange={f('specialite')} style={inp}>
+                  <option>Aromathérapeute</option>
+                  <option>Astrologue</option>
+                  <option>Cartomancienne</option>
+                  <option>Coach bien-être</option>
+                  <option>Coach yoga</option>
+                  <option>Energéticien</option>
+                  <option>Fleurs de Bach</option>
+                  <option>Hypnothérapeute</option>
+                  <option>Magnétiseur</option>
+                  <option>Médium</option>
+                  <option>Naturopathe</option>
+                  <option>Ostéopathe</option>
+                  <option>Praticien massage</option>
+                  <option>Psychologue</option>
+                  <option>Réflexologue</option>
+                  <option>Reiki</option>
+                  <option>Sophrologue</option>
+                  <option>Autre</option>
+                </select>
+              </Field>
+              <Field label="Statut">
+                <select value={newClient.statut} onChange={f('statut')} style={inp}>
+                  <option value="actif">Actif</option>
+                  <option value="inactif">Inactif</option>
+                  <option value="archivé">Archivé</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Notes">
+              <textarea value={newClient.notes} onChange={f('notes')} placeholder="Motif de consultation, antécédents…" rows={3} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+            </Field>
+            <div style={{ display: 'flex', gap: 10, marginTop: 22, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => { setNewClient(EMPTY_CLIENT); setFormMsg('') }}
+                style={{ padding: '9px 18px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+                Réinitialiser
+              </button>
+              <button type="submit" style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, margin: '18px 0 10px', flexWrap: 'wrap' }}>
@@ -137,16 +245,24 @@ export default function MesClients() {
       {favoris.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>Favoris</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {favoris.map(c => (
-              <div key={c.id} onClick={() => navigate(`/praticien/clients/${c.id}`)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-background-secondary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <i className="ti ti-star-filled" style={{ fontSize: 13, color: '#B8961E' }} aria-hidden="true" />
-                  {clientName(c)}
-                </span>
-              </div>
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+            {favoris.map(c => {
+              const age = calculerAge(c.date_naissance)
+              return (
+                <div key={c.id} onClick={() => navigate(`/praticien/clients/${c.id}`)}
+                  style={{ position: 'relative', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '16px 10px 12px', cursor: 'pointer', textAlign: 'center' }}>
+                  <button type="button" onClick={e => retirerFavori(e, c)} title="Retirer des favoris"
+                    style={{ position: 'absolute', top: 6, left: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="#F2B01E" stroke="#F2B01E" strokeWidth="1" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
+                  </button>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-background-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 600, color: 'var(--color-accent)', margin: '0 auto 8px' }}>
+                    {(c.prenom?.[0] || '') + (c.nom?.[0] || '')}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientName(c) || '(sans nom)'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{age != null ? `${age} ans` : '—'}</div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -170,9 +286,22 @@ export default function MesClients() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
           {clientsFiltres.map(c => {
             const info = infoParClient[c.id]
+            const dateCreation = c.created_at || c.date_creation
+            const estNouveau = dateCreation && (now - new Date(dateCreation)) / 86400000 <= 30
             return (
               <div key={c.id} onClick={() => navigate(`/praticien/clients/${c.id}`)}
-                style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '14px 16px', cursor: 'pointer' }}>
+                style={{
+                  position: 'relative',
+                  background: 'var(--color-background-secondary)',
+                  border: estNouveau ? '1px solid #F2B01E' : '0.5px solid var(--color-border-tertiary)',
+                  borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
+                  boxShadow: estNouveau ? '0 0 0 3px rgba(242, 176, 30, 0.18)' : 'none',
+                }}>
+                {estNouveau && (
+                  <span style={{ position: 'absolute', top: -9, right: 12, background: '#F2B01E', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, letterSpacing: '.03em' }}>
+                    ✨ NOUVEAU
+                  </span>
+                )}
                 <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--color-text-primary)' }}>{clientName(c) || '(sans nom)'}</div>
                 {c.specialite && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{c.specialite}</div>}
                 <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6 }}>
@@ -185,6 +314,15 @@ export default function MesClients() {
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+function Field({ label, children, style }) {
+  return (
+    <div style={style}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 5 }}>{label}</div>
+      {children}
     </div>
   )
 }
