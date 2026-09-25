@@ -81,10 +81,7 @@ export default function MesClients() {
     return true
   })
 
-  const aSuivre = clients.filter(c => {
-    const info = infoParClient[c.id]
-    return info?.count > 0 && !info?.prochaine
-  }).slice(0, 5)
+  const favoris = clients.filter(c => c.favori)
 
   async function handleAddClient(e) {
     e.preventDefault()
@@ -137,15 +134,17 @@ export default function MesClients() {
         Calculées sur la table de séances générique uniquement (Oracle, Énergie, Bach et modules métiers pas encore inclus).
       </div>
 
-      {aSuivre.length > 0 && (
+      {favoris.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>À suivre</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 8 }}>Favoris</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {aSuivre.map(c => (
+            {favoris.map(c => (
               <div key={c.id} onClick={() => navigate(`/praticien/clients/${c.id}`)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-background-secondary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13 }}>
-                <span>{clientName(c)}</span>
-                <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>Aucune prochaine séance</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <i className="ti ti-star-filled" style={{ fontSize: 13, color: '#B8961E' }} aria-hidden="true" />
+                  {clientName(c)}
+                </span>
               </div>
             ))}
           </div>

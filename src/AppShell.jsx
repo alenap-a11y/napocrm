@@ -643,6 +643,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/praticien-stub" element={<PraticienStub />} />
               <Route path="/praticien/clients" element={<MesClients />} />
               <Route path="/praticien/clients/:clientId" element={<FicheClientPraticien />} />
+              <Route path="/praticien/clients/:clientId/:tab" element={<FicheClientPraticien />} />
               <Route path="/analyticsns" element={<AnalyticsNS />} />
               <Route path="/formation" element={<Formation />} />
               <Route path="/ns-annuaire" element={<NsAnnuaire />} />
