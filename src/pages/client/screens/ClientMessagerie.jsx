@@ -62,6 +62,7 @@ export default function ClientMessagerie({ session }) {
     if (aLire.length > 0) {
       await supabaseClient.from('messages_liaison').update({ lu_at: new Date().toISOString() }).in('id', aLire);
       setUnreadByLiaison(prev => ({ ...prev, [liaison.id]: 0 }));
+      window.dispatchEvent(new Event('napo:client-messages-lues'));
     }
   }
 

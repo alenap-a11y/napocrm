@@ -14,6 +14,7 @@ import ClientProfil from './screens/ClientProfil';
 import ClientMonProfil from './screens/ClientMonProfil';
 import ClientBientotDisponible from './screens/ClientBientotDisponible';
 import ClientPraticienDetail from './screens/ClientPraticienDetail';
+import ClientMessagerie from './screens/ClientMessagerie';
 import ClientRdv from './screens/ClientRdv';
 
 const AUTHENTICATED_SCREENS = [
@@ -21,6 +22,7 @@ const AUTHENTICATED_SCREENS = [
   { path: '/client/seances', element: () => <ClientSeances /> },
   { path: '/client/annuaire', element: (session) => <ClientAnnuaire session={session} /> },
   { path: '/client/praticien/:slug', element: (session) => <ClientPraticienDetail session={session} /> },
+  { path: '/client/messagerie', element: (session) => <ClientMessagerie session={session} /> },
   { path: '/client/rdv/:slug', element: (session) => <ClientRdv session={session} /> },
   { path: '/client/evenements', element: (session) => <ClientEvenements session={session} /> },
   { path: '/client/favoris', element: (session) => <ClientFavoris session={session} /> },

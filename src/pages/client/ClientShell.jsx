@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { path: '/client/accueil', icon: 'ti-home', label: 'Accueil' },
   { path: '/client/seances', icon: 'ti-calendar-event', label: 'Séances' },
   { path: '/client/annuaire', icon: 'ti-address-book', label: 'Annuaire' },
+  { path: '/client/messagerie', icon: 'ti-message-circle', label: 'Messages' },
   { path: '/client/evenements', icon: 'ti-ticket', label: 'Événements' },
   { path: '/client/favoris', icon: 'ti-heart', label: 'Favoris' },
   { path: '/client/live', icon: 'ti-broadcast', label: 'Live' },
