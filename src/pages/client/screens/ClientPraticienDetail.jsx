@@ -3,12 +3,15 @@ import { useParams } from 'react-router-dom';
 import { supabaseClient } from '../../../lib/supabaseClient';
 import PraticienApercuContenu from '../../../components/PraticienApercuContenu';
 
-export default function ClientPraticienDetail() {
+export default function ClientPraticienDetail({ session }) {
   const { slug } = useParams();
   const [p, setP] = useState(null);
   const [activites, setActivites] = useState([]);
   const [produits, setProduits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [liaison, setLiaison] = useState(null);
+  const [liaisonLoading, setLiaisonLoading] = useState(false);
+  const [liaisonMsg, setLiaisonMsg] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -42,8 +45,39 @@ export default function ClientPraticienDetail() {
       .then(({ data }) => setProduits(data || []));
   }, [p?.id]);
 
+  useEffect(() => {
+    if (!p?.id || !session?.user?.id) return;
+    supabaseClient
+      .from('liaisons_praticien_client')
+      .select('statut, match_auto')
+      .eq('praticien_id', p.id)
+      .eq('client_portail_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setLiaison(data || null));
+  }, [p?.id, session?.user?.id]);
+
+  async function demanderLiaison() {
+    if (!p?.id || liaisonLoading) return;
+    setLiaisonLoading(true);
+    setLiaisonMsg('');
+    const { data, error } = await supabaseClient.rpc('demander_liaison', { p_praticien_id: p.id });
+    setLiaisonLoading(false);
+    if (error) {
+      setLiaisonMsg("Erreur lors de l'envoi de la demande.");
+      return;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    setLiaison({ statut: row?.out_statut, match_auto: row?.out_match_auto });
+  }
+
   if (loading) return <div className="px-6 py-8 text-center text-sauge">Chargement...</div>;
   if (!p) return <div className="px-6 py-8 text-center text-sauge">Praticien introuvable.</div>;
 
-  return <PraticienApercuContenu p={p} activites={activites} produits={produits} />;
+  return (
+    <PraticienApercuContenu
+      p={p} activites={activites} produits={produits}
+      liaison={liaison} liaisonLoading={liaisonLoading} liaisonMsg={liaisonMsg}
+      onDemanderLiaison={demanderLiaison}
+    />
+  );
 }

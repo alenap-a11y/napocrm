@@ -30,6 +30,7 @@ const ProfilPresentation = lazy(() => import('./pages/ProfilPresentation'))
 const PraticienStub = lazy(() => import('./pages/PraticienStub'))
 const MesClients = lazy(() => import('./pages/praticien/MesClients'))
 const FicheClientPraticien = lazy(() => import('./pages/praticien/FicheClientPraticien'))
+const DemandesLiaison = lazy(() => import('./pages/praticien/DemandesLiaison'))
 const AnalyticsNS = lazy(() => import('./pages/AnalyticsNS'))
 const Formation = lazy(() => import('./pages/Formation'))
 const FormationSéance = lazy(() => import('./pages/FormationSéance'))
@@ -94,6 +95,7 @@ const ALL_SB_ITEMS = [
   { id: 'seances',  label: 'Séances',  icon: 'ti-calendar-plus',    to: '/seances'  },
   { id: 'napo3d',   label: 'Napo-3D',  icon: 'ti-3d-cube-sphere',   to: '/napo-3d', moduleTitle: '3D Humains'  },
   { id: 'clients',     label: 'Clients',        icon: 'ti-users',          to: '/clients'                        },
+  { id: 'liaisons',    label: 'Liaisons',       icon: 'ti-link',           to: '/praticien/liaisons'             },
   { id: 'bach',        label: 'Fleurs de Bach', icon: 'ti-leaf',           to: '/fleurs-de-bach', moduleTitle: 'Fleurs de Bach'                 },
   { id: 'agenda',      label: 'Agenda',         icon: 'ti-calendar',       to: '/agenda'                         },
   { id: 'notes',    label: 'Notes',    icon: 'ti-notebook',         to: '/notes'    },
@@ -642,6 +644,7 @@ export default function AppShell({ user, onSignOut }) {
               <Route path="/newsnapo" element={<NewsNapo />} />
               <Route path="/presentation" element={<ProfilPresentation />} />
               <Route path="/praticien-stub" element={<PraticienStub />} />
+              <Route path="/praticien/liaisons" element={<DemandesLiaison />} />
               <Route path="/praticien/clients" element={<MesClients />} />
               <Route path="/praticien/clients/:clientId" element={<FicheClientPraticien />} />
               <Route path="/praticien/clients/:clientId/:tab" element={<FicheClientPraticien />} />

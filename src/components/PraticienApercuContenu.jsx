@@ -6,7 +6,7 @@ const ACTIVITE_LABELS = {
   ceremonie: 'Cérémonie', stage: 'Stage', replay: 'Replay',
 };
 
-export default function PraticienApercuContenu({ p, activites, produits }) {
+export default function PraticienApercuContenu({ p, activites, produits, liaison, liaisonLoading, liaisonMsg, onDemanderLiaison }) {
   return (
     <div className="px-6 py-8 max-w-md mx-auto space-y-8">
 
@@ -17,6 +17,36 @@ export default function PraticienApercuContenu({ p, activites, produits }) {
           <p className="text-sauge text-sm">{p.metier}</p>
         </div>
       </div>
+
+      {onDemanderLiaison && (
+        <section className="rounded-2xl p-4 border" style={{ borderColor: '#8FBF4F44', background: '#F3F8EC' }}>
+          {liaison?.statut === 'accepte' && (
+            <p className="text-sm font-medium" style={{ color: '#4A7A3E' }}>✓ Liaison acceptée avec ce praticien.</p>
+          )}
+          {liaison?.statut === 'bloque' && (
+            <p className="text-sm" style={{ color: '#993556' }}>Cette demande de liaison a été refusée.</p>
+          )}
+          {liaison?.statut === 'en_attente' && (
+            <p className="text-sm" style={{ color: '#4A7A3E' }}>Demande de liaison envoyée — en attente de validation par le praticien.</p>
+          )}
+          {!liaison && (
+            <>
+              <p className="text-sm mb-2" style={{ color: '#4A7A3E' }}>
+                Demandez une liaison avec ce praticien pour échanger avec lui depuis votre espace client.
+              </p>
+              <button
+                onClick={onDemanderLiaison}
+                disabled={liaisonLoading}
+                className="text-xs px-3 py-1.5 rounded-full text-white font-medium"
+                style={{ background: '#4A7A3E', opacity: liaisonLoading ? 0.6 : 1 }}
+              >
+                {liaisonLoading ? 'Envoi…' : 'Demander la liaison'}
+              </button>
+            </>
+          )}
+          {liaisonMsg && <p className="text-xs mt-2" style={{ color: '#993556' }}>{liaisonMsg}</p>}
+        </section>
+      )}
 
       {/* 1. PRO */}
       <section className="rounded-2xl p-4 border border-[#2C5F66]/15" style={{ background: '#EAF2F4' }}>
