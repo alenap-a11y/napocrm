@@ -13,6 +13,7 @@ import ProfilAbonnement from './components/ProfilAbonnement'
 import PolitiqueConfidentialite from './pages/PolitiqueConfidentialite'
 import ConfirmEmail from './pages/ConfirmEmail'
 import EspaceClientRouter from './pages/client/EspaceClientRouter'
+import QuestionnaireReponsePublic from './pages/QuestionnaireReponsePublic'
 import { supabase } from './lib/supabase'
 import { Analytics } from '@vercel/analytics/react'
 function clearNapoLocalPrefs() {
@@ -95,6 +96,9 @@ export default function App() {
   if (location.pathname.startsWith('/rdv/')) {
     const slug = location.pathname.split('/rdv/')[1]
     content = <AgendaPublic slug={slug} />
+  } else if (location.pathname.startsWith('/questionnaire/')) {
+    const token = location.pathname.split('/questionnaire/')[1]
+    content = <QuestionnaireReponsePublic token={token} />
   } else if (location.pathname === '/politique-confidentialite') {
     content = <PolitiqueConfidentialite />
   } else if (location.pathname === '/confirmer') {

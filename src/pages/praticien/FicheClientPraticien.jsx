@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useClients } from '../../hooks/useClients'
+import { CATEGORIES_QUESTIONS, QUESTIONS } from '../../data/questionsBank'
 
 function clientName(c) { return `${c.prenom || ''} ${c.nom || ''}`.trim() }
 
@@ -107,6 +108,17 @@ export default function FicheClientPraticien() {
   const [loadingFormation, setLoadingFormation] = useState(true)
   const [metierHistorique, setMetierHistorique] = useState([])
   const [loadingMetierHistorique, setLoadingMetierHistorique] = useState(true)
+  const [questionnairesClient, setQuestionnairesClient] = useState([])
+  const [loadingQuestionnaires, setLoadingQuestionnaires] = useState(true)
+  const [modalNouveauQuestionnaire, setModalNouveauQuestionnaire] = useState(false)
+  const [qTitre, setQTitre] = useState('')
+  const [qSelection, setQSelection] = useState([])
+  const [qCategorieOuverte, setQCategorieOuverte] = useState(null)
+  const [qRecherche, setQRecherche] = useState('')
+  const [qCreating, setQCreating] = useState(false)
+  const [qLienGenere, setQLienGenere] = useState('')
+  const [qEnvoiStatut, setQEnvoiStatut] = useState('')
+  const [qSuppressionId, setQSuppressionId] = useState(null)
 
   useEffect(() => {
     if (client) {
@@ -292,6 +304,85 @@ export default function FicheClientPraticien() {
         setLoadingMetierHistorique(false)
       })
   }, [activeTab, clientId])
+
+  function chargerQuestionnaires() {
+    if (!clientId) return
+    setLoadingQuestionnaires(true)
+    supabase.from('questionnaires')
+      .select('id, titre, statut, envoye_at, repondu_at, question_ids, token')
+      .eq('client_id', clientId)
+      .order('envoye_at', { ascending: false })
+      .then(({ data }) => {
+        setQuestionnairesClient(data || [])
+        setLoadingQuestionnaires(false)
+      })
+  }
+  useEffect(() => { chargerQuestionnaires() }, [clientId])
+
+  function toggleQuestion(id) {
+    setQSelection(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function fermerModalQuestionnaire() {
+    setModalNouveauQuestionnaire(false)
+    setQTitre(''); setQSelection([]); setQLienGenere(''); setQEnvoiStatut(''); setQRecherche('')
+  }
+
+  async function creerEtEnvoyerQuestionnaire() {
+    if (!qTitre.trim() || qSelection.length === 0) return
+    setQCreating(true)
+    setQEnvoiStatut('')
+    const { data: { user } } = await supabase.auth.getUser()
+    const consentement = "En répondant à ce questionnaire, vous acceptez que vos réponses soient collectées et utilisées par votre praticien dans le cadre exclusif de votre accompagnement. Aucune donnée médicale ne vous est demandée. Vos réponses ne seront ni partagées ni utilisées à d'autres fins."
+    const { data: q, error } = await supabase.from('questionnaires').insert({
+      user_id: user.id,
+      client_id: clientId,
+      titre: qTitre.trim(),
+      question_ids: qSelection,
+      consentement_texte: consentement,
+    }).select().single()
+    if (!error && q) {
+      const lien = `${window.location.origin}/questionnaire/${q.token}`
+      setQLienGenere(lien)
+      if (client?.email) {
+        setQEnvoiStatut("Envoi de l'email…")
+        const texte = `Bonjour,
+
+Votre praticien vous invite à répondre au questionnaire « ${qTitre.trim()} ».
+
+Cliquez sur ce lien pour y répondre :
+${lien}
+
+Vos réponses restent confidentielles et sont utilisées uniquement dans le cadre de votre accompagnement.
+
+À bientôt !`
+        const { error: mailError } = await supabase.functions.invoke('send-formation-invitation', {
+          body: { to: client.email, subject: `Questionnaire — ${qTitre.trim()}`, texte }
+        })
+        setQEnvoiStatut(mailError ? "Email non envoyé — copie le lien ci-dessous." : `Envoyé à ${client.email}.`)
+      } else {
+        setQEnvoiStatut('Aucun email enregistré pour ce client — copie le lien ci-dessous.')
+      }
+      chargerQuestionnaires()
+    }
+    setQCreating(false)
+  }
+
+  async function supprimerQuestionnaire(id) {
+    await supabase.from('questionnaires').delete().eq('id', id)
+    setQSuppressionId(null)
+    chargerQuestionnaires()
+  }
+
+  async function copierLien(lien) {
+    try { await navigator.clipboard.writeText(lien) } catch {}
+  }
+
+  const questionsFiltrees = QUESTIONS.filter(q => {
+    if (qRecherche && !q.texte.toLowerCase().includes(qRecherche.toLowerCase())) return false
+    if (qCategorieOuverte && q.categorie !== qCategorieOuverte) return false
+    return true
+  })
 
   const now = new Date().toISOString().slice(0, 10)
   const passees = seances.filter(s => s.date_seance && s.date_seance.slice(0, 10) < now)
@@ -787,6 +878,129 @@ export default function FicheClientPraticien() {
             </div>
           )}
         </>
+      ) : activeTab === 'questionnaires' ? (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              {questionnairesClient.length} questionnaire(s) envoyé(s)
+            </div>
+            <button type="button" onClick={() => setModalNouveauQuestionnaire(true)}
+              style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-plus" style={{ fontSize: 14 }} />Nouveau questionnaire
+            </button>
+          </div>
+
+          {loadingQuestionnaires ? (
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Chargement…</div>
+          ) : questionnairesClient.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-text-secondary)', fontSize: 13 }}>
+              <i className="ti ti-clipboard-list" style={{ fontSize: 28, display: 'block', marginBottom: 8 }} />
+              Aucun questionnaire envoyé à ce client.
+            </div>
+          ) : (
+            <div>
+              {questionnairesClient.map((q, idx) => (
+                <div key={q.id} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: idx < questionnairesClient.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: q.statut === 'repondu' ? '#0F6E56' : 'var(--color-accent)', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{q.titre}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                      {(q.question_ids || []).length} question(s) · envoyé le {fmtDate(q.envoye_at)}{q.statut === 'repondu' ? ` · répondu le ${fmtDate(q.repondu_at)}` : ' · en attente de réponse'}
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => copierLien(`${window.location.origin}/questionnaire/${q.token}`)}
+                    style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, padding: '3px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <i className="ti ti-link" style={{ fontSize: 11 }} />Lien
+                  </button>
+                  {qSuppressionId === q.id ? (
+                    <button type="button" onClick={() => supprimerQuestionnaire(q.id)}
+                      style={{ background: '#B3261E', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', fontSize: 11, padding: '3px 8px' }}>
+                      Confirmer
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setQSuppressionId(q.id)}
+                      style={{ background: 'none', border: '0.5px solid var(--color-border-secondary)', borderRadius: 6, cursor: 'pointer', color: '#B3261E', fontSize: 11, padding: '3px 8px' }}>
+                      <i className="ti ti-trash" style={{ fontSize: 11 }} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {modalNouveauQuestionnaire && (
+            <div onClick={fermerModalQuestionnaire} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: 'var(--color-background-primary)', borderRadius: 12, padding: 22, width: 620, maxWidth: '92vw', maxHeight: '86vh', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Nouveau questionnaire</div>
+
+                {qLienGenere ? (
+                  <div>
+                    <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 10 }}>{qEnvoiStatut}</div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 6 }}>Lien à copier-coller si besoin :</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input readOnly value={qLienGenere} style={{ ...inp, flex: 1 }} onFocus={e => e.target.select()} />
+                      <button type="button" onClick={() => copierLien(qLienGenere)}
+                        style={{ padding: '7px 14px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', fontSize: 12, cursor: 'pointer' }}>
+                        Copier
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
+                      <button type="button" onClick={fermerModalQuestionnaire}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--color-accent)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Fermer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <input value={qTitre} onChange={e => setQTitre(e.target.value)} placeholder="Titre du questionnaire (ex : Bilan de démarrage)"
+                      style={{ ...inp, width: '100%', marginBottom: 10 }} />
+                    <input value={qRecherche} onChange={e => setQRecherche(e.target.value)} placeholder="Rechercher une question…"
+                      style={{ ...inp, width: '100%', marginBottom: 10 }} />
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                      <button type="button" onClick={() => setQCategorieOuverte(null)}
+                        style={{ padding: '4px 10px', borderRadius: 20, border: 'none', background: !qCategorieOuverte ? 'var(--color-accent)' : 'var(--color-background-secondary)', color: !qCategorieOuverte ? '#fff' : 'var(--color-text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+                        Tout
+                      </button>
+                      {CATEGORIES_QUESTIONS.map(c => (
+                        <button key={c.id} type="button" onClick={() => setQCategorieOuverte(c.id)}
+                          style={{ padding: '4px 10px', borderRadius: 20, border: 'none', background: qCategorieOuverte === c.id ? 'var(--color-accent)' : 'var(--color-background-secondary)', color: qCategorieOuverte === c.id ? '#fff' : 'var(--color-text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{qSelection.length} question(s) sélectionnée(s)</div>
+                    <div style={{ flex: 1, overflowY: 'auto', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: 4, marginBottom: 14 }}>
+                      {questionsFiltrees.map(q => {
+                        const checked = qSelection.includes(q.id)
+                        return (
+                          <div key={q.id} onClick={() => toggleQuestion(q.id)}
+                            style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 10px', borderRadius: 6, cursor: 'pointer', background: checked ? 'rgba(242,176,30,0.08)' : 'transparent' }}>
+                            <div style={{ width: 16, height: 16, borderRadius: 4, marginTop: 2, border: checked ? 'none' : '1.5px solid var(--color-border-secondary)', background: checked ? 'var(--color-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {checked && <i className="ti ti-check" style={{ fontSize: 11, color: '#fff' }} />}
+                            </div>
+                            <div style={{ fontSize: 12.5, color: 'var(--color-text-primary)', lineHeight: 1.4 }}>{q.texte}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {qEnvoiStatut && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 10 }}>{qEnvoiStatut}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                      <button type="button" onClick={fermerModalQuestionnaire}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+                        Annuler
+                      </button>
+                      <button type="button" onClick={creerEtEnvoyerQuestionnaire} disabled={!qTitre.trim() || qSelection.length === 0 || qCreating}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: (!qTitre.trim() || qSelection.length === 0) ? 'var(--color-border-secondary)' : 'var(--color-accent)', color: '#fff', fontSize: 12, fontWeight: 600, cursor: (!qTitre.trim() || qSelection.length === 0) ? 'default' : 'pointer', opacity: qCreating ? 0.7 : 1 }}>
+                        {qCreating ? 'Envoi…' : `Créer et envoyer (${qSelection.length})`}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       ) : activeTab === 'formation' ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
